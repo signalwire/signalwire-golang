@@ -77,8 +77,8 @@ func (relay *RelaySession) RelayPhoneDial(ctx context.Context, call *CallSession
 	}
 
 	/* use tag as Call-ID*/
-	Logger.Debugf("call [%p] tag_id [%s]\n", call, call.TagID)
-	Logger.Debugf("reply ReplyBladeExecuteDecode: %v\n", r)
+	Log.Debug("call [%p] tag_id [%s]\n", call, call.TagID)
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
 	return relay.Blade.EventCalling.Cache.SetCallCache(call.TagID, call)
 }
@@ -98,7 +98,8 @@ func (relay *RelaySession) RelayPhoneConnect(ctx context.Context, call *CallSess
 	}
 
 	if len(call.CallID) == 0 {
-		Logger.Errorf("no CallID\n")
+		Log.Error("no CallID\n")
+
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
 
@@ -137,7 +138,7 @@ func (relay *RelaySession) RelayPhoneConnect(ctx context.Context, call *CallSess
 		return errors.New("type assertion failed")
 	}
 
-	Logger.Debugf("reply ReplyBladeExecuteDecode: %v\n", r)
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
 	return nil
 }
@@ -145,7 +146,7 @@ func (relay *RelaySession) RelayPhoneConnect(ctx context.Context, call *CallSess
 // RelayCallAnswer TODO DESCRIPTION
 func (relay *RelaySession) RelayCallAnswer(ctx context.Context, call *CallSession) error {
 	if len(call.CallID) == 0 {
-		Logger.Errorf("no CallID\n")
+		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
@@ -171,7 +172,7 @@ func (relay *RelaySession) RelayCallAnswer(ctx context.Context, call *CallSessio
 		return errors.New("type assertion failed")
 	}
 
-	Logger.Debugf("reply ReplyBladeExecuteDecode: %v\n", r)
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
 	return nil
 }
@@ -179,7 +180,7 @@ func (relay *RelaySession) RelayCallAnswer(ctx context.Context, call *CallSessio
 // RelayCallEnd TODO DESCRIPTION
 func (relay *RelaySession) RelayCallEnd(ctx context.Context, call *CallSession) error {
 	if len(call.CallID) == 0 {
-		Logger.Errorf("no CallID\n")
+		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
@@ -206,7 +207,7 @@ func (relay *RelaySession) RelayCallEnd(ctx context.Context, call *CallSession) 
 		return errors.New("type assertion failed")
 	}
 
-	Logger.Debugf("reply ReplyBladeExecuteDecode: %v\n", r)
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
 	return nil
 }
@@ -239,7 +240,7 @@ func (relay *RelaySession) RelayOnInboundAnswer(ctx context.Context) (*CallSessi
 // RelayPlayAudio TODO DESCRIPTION
 func (relay *RelaySession) RelayPlayAudio(ctx context.Context, call *CallSession, ctrlID string, url string) error {
 	if len(call.CallID) == 0 {
-		Logger.Errorf("no CallID\n")
+		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
@@ -259,7 +260,7 @@ func (relay *RelaySession) RelayPlayAudio(ctx context.Context, call *CallSession
 // RelayPlayTTS TODO DESCRIPTION
 func (relay *RelaySession) RelayPlayTTS(ctx context.Context, call *CallSession, ctrlID string, text, language, gender string) error {
 	if len(call.CallID) == 0 {
-		Logger.Errorf("no CallID\n")
+		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
@@ -281,7 +282,7 @@ func (relay *RelaySession) RelayPlayTTS(ctx context.Context, call *CallSession, 
 // RelayPlaySilence TODO DESCRIPTION
 func (relay *RelaySession) RelayPlayRingtone(ctx context.Context, call *CallSession, ctrlID string, name string, duration float64) error {
 	if len(call.CallID) == 0 {
-		Logger.Errorf("no CallID\n")
+		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
@@ -302,7 +303,7 @@ func (relay *RelaySession) RelayPlayRingtone(ctx context.Context, call *CallSess
 // RelayPlaySilence TODO DESCRIPTION
 func (relay *RelaySession) RelayPlaySilence(ctx context.Context, call *CallSession, ctrlID string, duration float64) error {
 	if len(call.CallID) == 0 {
-		Logger.Errorf("no CallID\n")
+		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
@@ -322,7 +323,7 @@ func (relay *RelaySession) RelayPlaySilence(ctx context.Context, call *CallSessi
 // RelayPlay TODO DESCRIPTION
 func (relay *RelaySession) RelayPlay(ctx context.Context, call *CallSession, controlID string, play []PlayStruct) error {
 	if len(call.CallID) == 0 {
-		Logger.Errorf("no CallID\n")
+		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
@@ -349,9 +350,9 @@ func (relay *RelaySession) RelayPlay(ctx context.Context, call *CallSession, con
 	select {
 	case call.CallPlayControlIDs <- controlID:
 		// send the ctrlID to go routine that fires Consumer callbacks
-		Logger.Debugf("sent controlID to go routine\n")
+		Log.Debug("sent controlID to go routine\n")
 	default:
-		Logger.Debugf("controlID was not sent to go routine\n")
+		Log.Debug("controlID was not sent to go routine\n")
 	}
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute
@@ -366,7 +367,7 @@ func (relay *RelaySession) RelayPlay(ctx context.Context, call *CallSession, con
 		return errors.New("type assertion failed")
 	}
 
-	Logger.Debugf("reply ReplyBladeExecuteDecode: %v\n", r)
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
 	return nil
 }
@@ -374,7 +375,7 @@ func (relay *RelaySession) RelayPlay(ctx context.Context, call *CallSession, con
 // RelayPlayVolume TODO DESCRIPTION
 func (relay *RelaySession) RelayPlayVolume(ctx context.Context, call *CallSession, ctrlID *string, vol float64) error {
 	if len(call.CallID) == 0 {
-		Logger.Errorf("no CallID\n")
+		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
@@ -402,7 +403,7 @@ func (relay *RelaySession) RelayPlayVolume(ctx context.Context, call *CallSessio
 		return errors.New("type assertion failed")
 	}
 
-	Logger.Debugf("reply ReplyBladeExecuteDecode: %v\n", r)
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
 	return nil
 }
@@ -410,7 +411,7 @@ func (relay *RelaySession) RelayPlayVolume(ctx context.Context, call *CallSessio
 // RelayPlayResume TODO DESCRIPTION
 func (relay *RelaySession) RelayPlayResume(ctx context.Context, call *CallSession, ctrlID *string) error {
 	if len(call.CallID) == 0 {
-		Logger.Errorf("no CallID\n")
+		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
@@ -437,7 +438,7 @@ func (relay *RelaySession) RelayPlayResume(ctx context.Context, call *CallSessio
 		return errors.New("type assertion failed")
 	}
 
-	Logger.Debugf("reply ReplyBladeExecuteDecode: %v\n", r)
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
 	return nil
 }
@@ -445,7 +446,7 @@ func (relay *RelaySession) RelayPlayResume(ctx context.Context, call *CallSessio
 // RelayPlayPause TODO DESCRIPTION
 func (relay *RelaySession) RelayPlayPause(ctx context.Context, call *CallSession, ctrlID *string) error {
 	if len(call.CallID) == 0 {
-		Logger.Errorf("no CallID\n")
+		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
@@ -472,7 +473,7 @@ func (relay *RelaySession) RelayPlayPause(ctx context.Context, call *CallSession
 		return errors.New("type assertion failed")
 	}
 
-	Logger.Debugf("reply ReplyBladeExecuteDecode: %v\n", r)
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
 	return nil
 }
@@ -480,7 +481,7 @@ func (relay *RelaySession) RelayPlayPause(ctx context.Context, call *CallSession
 // RelayPlayStop TODO DESCRIPTION
 func (relay *RelaySession) RelayPlayStop(ctx context.Context, call *CallSession, ctrlID *string) error {
 	if len(call.CallID) == 0 {
-		Logger.Errorf("no CallID\n")
+		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
@@ -507,7 +508,7 @@ func (relay *RelaySession) RelayPlayStop(ctx context.Context, call *CallSession,
 		return errors.New("type assertion failed")
 	}
 
-	Logger.Debugf("reply ReplyBladeExecuteDecode: %v\n", r)
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
 	return nil
 }
@@ -515,7 +516,7 @@ func (relay *RelaySession) RelayPlayStop(ctx context.Context, call *CallSession,
 // RelayRecordAudio TODO DESCRIPTION
 func (relay *RelaySession) RelayRecordAudio(ctx context.Context, call *CallSession, controlID string, rec *RecordParams) error {
 	if len(call.CallID) == 0 {
-		Logger.Errorf("no CallID\n")
+		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
@@ -556,9 +557,9 @@ func (relay *RelaySession) RelayRecordAudio(ctx context.Context, call *CallSessi
 	select {
 	case call.CallRecordControlIDs <- controlID:
 		// send the ctrlID to go routine that fires Consumer callbacks
-		Logger.Debugf("sent controlID to go routine\n")
+		Log.Debug("sent controlID to go routine\n")
 	default:
-		Logger.Debugf("controlID was not sent to go routine\n")
+		Log.Debug("controlID was not sent to go routine\n")
 	}
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute
@@ -573,7 +574,7 @@ func (relay *RelaySession) RelayRecordAudio(ctx context.Context, call *CallSessi
 		return errors.New("type assertion failed")
 	}
 
-	Logger.Debugf("reply ReplyBladeExecuteDecode: %v\n", r)
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
 	call.AddAction(controlID, "init")
 
@@ -583,7 +584,7 @@ func (relay *RelaySession) RelayRecordAudio(ctx context.Context, call *CallSessi
 // RelayRecordAudioStop TODO DESCRIPTION
 func (relay *RelaySession) RelayRecordAudioStop(ctx context.Context, call *CallSession, ctrlID *string) error {
 	if len(call.CallID) == 0 {
-		Logger.Errorf("no CallID\n")
+		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
@@ -610,7 +611,7 @@ func (relay *RelaySession) RelayRecordAudioStop(ctx context.Context, call *CallS
 		return errors.New("type assertion failed")
 	}
 
-	Logger.Debugf("reply ReplyBladeExecuteDecode: %v\n", r)
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
 	return nil
 }
@@ -618,7 +619,7 @@ func (relay *RelaySession) RelayRecordAudioStop(ctx context.Context, call *CallS
 // RelayDetectFax TODO DESCRIPTION
 func (relay *RelaySession) RelayDetectDigit(ctx context.Context, call *CallSession, controlID string, digits string) error {
 	if len(call.CallID) == 0 {
-		Logger.Errorf("no CallID\n")
+		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
@@ -640,9 +641,9 @@ func (relay *RelaySession) RelayDetectDigit(ctx context.Context, call *CallSessi
 	select {
 	case call.CallDetectDigitControlID <- controlID:
 		// send the ctrlID to go routine that fires Consumer callbacks
-		Logger.Debugf("sent controlID to go routine\n")
+		Log.Debug("sent controlID to go routine\n")
 	default:
-		Logger.Debugf("controlID was not sent to go routine\n")
+		Log.Debug("controlID was not sent to go routine\n")
 	}
 
 	return relay.RelayDetect(ctx, call, controlID, detect)
@@ -651,7 +652,7 @@ func (relay *RelaySession) RelayDetectDigit(ctx context.Context, call *CallSessi
 // RelayDetectFax TODO DESCRIPTION
 func (relay *RelaySession) RelayDetectFax(ctx context.Context, call *CallSession, controlID string, faxtone string) error {
 	if len(call.CallID) == 0 {
-		Logger.Errorf("no CallID\n")
+		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
@@ -673,9 +674,9 @@ func (relay *RelaySession) RelayDetectFax(ctx context.Context, call *CallSession
 	select {
 	case call.CallDetectFaxControlID <- controlID:
 		// send the ctrlID to go routine that fires Consumer callbacks
-		Logger.Debugf("sent controlID to go routine\n")
+		Log.Debug("sent controlID to go routine\n")
 	default:
-		Logger.Debugf("controlID was not sent to go routine\n")
+		Log.Debug("controlID was not sent to go routine\n")
 	}
 
 	return relay.RelayDetect(ctx, call, controlID, detect)
@@ -684,7 +685,7 @@ func (relay *RelaySession) RelayDetectFax(ctx context.Context, call *CallSession
 // RelayDetectMachine TODO DESCRIPTION
 func (relay *RelaySession) RelayDetectMachine(ctx context.Context, call *CallSession, controlID string, det *DetectMachineParams) error {
 	if len(call.CallID) == 0 {
-		Logger.Errorf("no CallID\n")
+		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
@@ -709,9 +710,9 @@ func (relay *RelaySession) RelayDetectMachine(ctx context.Context, call *CallSes
 	select {
 	case call.CallDetectMachineControlID <- controlID:
 		// send the ctrlID to go routine that fires Consumer callbacks
-		Logger.Debugf("sent controlID to go routine\n")
+		Log.Debug("sent controlID to go routine\n")
 	default:
-		Logger.Debugf("controlID was not sent to go routine\n")
+		Log.Debug("controlID was not sent to go routine\n")
 	}
 
 	return relay.RelayDetect(ctx, call, controlID, detect)
@@ -720,7 +721,7 @@ func (relay *RelaySession) RelayDetectMachine(ctx context.Context, call *CallSes
 // RelayDetect TODO DESCRIPTION
 func (relay *RelaySession) RelayDetect(ctx context.Context, call *CallSession, controlID string, detect DetectStruct) error {
 	if len(call.CallID) == 0 {
-		Logger.Errorf("no CallID\n")
+		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
@@ -749,7 +750,7 @@ func (relay *RelaySession) RelayDetect(ctx context.Context, call *CallSession, c
 		return errors.New("type assertion failed")
 	}
 
-	Logger.Debugf("reply ReplyBladeExecuteDecode: %v\n", r)
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
 	return nil
 }
@@ -757,7 +758,7 @@ func (relay *RelaySession) RelayDetect(ctx context.Context, call *CallSession, c
 // RelayDetectStop TODO DESCRIPTION
 func (relay *RelaySession) RelayDetectStop(ctx context.Context, call *CallSession, ctrlID *string) error {
 	if len(call.CallID) == 0 {
-		Logger.Errorf("no CallID\n")
+		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
@@ -784,7 +785,7 @@ func (relay *RelaySession) RelayDetectStop(ctx context.Context, call *CallSessio
 		return errors.New("type assertion failed")
 	}
 
-	Logger.Debugf("reply ReplyBladeExecuteDecode: %v\n", r)
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
 	return nil
 }
@@ -792,7 +793,7 @@ func (relay *RelaySession) RelayDetectStop(ctx context.Context, call *CallSessio
 // RelaySendFax TODO DESCRIPTION
 func (relay *RelaySession) RelaySendFax(ctx context.Context, call *CallSession, ctrlID *string, doc, id, headerInfo string) error {
 	if len(call.CallID) == 0 {
-		Logger.Errorf("no CallID\n")
+		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
@@ -813,9 +814,9 @@ func (relay *RelaySession) RelaySendFax(ctx context.Context, call *CallSession, 
 	select {
 	case call.CallFaxControlID <- *ctrlID:
 		// send the ctrlID to go routine that fires Consumer callbacks
-		Logger.Debugf("sent controlID to go routine\n")
+		Log.Debug("sent controlID to go routine\n")
 	default:
-		Logger.Debugf("controlID was not sent to go routine\n")
+		Log.Debug("controlID was not sent to go routine\n")
 	}
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute
@@ -830,7 +831,7 @@ func (relay *RelaySession) RelaySendFax(ctx context.Context, call *CallSession, 
 		return errors.New("type assertion failed")
 	}
 
-	Logger.Debugf("reply ReplyBladeExecuteDecode: %v\n", r)
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
 	return nil
 }
@@ -838,7 +839,7 @@ func (relay *RelaySession) RelaySendFax(ctx context.Context, call *CallSession, 
 // RelayReceiveFax TODO DESCRIPTION
 func (relay *RelaySession) RelayReceiveFax(ctx context.Context, call *CallSession, ctrlID *string) error {
 	if len(call.CallID) == 0 {
-		Logger.Errorf("no CallID\n")
+		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
@@ -856,9 +857,9 @@ func (relay *RelaySession) RelayReceiveFax(ctx context.Context, call *CallSessio
 	select {
 	case call.CallFaxControlID <- *ctrlID:
 		// send the ctrlID to go routine that fires Consumer callbacks
-		Logger.Debugf("sent controlID to go routine\n")
+		Log.Debug("sent controlID to go routine\n")
 	default:
-		Logger.Debugf("controlID was not sent to go routine\n")
+		Log.Debug("controlID was not sent to go routine\n")
 	}
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute
@@ -873,7 +874,7 @@ func (relay *RelaySession) RelayReceiveFax(ctx context.Context, call *CallSessio
 		return errors.New("type assertion failed")
 	}
 
-	Logger.Debugf("reply ReplyBladeExecuteDecode: %v\n", r)
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
 	return nil
 }
@@ -881,7 +882,7 @@ func (relay *RelaySession) RelayReceiveFax(ctx context.Context, call *CallSessio
 // RelaySendFaxStop TODO DESCRIPTION
 func (relay *RelaySession) RelaySendFaxStop(ctx context.Context, call *CallSession, ctrlID *string) error {
 	if len(call.CallID) == 0 {
-		Logger.Errorf("no CallID\n")
+		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
@@ -908,7 +909,7 @@ func (relay *RelaySession) RelaySendFaxStop(ctx context.Context, call *CallSessi
 		return errors.New("type assertion failed")
 	}
 
-	Logger.Debugf("reply ReplyBladeExecuteDecode: %v\n", r)
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
 	return nil
 }
@@ -916,7 +917,7 @@ func (relay *RelaySession) RelaySendFaxStop(ctx context.Context, call *CallSessi
 // RelayReceiveFaxStop TODO DESCRIPTION
 func (relay *RelaySession) RelayReceiveFaxStop(ctx context.Context, call *CallSession, ctrlID *string) error {
 	if len(call.CallID) == 0 {
-		Logger.Errorf("no CallID\n")
+		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
@@ -943,7 +944,7 @@ func (relay *RelaySession) RelayReceiveFaxStop(ctx context.Context, call *CallSe
 		return errors.New("type assertion failed")
 	}
 
-	Logger.Debugf("reply ReplyBladeExecuteDecode: %v\n", r)
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
 	return nil
 }

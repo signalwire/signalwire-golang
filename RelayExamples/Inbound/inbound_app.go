@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/signalwire/signalwire-golang/signalwire"
-	log "github.com/sirupsen/logrus"
 )
 
 // App consts
@@ -49,26 +48,26 @@ func MyOnIncomingCall(consumer *signalwire.Consumer, call *signalwire.CallObj) {
 	resultAnswer := call.Answer()
 	if !resultAnswer.Successful {
 		if err := consumer.Stop(); err != nil {
-			log.Errorf("Error occurred while trying to stop Consumer")
+			signalwire.Log.Error("Error occurred while trying to stop Consumer\n")
 		}
 
 		return
 	}
 
-	log.Info("Playing audio on call..")
+	signalwire.Log.Info("Playing audio on call..\n")
 
 	go spinner(100 * time.Millisecond)
 
 	if _, err := call.PlayAudio("https://cdn.signalwire.com/default-music/welcome.mp3"); err != nil {
-		log.Errorf("Error occurred while trying to play audio")
+		signalwire.Log.Error("Error occurred while trying to play audio\n")
 	}
 
 	if err := call.Hangup(); err != nil {
-		log.Errorf("Error occurred while trying to hangup call")
+		signalwire.Log.Error("Error occurred while trying to hangup call\n")
 	}
 
 	if err := consumer.Stop(); err != nil {
-		log.Errorf("Error occurred while trying to stop Consumer")
+		signalwire.Log.Error("Error occurred while trying to stop Consumer\n")
 	}
 }
 
@@ -93,7 +92,7 @@ func main() {
 	}
 
 	if verbose {
-		log.SetLevel(log.DebugLevel)
+		signalwire.Log.SetLevel(signalwire.DebugLevelLog)
 	}
 
 	go func() {
@@ -107,7 +106,7 @@ func main() {
 			case syscall.SIGTERM:
 				fallthrough
 			case syscall.SIGINT:
-				log.Printf("Exit")
+				signalwire.Log.Info("Exit\n")
 				os.Exit(0)
 			}
 		}
@@ -120,10 +119,10 @@ func main() {
 	// register callback
 	consumer.OnIncomingCall = MyOnIncomingCall
 
-	log.Info("Wait incoming call..")
+	signalwire.Log.Info("Wait incoming call..\n")
 
 	// start
 	if err := consumer.Run(); err != nil {
-		log.Errorf("Error occurred while starting Signalwire Consumer")
+		signalwire.Log.Error("Error occurred while starting Signalwire Consumer\n")
 	}
 }

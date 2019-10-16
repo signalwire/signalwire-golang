@@ -7,7 +7,6 @@ import (
 	"time"
 
 	gomock "github.com/golang/mock/gomock"
-	"github.com/sirupsen/logrus"
 	assert "github.com/stretchr/testify/assert"
 )
 
@@ -15,7 +14,6 @@ func TestConsumer(t *testing.T) {
 	t.Run(
 		"ConsumerConnectDisconnect",
 		func(t *testing.T) {
-			Logger = logrus.New()
 			consumer := new(Consumer)
 			assert.NotNil(t, consumer, "Consumer must not be nil")
 
@@ -40,7 +38,7 @@ func TestConsumer(t *testing.T) {
 			var err error
 			go func() {
 				if err = consumer.Run(); err != nil {
-					log.Errorf("Error occurred while starting Signalwire Consumer")
+					Log.Error("Error occurred while starting Signalwire Consumer\n")
 				}
 				t.Log("consumer.Run() stopped\n")
 				wg.Done()
@@ -53,7 +51,7 @@ func TestConsumer(t *testing.T) {
 
 				/* this will call Disconnect() which is mocked*/
 				if errStop := consumer.Stop(); errStop != nil {
-					log.Errorf("Error occurred while stopping Signalwire Consumer: %v\n", errStop)
+					Log.Error("Error occurred while stopping Signalwire Consumer: %v\n", errStop)
 				}
 
 				wg.Done()

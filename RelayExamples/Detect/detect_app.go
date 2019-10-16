@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/signalwire/signalwire-golang/signalwire"
-	log "github.com/sirupsen/logrus"
 )
 
 // App consts
@@ -43,22 +42,22 @@ func spinner(delay time.Duration) {
 
 // MyOnDetectFinished ran when Detect Action finishes
 func MyOnDetectFinished(_ interface{}) {
-	log.Printf("Detect finished.\n")
+	signalwire.Log.Info("Detect finished.\n")
 }
 
 // MyOnDetectUpdate ran on Detector update
 func MyOnDetectUpdate(_ interface{}) {
-	log.Printf("Detect update.\n")
+	signalwire.Log.Info("Detect update.\n")
 }
 
 // MyOnDetectError ran on Detector error
 func MyOnDetectError(_ interface{}) {
-	log.Errorf("Detect error.\n")
+	signalwire.Log.Error("Detect error.\n")
 }
 
 // MyReady - gets executed when Blade is successfully setup (after signalwire.receive)
 func MyReady(consumer *signalwire.Consumer) {
-	log.Printf("calling out...\n")
+	signalwire.Log.Info("calling out...\n")
 
 	fromNumber := "+132XXXXXXXX"
 
@@ -71,7 +70,7 @@ func MyReady(consumer *signalwire.Consumer) {
 	resultDial := consumer.Client.Calling.DialPhone(fromNumber, toNumber)
 	if !resultDial.Successful {
 		if err := consumer.Stop(); err != nil {
-			log.Errorf("Error occurred while trying to stop Consumer")
+			signalwire.Log.Error("Error occurred while trying to stop Consumer")
 		}
 
 		return
@@ -85,14 +84,14 @@ func MyReady(consumer *signalwire.Consumer) {
 
 	detectMachineAction, err := resultDial.Call.DetectMachineAsync(&det)
 	if err != nil {
-		log.Errorf("Error occurred while trying to start answering machine detector")
+		signalwire.Log.Error("Error occurred while trying to start answering machine detector")
 	}
 
 	var det2 signalwire.DetectDigitParams
 	detectDigitAction, err := resultDial.Call.DetectDigitAsync(&det2)
 
 	if err != nil {
-		log.Errorf("Error occurred while trying to start digit detector")
+		signalwire.Log.Error("Error occurred while trying to start digit detector")
 	}
 
 	var det3 signalwire.DetectFaxParams
@@ -100,10 +99,10 @@ func MyReady(consumer *signalwire.Consumer) {
 	detectFaxAction, err := resultDial.Call.DetectFaxAsync(&det3)
 
 	if err != nil {
-		log.Errorf("Error occurred while trying to start fax detector")
+		signalwire.Log.Error("Error occurred while trying to start fax detector")
 	}
 
-	log.Printf("Detecting...")
+	signalwire.Log.Info("Detecting...")
 
 	go spinner(100 * time.Millisecond)
 
@@ -125,43 +124,43 @@ func MyReady(consumer *signalwire.Consumer) {
 		time.Sleep(1 * time.Second)
 
 		if detectMachineAction.GetCompleted() {
-			log.Printf("Machine Detection Successful(%v) State %v\n", detectMachineAction.Result.Successful, detectMachineAction.Event.String())
+			signalwire.Log.Info("Machine Detection Successful(%v) State %v\n", detectMachineAction.Result.Successful, detectMachineAction.Event.String())
 			break
 		}
 
-		log.Printf("Last Machine event: %s", detectMachineAction.GetEvent().String())
+		signalwire.Log.Info("Last Machine event: %s", detectMachineAction.GetEvent().String())
 	}
 
 	for {
 		time.Sleep(1 * time.Second)
 
 		if detectDigitAction.GetCompleted() {
-			log.Printf("Digit Detection Successful(%v) State %v\n", detectDigitAction.Result.Successful, detectDigitAction.Event.String())
+			signalwire.Log.Info("Digit Detection Successful(%v) State %v\n", detectDigitAction.Result.Successful, detectDigitAction.Event.String())
 			break
 		}
 
-		log.Printf("Last Digit event: %s", detectDigitAction.GetEvent().String())
+		signalwire.Log.Info("Last Digit event: %s", detectDigitAction.GetEvent().String())
 	}
 
 	for {
 		time.Sleep(1 * time.Second)
 
 		if detectFaxAction.GetCompleted() {
-			log.Printf("Fax Detection Successful(%v) State %v\n", detectFaxAction.Result.Successful, detectFaxAction.Event.String())
+			signalwire.Log.Info("Fax Detection Successful(%v) State %v\n", detectFaxAction.Result.Successful, detectFaxAction.Event.String())
 			break
 		}
 
-		log.Printf("Last Fax event: %s", detectFaxAction.GetEvent().String())
+		signalwire.Log.Info("Last Fax event: %s", detectFaxAction.GetEvent().String())
 	}
 
 	if resultDial.Call.GetCallState() != signalwire.Ending && resultDial.Call.GetCallState() != signalwire.Ended {
 		if err := resultDial.Call.Hangup(); err != nil {
-			log.Errorf("Error occurred while trying to hangup call. Err: %v\n", err)
+			signalwire.Log.Error("Error occurred while trying to hangup call. Err: %v\n", err)
 		}
 	}
 
 	if err := consumer.Stop(); err != nil {
-		log.Errorf("Error occurred while trying to stop Consumer. Err: %v\n", err)
+		signalwire.Log.Error("Error occurred while trying to stop Consumer. Err: %v\n", err)
 	}
 }
 
@@ -186,7 +185,7 @@ func main() {
 	}
 
 	if verbose {
-		log.SetLevel(log.DebugLevel)
+		signalwire.Log.SetLevel(signalwire.DebugLevelLog)
 	}
 
 	go func() {
@@ -200,19 +199,19 @@ func main() {
 			case syscall.SIGTERM:
 				fallthrough
 			case syscall.SIGINT:
-				log.Printf("Exit")
+				signalwire.Log.Info("Exit")
 				os.Exit(0)
 			}
 		}
 	}()
 
-	consumer := new(signalwire.Consumer)
+	consumer := signalwire.NewConsumer()
 	// setup the Client
 	consumer.Setup(PProjectID, PTokenID, Contexts)
 	// register callback
 	consumer.Ready = MyReady
 	// start
 	if err := consumer.Run(); err != nil {
-		log.Errorf("Error occurred while starting Signalwire Consumer")
+		consumer.Log.Error("Error occurred while starting Signalwire Consumer")
 	}
 }

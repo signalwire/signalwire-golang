@@ -8,16 +8,12 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
-	"path"
 	"runtime"
 	"runtime/trace"
 	"syscall"
 
 	"github.com/signalwire/signalwire-golang/signalwire"
-	"github.com/sirupsen/logrus"
 )
-
-var log *logrus.Logger
 
 // App consts
 const (
@@ -55,24 +51,6 @@ type LocalSettings struct {
 	Profiles ProfilesStruct
 }
 
-func init() {
-	log = logrus.New()
-
-	log.SetFormatter(
-		&logrus.TextFormatter{
-			DisableColors: false,
-			FullTimestamp: true,
-			CallerPrettyfier: func(f *runtime.Frame) (string, string) {
-				filename := path.Base(f.File)
-				return fmt.Sprintf("%s()", f.Function), fmt.Sprintf("%s:%d", filename, f.Line)
-			},
-		},
-	)
-	log.SetReportCaller(true)
-
-	signalwire.Logger = log
-}
-
 func main() {
 	var (
 		printVersion bool
@@ -93,7 +71,7 @@ func main() {
 	}
 
 	if verbose {
-		log.SetLevel(logrus.DebugLevel)
+		signalwire.Log.SetLevel(signalwire.DebugLevelLog)
 	}
 
 	var traceFh *os.File
@@ -111,7 +89,7 @@ func main() {
 		defer traceFh.Close()
 
 		if err = trace.Start(traceFh); err != nil {
-			fmt.Printf("Trace error: %v", err)
+			fmt.Printf("Trace error: %v\n", err)
 		}
 	}
 
@@ -131,7 +109,8 @@ func main() {
 					trace.Stop()
 					traceFh.Close()
 				}
-				log.Printf("Exit")
+
+				signalwire.Log.Info("Exit\n")
 
 				os.Exit(0)
 			}
@@ -140,20 +119,20 @@ func main() {
 
 	jLaunch, err := os.Open("launchSettings_outbound.json")
 	if err != nil {
-		log.Fatal(err)
+		signalwire.Log.Fatal("%v\n", err)
 	}
 
 	b, err := ioutil.ReadAll(jLaunch)
 	if err != nil {
-		log.Fatal(err)
+		signalwire.Log.Fatal("%v\n", err)
 	}
 
 	var settings LocalSettings
 	if err = json.Unmarshal(b, &settings); err != nil {
-		log.Fatal(err)
+		signalwire.Log.Fatal("%v\n", err)
 	}
 
-	log.Printf("Launch settings: %v\n", settings)
+	signalwire.Log.Info("Launch settings: %v\n", settings)
 
 	toNumber := settings.Profiles.CallingOutbound.EnvironmentVariables.TestToNumber
 	fromNumber := settings.Profiles.CallingOutbound.EnvironmentVariables.TestFromNumber
@@ -163,8 +142,8 @@ func main() {
 		testHost = signalwire.WssHost
 	}
 
-	log.Printf("ToNumber: %s\n", toNumber)
-	log.Printf("FromNumber: %s\n", fromNumber)
+	signalwire.Log.Info("ToNumber: %s\n", toNumber)
+	signalwire.Log.Info("FromNumber: %s\n", fromNumber)
 
 	defer jLaunch.Close()
 
@@ -180,7 +159,7 @@ func main() {
 	defer cancel()
 
 	if err := blade.BladeInit(ctx, testHost); err != nil {
-		log.Fatalf("cannot init Blade: %v\n", err)
+		signalwire.Log.Fatal("cannot init Blade: %v\n", err)
 	}
 
 	var bladeAuth signalwire.BladeAuth
@@ -189,23 +168,23 @@ func main() {
 	bladeAuth.TokenID = TokenID
 
 	if err := blade.BladeConnect(ctx, &bladeAuth); err != nil {
-		log.Fatalf("cannot connect to Blade Network: %v\n", err)
+		signalwire.Log.Fatal("cannot connect to Blade Network: %v\n", err)
 	}
 
 	if blade.SessionState != signalwire.BladeConnected {
-		log.Fatalf("not in connected state\n")
+		signalwire.Log.Fatal("not in connected state\n")
 	}
 
 	if err := blade.BladeSetup(ctx); err != nil {
-		log.Fatalf("cannot setup protocol on Blade Network: %v\n", err)
+		signalwire.Log.Fatal("cannot setup protocol on Blade Network: %v\n", err)
 	}
 
 	DemoSession.SignalwireChannels = []string{"notifications"}
 	if err := blade.BladeAddSubscription(ctx, DemoSession.SignalwireChannels); err != nil {
-		log.Fatalf("cannot subscribe to notifications on Blade Network: %v\n", err)
+		signalwire.Log.Fatal("cannot subscribe to notifications on Blade Network: %v\n", err)
 	}
 
-	log.Infof("dialing...")
+	signalwire.Log.Info("dialing...\n")
 
 	for j := 1; j <= testCalls; j++ {
 		call := &DemoSession.Calls[j]
@@ -215,45 +194,46 @@ func main() {
 		Relay.Blade = blade
 
 		if err := Relay.RelayPhoneDial(ctx, call, fromNumber, toNumber, 10); err != nil {
-			log.Fatalf("cannot dial phone number: %v\n", err)
+			signalwire.Log.Fatal("cannot dial phone number: %v\n", err)
 		}
 
 		// wait for "Answered"
-		log.Infof("wait for 'Answered'...")
+		signalwire.Log.Info("wait for 'Answered'...\n")
 
 		if ret := call.WaitCallStateInternal(ctx, signalwire.Answered); !ret {
-			log.Fatalln("did not get Answered state")
+			signalwire.Log.Fatal("did not get Answered state\n")
 		}
 
 		if err := Relay.RelayPlayAudio(ctx, call, "1234abc", "https://cdn.signalwire.com/default-music/welcome.mp3"); err != nil {
-			log.Fatalf("cannot play audio on call: %v\n", err)
+			signalwire.Log.Fatal("cannot play audio on call: %v\n", err)
 		}
 
-		log.Infof("wait for 'Ending'...")
+		signalwire.Log.Info("wait for 'Ending'...\n")
 
 		if ret := call.WaitCallStateInternal(ctx, signalwire.Ending); !ret {
-			log.Warn("did not get Ending state")
+			signalwire.Log.Warn("did not get Ending state\n")
 		}
 
 		if ret := call.WaitCallStateInternal(ctx, signalwire.Ended); !ret {
-			log.Warn("did not get Ended state")
+			signalwire.Log.Warn("did not get Ended state\n")
 		}
 
 		if call.CallState != signalwire.Ending && call.CallState != signalwire.Ended {
 			if err := Relay.RelayCallEnd(ctx, call); err != nil {
-				log.Fatalf("call.end error: %v\n", err)
+				signalwire.Log.Fatal("call.end error: %v\n", err)
 			}
 		}
 
-		log.Printf("show CallSession for call [%v]\n", call)
+		signalwire.Log.Info("show CallSession for call [%v]\n", call)
 
 		if err := Relay.RelayStop(ctx); err != nil {
-			log.Fatalf("RelayStop error: %v\n", err)
+			signalwire.Log.Fatal("RelayStop error: %v\n", err)
 		}
 
-		log.Printf("Test Passed\n")
+		signalwire.Log.Info("Test Passed\n")
 		call.CallCleanup(ctx)
 	}
-	/*pass context to go routine*/
+
+	/* pass context to go routine */
 	go blade.BladeWaitDisconnect(DemoSession.Ctx)
 }

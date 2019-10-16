@@ -122,7 +122,7 @@ func (calling *Calling) DialPhone(fromNumber, toNumber string) ResultDial {
 	c.Calling = calling
 
 	if ret := newcall.WaitCallStateInternal(calling.Ctx, Answered); !ret {
-		log.Debugf("did not get Answered state")
+		Log.Debug("did not get Answered state\n")
 
 		c.call = nil
 		res.Call = c
@@ -146,7 +146,7 @@ func (callobj *CallObj) Hangup() error {
 	}
 
 	if ret := call.WaitCallStateInternal(callobj.Calling.Ctx, Ended); !ret {
-		log.Debug("did not get Ended state for call\n")
+		Log.Debug("did not get Ended state for call\n")
 	}
 
 	if call.CallState == Ended {
@@ -165,7 +165,7 @@ func (callobj *CallObj) Answer() ResultAnswer {
 
 	if call.CallState != Answered {
 		if err := callobj.Calling.Relay.RelayCallAnswer(callobj.Calling.Ctx, call); err != nil {
-			log.Debugf("cannot answer call. err: %v\n", err)
+			Log.Debug("cannot answer call. err: %v\n", err)
 
 			return *res
 		}
@@ -174,7 +174,7 @@ func (callobj *CallObj) Answer() ResultAnswer {
 	// 'Answered' state event may have already come before we get the 200 for calling.answer command.
 	if call.CallState != Answered {
 		if ret := call.WaitCallStateInternal(callobj.Calling.Ctx, Answered); !ret {
-			log.Debug("did not get Answered state for call\n")
+			Log.Debug("did not get Answered state for call\n")
 
 			return *res
 		}
@@ -196,7 +196,7 @@ func (callobj *CallObj) GetCallState() CallState {
 
 func (callobj *CallObj) WaitFor(want CallState) bool {
 	if ret := callobj.call.WaitCallStateInternal(callobj.Calling.Ctx, want); !ret {
-		log.Errorf("did not get %s state for call \n", want.String())
+		Log.Error("did not get %s state for call\n", want.String())
 		return false
 	}
 
@@ -205,7 +205,7 @@ func (callobj *CallObj) WaitFor(want CallState) bool {
 
 func (callobj *CallObj) WaitForRinging() bool {
 	if ret := callobj.call.WaitCallStateInternal(callobj.Calling.Ctx, Ringing); !ret {
-		log.Errorf("did not get Ringing state for call \n")
+		Log.Error("did not get Ringing state for call\n")
 		return false
 	}
 
@@ -214,7 +214,7 @@ func (callobj *CallObj) WaitForRinging() bool {
 
 func (callobj *CallObj) WaitForAnswered() bool {
 	if ret := callobj.call.WaitCallStateInternal(callobj.Calling.Ctx, Answered); !ret {
-		log.Errorf("did not get Answered state for call \n")
+		Log.Error("did not get Answered state for call\n")
 		return false
 	}
 
@@ -223,7 +223,7 @@ func (callobj *CallObj) WaitForAnswered() bool {
 
 func (callobj *CallObj) WaitForEnding() bool {
 	if ret := callobj.call.WaitCallStateInternal(callobj.Calling.Ctx, Ending); !ret {
-		log.Errorf("did not get Ending state for call \n")
+		Log.Error("did not get Ending state for call\n")
 		return false
 	}
 
@@ -232,7 +232,7 @@ func (callobj *CallObj) WaitForEnding() bool {
 
 func (callobj *CallObj) WaitForEnded() bool {
 	if ret := callobj.call.WaitCallStateInternal(callobj.Calling.Ctx, Ended); !ret {
-		log.Errorf("did not get Ended state for call \n")
+		Log.Error("did not get Ended state for call\n")
 		return false
 	}
 
@@ -271,7 +271,8 @@ func (calling *Calling) Dial(c *CallObj) ResultDial {
 	}
 
 	if err := calling.Relay.RelayPhoneDial(calling.Ctx, c.call, c.call.From, c.call.To, DefaultRingTimeout); err != nil {
-		log.Errorf("fields From or To not set for call\n")
+		Log.Error("fields From or To not set for call\n")
+
 		return *res
 	}
 

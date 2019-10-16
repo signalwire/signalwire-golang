@@ -7,7 +7,6 @@ import (
 	"time"
 
 	gomock "github.com/golang/mock/gomock"
-	"github.com/sirupsen/logrus"
 	assert "github.com/stretchr/testify/assert"
 )
 
@@ -15,7 +14,6 @@ func TestRelay(t *testing.T) {
 	t.Run(
 		"RelayPhoneDial",
 		func(t *testing.T) {
-			Logger = logrus.New()
 			relay := new(RelaySession)
 
 			mockCtrl := gomock.NewController(t)
@@ -62,7 +60,6 @@ func TestRelay(t *testing.T) {
 	t.Run(
 		"RelayPhoneConnect",
 		func(t *testing.T) {
-			Logger = logrus.New()
 			relay := new(RelaySession)
 
 			mockCtrl := gomock.NewController(t)

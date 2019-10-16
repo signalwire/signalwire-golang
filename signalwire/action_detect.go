@@ -239,7 +239,7 @@ func (callobj *CallObj) callbacksRunDetectMachine(_ context.Context, ctrlID stri
 
 			res.RUnlock()
 
-			log.Debugf("Got detectevent %s. ctrlID: %s\n", detectevent.String(), ctrlID)
+			Log.Debug("Got detectevent %s. ctrlID: %s\n", detectevent.String(), ctrlID)
 
 			switch detectevent {
 			case DetectMachineFinished:
@@ -250,7 +250,7 @@ func (callobj *CallObj) callbacksRunDetectMachine(_ context.Context, ctrlID stri
 
 				res.Unlock()
 
-				log.Debugf("Detect finished. ctrlID: %s\n", ctrlID)
+				Log.Debug("Detect finished. ctrlID: %s\n", ctrlID)
 
 				if callobj.OnDetectFinished != nil {
 					callobj.OnDetectFinished(res)
@@ -281,7 +281,8 @@ func (callobj *CallObj) callbacksRunDetectMachine(_ context.Context, ctrlID stri
 		}
 
 		if out {
-			log.Debugf("OUT\n")
+			Log.Debug("OUT\n")
+
 			break
 		}
 	}
@@ -305,7 +306,7 @@ func (callobj *CallObj) callbacksRunDetectFax(_ context.Context, ctrlID string, 
 
 			res.RUnlock()
 
-			log.Debugf("Got detectevent %s. ctrlID: %s\n", detectevent.String(), ctrlID)
+			Log.Debug("Got detectevent %s. ctrlID: %s\n", detectevent.String(), ctrlID)
 
 			switch detectevent {
 			case DetectFaxFinished:
@@ -316,7 +317,7 @@ func (callobj *CallObj) callbacksRunDetectFax(_ context.Context, ctrlID string, 
 
 				res.Unlock()
 
-				log.Debugf("Detect finished. ctrlID: %s\n", ctrlID)
+				Log.Debug("Detect finished. ctrlID: %s\n", ctrlID)
 
 				if callobj.OnDetectFinished != nil {
 					callobj.OnDetectFinished(res)
@@ -363,7 +364,7 @@ func (callobj *CallObj) callbacksRunDetectDigit(_ context.Context, ctrlID string
 
 			res.RUnlock()
 
-			log.Debugf("Got detectevent %s. ctrlID: %s\n", detectevent.String(), ctrlID)
+			Log.Debug("Got detectevent %s. ctrlID: %s\n", detectevent.String(), ctrlID)
 
 			switch detectevent {
 			case DetectDigitFinished:
@@ -374,7 +375,7 @@ func (callobj *CallObj) callbacksRunDetectDigit(_ context.Context, ctrlID string
 
 				res.Unlock()
 
-				log.Debugf("Detect finished. ctrlID: %s\n", ctrlID)
+				Log.Debug("Detect finished. ctrlID: %s\n", ctrlID)
 
 				if callobj.OnDetectFinished != nil {
 					callobj.OnDetectFinished(res)
@@ -568,7 +569,7 @@ func detectInternalStop(v interface{}) error {
 
 		if len(m.ControlID) == 0 {
 			m.RUnlock()
-			log.Errorf("no controlID")
+			Log.Error("no controlID\n")
 
 			return errors.New("no controlID")
 		}
@@ -592,9 +593,11 @@ func detectInternalStop(v interface{}) error {
 		}
 
 		d.RLock()
+
 		if len(d.ControlID) == 0 {
 			d.RUnlock()
-			log.Errorf("no controlID")
+
+			Log.Error("no controlID\n")
 
 			return errors.New("no controlID")
 		}
@@ -618,9 +621,11 @@ func detectInternalStop(v interface{}) error {
 		}
 
 		f.RLock()
+
 		if len(f.ControlID) == 0 {
 			f.RUnlock()
-			log.Errorf("no controlID")
+
+			Log.Error("no controlID\n")
 
 			return errors.New("no controlID")
 		}

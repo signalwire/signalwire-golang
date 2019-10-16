@@ -118,7 +118,7 @@ func (callobj *CallObj) callbacksRunRecord(_ context.Context, ctrlID string, res
 
 				res.Unlock()
 
-				log.Debugf("Record finished. ctrlID: %s\n", ctrlID)
+				Log.Debug("Record finished. ctrlID: %s\n", ctrlID)
 
 				callobj.call.RemoveAction(ctrlID)
 
@@ -134,13 +134,13 @@ func (callobj *CallObj) callbacksRunRecord(_ context.Context, ctrlID string, res
 
 				res.Unlock()
 
-				log.Debugf("Recording. ctrlID: %s\n", ctrlID)
+				Log.Debug("Recording. ctrlID: %s\n", ctrlID)
 
 				if callobj.OnRecordRecording != nil {
 					callobj.OnRecordRecording(res)
 				}
 			case RecordNoInput:
-				log.Debugf("No input for recording. ctrlID: %s\n", ctrlID)
+				Log.Debug("No input for recording. ctrlID: %s\n", ctrlID)
 				res.Lock()
 
 				res.Completed = true
@@ -160,7 +160,7 @@ func (callobj *CallObj) callbacksRunRecord(_ context.Context, ctrlID string, res
 
 				res.Unlock()
 
-				log.Debugf("Recording paused. ctrlID: %s\n", ctrlID)
+				Log.Debug("Recording paused. ctrlID: %s\n", ctrlID)
 
 				out = true
 
@@ -173,7 +173,7 @@ func (callobj *CallObj) callbacksRunRecord(_ context.Context, ctrlID string, res
 				callobj.OnRecordStateChange(res)
 			}
 		case params := <-callobj.call.CallRecordEventChans[ctrlID]:
-			log.Debugf("got params for ctrlID : %s\n", ctrlID)
+			Log.Debug("got params for ctrlID : %s\n", ctrlID)
 
 			res.Lock()
 
@@ -262,7 +262,7 @@ func (recordaction *RecordAction) recordAudioAsyncStop() error {
 
 	if len(recordaction.ControlID) == 0 {
 		recordaction.RUnlock()
-		log.Errorf("no controlID")
+		Log.Error("no controlID\n")
 
 		return errors.New("no controlID")
 	}

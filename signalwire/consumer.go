@@ -3,12 +3,7 @@ package signalwire
 import (
 	"context"
 	"errors"
-	"fmt"
-	"path"
-	"runtime"
 	"sync"
-
-	"github.com/sirupsen/logrus"
 )
 
 var GlobalOverwriteHost string
@@ -25,6 +20,15 @@ type Consumer struct {
 	OnIncomingMessage    func(*Consumer)
 	OnMessageStateChange func(*Consumer)
 	OnTask               func(*Consumer)
+
+	Log LoggerWrapper
+}
+
+// NewConsumer TODO DESCRIPTION
+func NewConsumer() *Consumer {
+	return &Consumer{
+		Log: Log,
+	}
 }
 
 // IConsumer TODO DESCRIPTION
@@ -33,27 +37,6 @@ type IConsumer interface {
 	Teardown()
 	Stop()
 	Run()
-}
-
-var log *logrus.Logger
-
-func loginit() {
-	log = logrus.New()
-
-	log.SetFormatter(
-		&logrus.TextFormatter{
-			DisableColors: false,
-			FullTimestamp: true,
-			CallerPrettyfier: func(f *runtime.Frame) (string, string) {
-				filename := path.Base(f.File)
-				return fmt.Sprintf("%s()", f.Function), fmt.Sprintf("%s:%d", filename, f.Line)
-			},
-		},
-	)
-	log.SetReportCaller(true)
-	//	log.SetLevel(logrus.DebugLevel)
-
-	Logger = log
 }
 
 // Setup TODO DESCRIPTION
@@ -83,8 +66,6 @@ func (consumer *Consumer) Run() error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	loginit()
-
 	var (
 		err error
 		wg  sync.WaitGroup
@@ -103,12 +84,12 @@ func (consumer *Consumer) Run() error {
 	<-consumer.Client.Operational
 
 	if err != nil {
-		log.Debugf("cannot setup Blade: %v", err)
+		Log.Debug("cannot setup Blade: %v\n", err)
 
 		return errors.New("cannot setup Blade")
 	}
 
-	log.Debugf("Blade Ready...\n")
+	Log.Debug("Blade Ready...\n")
 
 	consumer.Client.SetupInbound()
 
@@ -121,7 +102,7 @@ func (consumer *Consumer) Run() error {
 			for {
 				call, ierr := consumer.Client.I.WaitInbound()
 				if ierr != nil {
-					log.Errorf("Error processing incoming call: %v\n", ierr)
+					Log.Error("Error processing incoming call: %v\n", ierr)
 				} else {
 					var I ICallObj = CallObjNew()
 
@@ -132,12 +113,13 @@ func (consumer *Consumer) Run() error {
 				}
 			}
 		}()
-		log.Debugf("OnIncomingCall CB enabled\n")
+
+		Log.Debug("OnIncomingCall CB enabled\n")
 	}
 
 	wg.Wait()
 
-	log.Debug("consumer()/Run() stopped.\n")
+	Log.Debug("consumer()/Run() stopped.\n")
 
 	return err
 }

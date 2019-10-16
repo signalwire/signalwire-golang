@@ -72,7 +72,7 @@ func (*EventCalling) callConnectStateFromStr(s string) (CallConnectState, error)
 		return state, errors.New("invalid CallConnectState")
 	}
 
-	Logger.Debugf("state [%s] [%s]\n", s, state.String())
+	Log.Debug("state [%s] [%s]\n", s, state.String())
 
 	return state, nil
 }
@@ -95,7 +95,7 @@ func (*EventCalling) callStateFromStr(s string) (CallState, error) {
 		return state, errors.New("invalid CallState")
 	}
 
-	Logger.Debugf("callstate [%s] [%s]\n", s, state.String())
+	Log.Debug("callstate [%s] [%s]\n", s, state.String())
 
 	return state, nil
 }
@@ -117,7 +117,7 @@ func (*EventCalling) callPlayStateFromStr(s string) (PlayState, error) {
 		return state, errors.New("invalid PlayState")
 	}
 
-	Logger.Debugf("state [%s] [%s]\n", s, state.String())
+	Log.Debug("state [%s] [%s]\n", s, state.String())
 
 	return state, nil
 }
@@ -137,7 +137,7 @@ func (*EventCalling) callRecordStateFromStr(s string) (RecordState, error) {
 		return state, errors.New("invalid RecordState")
 	}
 
-	Logger.Debugf("state [%s] [%s]\n", s, state.String())
+	Log.Debug("state [%s] [%s]\n", s, state.String())
 
 	return state, nil
 }
@@ -250,13 +250,13 @@ func (*EventCalling) getBroadcastParams(_ context.Context, in, out interface{}) 
 
 	jsonData, err = json.Marshal(in)
 	if err != nil {
-		Logger.Errorf("error marshaling Params\n")
+		Log.Error("error marshaling Params\n")
 
 		return err
 	}
 
 	if err = json.Unmarshal(jsonData, out); err != nil {
-		Logger.Errorf("error unmarshaling\n")
+		Log.Error("error unmarshaling\n")
 
 		return err
 	}
@@ -271,10 +271,10 @@ func (calling *EventCalling) onCallingEventConnect(ctx context.Context, broadcas
 		return err
 	}
 
-	Logger.Debugf("broadcast.Params.Params.CallID: %v\n", params.CallID)
-	Logger.Debugf("broadcast.Params.Params.NodeID: %v\n", params.NodeID)
-	Logger.Debugf("broadcast.Params.Params.TagID: %v\n", params.TagID)
-	Logger.Debugf("params.ConnectState: %v\n", params.ConnectState)
+	Log.Debug("broadcast.Params.Params.CallID: %v\n", params.CallID)
+	Log.Debug("broadcast.Params.Params.NodeID: %v\n", params.NodeID)
+	Log.Debug("broadcast.Params.Params.TagID: %v\n", params.TagID)
+	Log.Debug("params.CallState: %v\n", params.ConnectState)
 
 	state, err := calling.I.callConnectStateFromStr(params.ConnectState)
 	if err != nil {
@@ -348,7 +348,7 @@ func (calling *EventCalling) onCallingEventReceive(ctx context.Context, broadcas
 }
 
 func (calling *EventCalling) onCallingEventPlay(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
-	Logger.Debugf("ctx: %p calling %p %v\n", ctx, calling, broadcast)
+	Log.Debug("ctx: %p calling %p %v\n", ctx, calling, broadcast)
 
 	var params ParamsEventCallingCallPlay
 
@@ -370,12 +370,12 @@ func (calling *EventCalling) onCallingEventPlay(ctx context.Context, broadcast N
 }
 
 func (calling *EventCalling) onCallingEventCollect(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
-	Logger.Debugf("ctx: %p calling %p %v\n", ctx, calling, broadcast)
+	Log.Debug("ctx: %p calling %p %v\n", ctx, calling, broadcast)
 	return nil
 }
 
 func (calling *EventCalling) onCallingEventRecord(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
-	Logger.Debugf("ctx: %p calling %p %v\n", ctx, calling, broadcast)
+	Log.Debug("ctx: %p calling %p %v\n", ctx, calling, broadcast)
 
 	var params ParamsEventCallingCallRecord
 
@@ -401,12 +401,12 @@ func (calling *EventCalling) onCallingEventRecord(ctx context.Context, broadcast
 }
 
 func (calling *EventCalling) onCallingEventTap(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
-	Logger.Debugf("ctx: %p calling %p %v\n", ctx, calling, broadcast)
+	Log.Debug("ctx: %p calling %p %v\n", ctx, calling, broadcast)
 	return nil
 }
 
 func (calling *EventCalling) onCallingEventDetect(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
-	Logger.Debugf("ctx: %p calling %p %v\n", ctx, calling, broadcast)
+	Log.Debug("ctx: %p calling %p %v\n", ctx, calling, broadcast)
 
 	var params ParamsEventCallingCallDetect
 
@@ -428,7 +428,7 @@ func (calling *EventCalling) onCallingEventDetect(ctx context.Context, broadcast
 }
 
 func (calling *EventCalling) onCallingEventFax(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
-	Logger.Debugf("ctx: %p calling %p %v\n", ctx, calling, broadcast)
+	Log.Debug("ctx: %p calling %p %v\n", ctx, calling, broadcast)
 
 	var params ParamsEventCallingFax
 
@@ -454,7 +454,7 @@ func (calling *EventCalling) onCallingEventFax(ctx context.Context, broadcast No
 }
 
 func (calling *EventCalling) onCallingEventSendDigits(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
-	Logger.Debugf("ctx: %p calling %p %v\n", ctx, calling, broadcast)
+	Log.Debug("ctx: %p calling %p %v\n", ctx, calling, broadcast)
 	return nil
 }
 
@@ -504,16 +504,17 @@ func (calling *EventCalling) callingNotif(ctx context.Context, broadcast NotifPa
 				return err
 			}
 		default:
-			Logger.Debugf("got event_type %s\n", broadcast.Params.EventType)
+			Log.Debug("got event_type %s\n", broadcast.Params.EventType)
 		}
 	case "relay":
-		Logger.Debugf("got RELAY event\n")
+		Log.Debug("got RELAY event\n")
 	default:
-		Logger.Debugf("got event %s . unsupported\n", broadcast.Event)
+		Log.Debug("got event %s . unsupported\n", broadcast.Event)
+
 		return fmt.Errorf("unsupported event")
 	}
 
-	Logger.Debugf("broadcast: %v\n", broadcast)
+	Log.Debug("broadcast: %v\n", broadcast)
 
 	return nil
 }
@@ -524,23 +525,23 @@ func (calling *EventCalling) getCall(ctx context.Context, tag, callID string) (*
 		err  error
 	)
 
-	Logger.Debugf("tag [%s] callid [%s] [%p]\n", tag, callID, calling)
+	Log.Debug("tag [%s] callid [%s] [%p]\n", tag, callID, calling)
 
 	/* some events don't have the tag */
 	if len(callID) > 0 && len(tag) > 0 {
 		call, err = calling.Cache.GetCallCache(tag)
 		if err != nil {
-			Logger.Debugf("GetCallCache failed: %v", err)
+			Log.Debug("GetCallCache failed: %v", err)
 		}
 
 		if call != nil {
 			// remove call object from the mapping and read with the call_id as key
 			if err = calling.Cache.DeleteCallCache(tag); err != nil {
-				Logger.Debugf("DeleteCallCache failed: %v", err)
+				Log.Debug("DeleteCallCache failed: %v", err)
 			}
 
 			if err = calling.Cache.SetCallCache(callID, call); err != nil {
-				Logger.Debugf("SetCallCache failed: %v", err)
+				Log.Debug("SetCallCache failed: %v", err)
 			}
 		}
 	}
@@ -550,27 +551,27 @@ func (calling *EventCalling) getCall(ctx context.Context, tag, callID string) (*
 		// new inbound call
 		call = new(CallSession)
 		if err = calling.Cache.SetCallCache(callID, call); err != nil {
-			Logger.Debugf("SetCallCache failed: %v", err)
+			Log.Debug("SetCallCache failed: %v\n", err)
 		}
 
 		call.CallInit(ctx)
 
-		Logger.Debugf("new inbound call: [%p]\n", call)
+		Log.Debug("new inbound call: [%p]\n", call)
 	}
 
 	return call, err
 }
 
 func (calling *EventCalling) dispatchStateNotif(ctx context.Context, callParams CallParams) error {
-	Logger.Debugf("tag [%s] callstate [%s] blade [%p] direction: %s\n", callParams.TagID, callParams.CallState.String(), calling.blade, callParams.Direction)
-	Logger.Debugf("direction : %v\n", callParams.Direction)
+	Log.Debug("tag [%s] callstate [%s] blade [%p] direction: %s\n", callParams.TagID, callParams.CallState.String(), calling.blade, callParams.Direction)
+	Log.Debug("direction : %v\n", callParams.Direction)
 
 	call, _ := calling.I.getCall(ctx, callParams.TagID, callParams.CallID)
 	if call == nil {
 		return fmt.Errorf("error, nil CallSession")
 	}
 
-	Logger.Debugf("call [%p]\n", call)
+	Log.Debug("call [%p]\n", call)
 
 	call.SetParams(callParams.CallID, callParams.NodeID, callParams.Direction, callParams.ToNumber, callParams.FromNumber)
 
@@ -584,23 +585,23 @@ func (calling *EventCalling) dispatchStateNotif(ctx context.Context, callParams 
 
 	select {
 	case call.CallStateChan <- callParams.CallState:
-		Logger.Debugf("sent callstate\n")
+		Log.Debug("sent callstate\n")
 	default:
-		Logger.Debugf("no callstate sent\n")
+		Log.Debug("no callstate sent\n")
 	}
 
 	return nil
 }
 
 func (calling *EventCalling) dispatchConnectStateNotif(ctx context.Context, callParams CallParams, peer PeerDeviceStruct, ccstate CallConnectState) error {
-	Logger.Debugf("tag [%s] [%s] [%p]\n", callParams.TagID, ccstate.String(), calling.blade)
+	Log.Debug("tag [%s] [%s] [%p]\n", callParams.TagID, ccstate.String(), calling.blade)
 
 	call, _ := calling.I.getCall(ctx, callParams.TagID, callParams.CallID)
 	if call == nil {
 		return fmt.Errorf("error, nil CallSession")
 	}
 
-	Logger.Debugf("call [%p]\n", call)
+	Log.Debug("call [%p]\n", call)
 
 	call.UpdateCallConnectState(ccstate)
 
@@ -610,43 +611,43 @@ func (calling *EventCalling) dispatchConnectStateNotif(ctx context.Context, call
 
 	select {
 	case call.CallConnectStateChan <- ccstate:
-		Logger.Debugf("sent connstate\n")
+		Log.Debug("sent connstate\n")
 	default:
-		Logger.Debugf("no connstate sent\n")
+		Log.Debug("no connstate sent\n")
 	}
 
 	return nil
 }
 
 func (calling *EventCalling) dispatchPlayState(ctx context.Context, callID, ctrlID string, playState PlayState) error {
-	Logger.Debugf("callid [%s] playstate [%s] blade [%p] ctrlID: %s\n", callID, playState, calling.blade, ctrlID)
+	Log.Debug("callid [%s] playstate [%s] blade [%p] ctrlID: %s\n", callID, playState, calling.blade, ctrlID)
 
 	call, _ := calling.I.getCall(ctx, "", callID)
 	if call == nil {
 		return fmt.Errorf("error, nil CallSession")
 	}
 
-	Logger.Debugf("call [%p]\n", call)
+	Log.Debug("call [%p]\n", call)
 
 	select {
 	case call.CallPlayChans[ctrlID] <- playState:
-		Logger.Debugf("sent playstate\n")
+		Log.Debug("sent playstate\n")
 	default:
-		Logger.Debugf("no playstate sent\n")
+		Log.Debug("no playstate sent\n")
 	}
 
 	return nil
 }
 
 func (calling *EventCalling) dispatchRecordState(ctx context.Context, callID, ctrlID string, recordState RecordState) error {
-	Logger.Debugf("callid [%s] recordstate [%s] blade [%p] ctrlID: %s\n", callID, recordState, calling.blade, ctrlID)
+	Log.Debug("callid [%s] recordstate [%s] blade [%p] ctrlID: %s\n", callID, recordState, calling.blade, ctrlID)
 
 	call, _ := calling.I.getCall(ctx, "", callID)
 	if call == nil {
 		return fmt.Errorf("error, nil CallSession")
 	}
 
-	Logger.Debugf("call [%p]\n", call)
+	Log.Debug("call [%p]\n", call)
 
 	/* // possibly redundant, we have a map of Recording channels with key as ctrlID
 	if call.GetActionState(ctrlID) == "" {
@@ -655,51 +656,51 @@ func (calling *EventCalling) dispatchRecordState(ctx context.Context, callID, ct
 	<-call.CallRecordReadyChans[ctrlID]
 	select {
 	case call.CallRecordChans[ctrlID] <- recordState:
-		Logger.Debugf("sent recordstate\n")
+		Log.Debug("sent recordstate\n")
 	default:
-		Logger.Debugf("no recordstate sent\n")
+		Log.Debug("no recordstate sent\n")
 	}
 
 	return nil
 }
 
 func (calling *EventCalling) dispatchRecordEventParams(ctx context.Context, callID, ctrlID string, params ParamsEventCallingCallRecord) error {
-	Logger.Debugf("callid [%s] blade [%p] ctrlID: %s\n", callID, calling.blade, ctrlID)
+	Log.Debug("callid [%s] blade [%p] ctrlID: %s\n", callID, calling.blade, ctrlID)
 
 	call, _ := calling.I.getCall(ctx, "", callID)
 	if call == nil {
 		return fmt.Errorf("error, nil CallSession")
 	}
 
-	Logger.Debugf("call [%p]\n", call)
+	Log.Debug("call [%p]\n", call)
 
 	select {
 	case call.CallRecordEventChans[ctrlID] <- params:
-		Logger.Debugf("sent params (event)\n")
+		Log.Debug("sent params (event)\n")
 	default:
-		Logger.Debugf("no params (event) sent\n")
+		Log.Debug("no params (event) sent\n")
 	}
 
 	return nil
 }
 
 func (calling *EventCalling) dispatchDetect(ctx context.Context, callID, ctrlID string, v interface{}) error {
-	Logger.Debugf("callid [%s] detectevent [%v] blade [%p] ctrlID: %s\n", callID, v, calling.blade, ctrlID)
+	Log.Debug("callid [%s] detectevent [%v] blade [%p] ctrlID: %s\n", callID, v, calling.blade, ctrlID)
 
 	call, _ := calling.I.getCall(ctx, "", callID)
 	if call == nil {
 		return fmt.Errorf("error, nil CallSession")
 	}
 
-	Logger.Debugf("call [%p]\n", call)
+	Log.Debug("call [%p]\n", call)
 
 	detectEventMachine, ok1 := v.(DetectMachineEvent)
 	if ok1 {
 		select {
 		case call.CallDetectMachineChans[ctrlID] <- detectEventMachine:
-			Logger.Debugf("sent detectevent Machine\n")
+			Log.Debug("sent detectevent Machine\n")
 		default:
-			Logger.Debugf("no detectevent sent - Machine\n")
+			Log.Debug("no detectevent sent - Machine\n")
 		}
 
 		return nil
@@ -709,9 +710,9 @@ func (calling *EventCalling) dispatchDetect(ctx context.Context, callID, ctrlID 
 	if ok2 {
 		select {
 		case call.CallDetectDigitChans[ctrlID] <- detectEventDigit:
-			Logger.Debugf("sent detectevent Digit\n")
+			Log.Debug("sent detectevent Digit\n")
 		default:
-			Logger.Debugf("no detectevent sent - Digit\n")
+			Log.Debug("no detectevent sent - Digit\n")
 		}
 
 		return nil
@@ -721,76 +722,76 @@ func (calling *EventCalling) dispatchDetect(ctx context.Context, callID, ctrlID 
 	if ok3 {
 		select {
 		case call.CallDetectFaxChans[ctrlID] <- detectEventFax:
-			Logger.Debugf("sent detectevent Fax\n")
+			Log.Debug("sent detectevent Fax\n")
 		default:
-			Logger.Debugf("no detectevent sent - Fax\n")
+			Log.Debug("no detectevent sent - Fax\n")
 		}
 
 		return nil
 	}
 
-	Logger.Errorf("type assertion failed (detector event)\n")
+	Log.Error("type assertion failed (detector event)\n")
 
 	return nil
 }
 
 // todo : Event in the action
 func (calling *EventCalling) dispatchDetectEventParams(ctx context.Context, callID, ctrlID string, params ParamsEventCallingCallDetect) error {
-	Logger.Debugf("callid [%s] blade [%p] ctrlID: %s\n", callID, calling.blade, ctrlID)
+	Log.Debug("callid [%s] blade [%p] ctrlID: %s\n", callID, calling.blade, ctrlID)
 
 	call, _ := calling.I.getCall(ctx, "", callID)
 	if call == nil {
 		return fmt.Errorf("error, nil CallSession")
 	}
 
-	Logger.Debugf("call [%p]\n", call)
+	Log.Debug("call [%p]\n", call)
 
 	select {
 	case call.CallDetectEventChans[ctrlID] <- params:
-		Logger.Debugf("sent params (event)\n")
+		Log.Debug("sent params (event)\n")
 	default:
-		Logger.Debugf("no params (event) sent\n")
+		Log.Debug("no params (event) sent\n")
 	}
 
 	return nil
 }
 
 func (calling *EventCalling) dispatchFax(ctx context.Context, callID, ctrlID string, faxType FaxEventType) error {
-	Logger.Debugf("callid [%s] faxtype [%s] blade [%p] ctrlID: %s\n", callID, faxType.String(), calling.blade, ctrlID)
+	Log.Debug("callid [%s] faxtype [%s] blade [%p] ctrlID: %s\n", callID, faxType.String(), calling.blade, ctrlID)
 
 	call, _ := calling.I.getCall(ctx, "", callID)
 	if call == nil {
 		return fmt.Errorf("error, nil CallSession")
 	}
 
-	Logger.Debugf("call [%p]\n", call)
+	Log.Debug("call [%p]\n", call)
 
 	<-call.CallFaxReadyChan
 	select {
 	case call.CallFaxChan <- faxType:
-		Logger.Debugf("sent faxType\n")
+		Log.Debug("sent faxType\n")
 	default:
-		Logger.Debugf("no faxType sent\n")
+		Log.Debug("no faxType sent\n")
 	}
 
 	return nil
 }
 
 func (calling *EventCalling) dispatchFaxEventParams(ctx context.Context, callID, ctrlID string, params ParamsEventCallingFax) error {
-	Logger.Debugf("callid [%s] blade [%p] ctrlID: %s\n", callID, calling.blade, ctrlID)
+	Log.Debug("callid [%s] blade [%p] ctrlID: %s\n", callID, calling.blade, ctrlID)
 
 	call, _ := calling.I.getCall(ctx, "", callID)
 	if call == nil {
 		return fmt.Errorf("error, nil CallSession")
 	}
 
-	Logger.Debugf("call [%p]\n", call)
+	Log.Debug("call [%p]\n", call)
 
 	select {
 	case call.CallFaxEventChan <- params.Fax:
-		Logger.Debugf("sent params (event)\n")
+		Log.Debug("sent params (event)\n")
 	default:
-		Logger.Debugf("no params (event) sent\n")
+		Log.Debug("no params (event) sent\n")
 	}
 
 	return nil
