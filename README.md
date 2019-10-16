@@ -1,7 +1,7 @@
 # SignalWire Go Lang
 
 
-[![Build Status](https://ci.signalwire.com/api/badges/signalwire/signalwire-golang/status.svg)](https://ci.signalwire.com/signalwire/signalwire-go) [![Gem Version](https://badge.fury.io/rb/signalwire.svg)](https://badge.fury.io/rb/signalwire)
+[![Build Status](https://ci.signalwire.com/api/badges/signalwire/signalwire-golang/status.svg)](https://ci.signalwire.com/signalwire/signalwire-go)
 
 The Relay SDK for Go enables Go Lang developers to connect and use SignalWire's Relay APIs within their own Go code. Our Relay SDK allows developers to build or add robust and innovative communication services to their applications.
 
