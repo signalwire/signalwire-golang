@@ -1,36 +1,25 @@
 package signalwire
 
+// Available log levels
+const (
+	TraceLevelLog int = iota + 1
+	DebugLevelLog
+	InfoLevelLog
+	WarnLevelLog
+	ErrorLevelLog
+	FatalLevelLog
+	PanicLevelLog
+)
+
 // LoggerWrapper defines custom logger interface
 type LoggerWrapper interface {
-	Debug(args ...interface{})
-	Debugf(format string, args ...interface{})
-	Debugln(args ...interface{})
+	Trace(format string, args ...interface{})
+	Debug(format string, args ...interface{})
+	Info(format string, args ...interface{})
+	Warn(format string, args ...interface{})
+	Error(format string, args ...interface{})
+	Fatal(format string, args ...interface{})
+	Panic(format string, args ...interface{})
 
-	Error(args ...interface{})
-	Errorf(format string, args ...interface{})
-	Errorln(args ...interface{})
-
-	Fatal(args ...interface{})
-	Fatalf(format string, args ...interface{})
-	Fatalln(args ...interface{})
-
-	Info(args ...interface{})
-	Infof(format string, args ...interface{})
-	Infoln(args ...interface{})
-
-	Panic(args ...interface{})
-	Panicf(format string, args ...interface{})
-	Panicln(args ...interface{})
-
-	Print(args ...interface{})
-	Printf(format string, args ...interface{})
-	Println(args ...interface{})
-
-	Trace(args ...interface{})
-	Tracef(format string, args ...interface{})
-	Traceln(args ...interface{})
-
-	Warn(args ...interface{})
-	Warnf(format string, args ...interface{})
-	Warnln(args ...interface{})
+	SetLevel(level int)
 }

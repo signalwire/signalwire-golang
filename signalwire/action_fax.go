@@ -146,7 +146,7 @@ func (callobj *CallObj) callbacksRunFax(_ context.Context, ctrlID string, res *F
 
 				res.Unlock()
 
-				log.Debugf("Fax finished. ctrlID: %s res [%p] Completed [%v] Successful [%v]\n", ctrlID, res, res.Completed, res.Result.Successful)
+				Log.Debug("Fax finished. ctrlID: %s res [%p] Completed [%v] Successful [%v]\n", ctrlID, res, res.Completed, res.Result.Successful)
 
 				if callobj.OnFaxFinished != nil {
 					callobj.OnFaxFinished(res)
@@ -158,13 +158,13 @@ func (callobj *CallObj) callbacksRunFax(_ context.Context, ctrlID string, res *F
 
 				res.Unlock()
 
-				log.Debugf("Page event. ctrlID: %s\n", ctrlID)
+				Log.Debug("Page event. ctrlID: %s\n", ctrlID)
 
 				if callobj.OnFaxPage != nil {
 					callobj.OnFaxPage(res)
 				}
 			case FaxError:
-				log.Debugf("Fax error. ctrlID: %s\n", ctrlID)
+				Log.Debug("Fax error. ctrlID: %s\n", ctrlID)
 
 				res.Lock()
 
@@ -177,10 +177,10 @@ func (callobj *CallObj) callbacksRunFax(_ context.Context, ctrlID string, res *F
 					callobj.OnFaxError(res)
 				}
 			default:
-				log.Errorf("Unknown state. ctrlID: %s\n", ctrlID)
+				Log.Debug("Unknown state. ctrlID: %s\n", ctrlID)
 			}
 		case fax := <-callobj.call.CallFaxEventChan:
-			log.Debugf("go params: %v\n", fax)
+			Log.Debug("go params: %v\n", fax)
 
 			switch fax.EventType {
 			case "page":

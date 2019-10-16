@@ -12,7 +12,6 @@ import (
 
 	. "github.com/golang/mock/gomock"
 	"github.com/gorilla/websocket"
-	"github.com/sirupsen/logrus"
 	jsonrpc2 "github.com/sourcegraph/jsonrpc2"
 	assert "github.com/stretchr/testify/assert"
 )
@@ -50,8 +49,6 @@ func TestBlade(t *testing.T) {
 	t.Run(
 		"BladeInit",
 		func(t *testing.T) {
-			Logger = logrus.New()
-
 			mockCtrl := NewController(t)
 			defer mockCtrl.Finish()
 			Imock := NewMockIBlade(mockCtrl)
@@ -98,8 +95,6 @@ func TestBlade(t *testing.T) {
 	t.Run(
 		"BladeSetup",
 		func(t *testing.T) {
-			Logger = logrus.New()
-
 			mockCtrl := NewController(t)
 			defer mockCtrl.Finish()
 			Imock := NewMockIBlade(mockCtrl)
@@ -148,8 +143,6 @@ func TestBlade(t *testing.T) {
 	t.Run(
 		"BladeSignalwireReceive",
 		func(t *testing.T) {
-			Logger = logrus.New()
-
 			mockCtrl := NewController(t)
 			defer mockCtrl.Finish()
 			Imock := NewMockIBlade(mockCtrl)
@@ -185,8 +178,6 @@ func TestBlade(t *testing.T) {
 	t.Run(
 		"handleBladeBroadcast",
 		func(t *testing.T) {
-			Logger = logrus.New()
-
 			mockCtrl := NewController(t)
 			defer mockCtrl.Finish()
 			Imock := NewMockIBlade(mockCtrl)

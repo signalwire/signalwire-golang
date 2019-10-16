@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/signalwire/signalwire-golang/signalwire"
-	log "github.com/sirupsen/logrus"
 )
 
 // App consts
@@ -43,17 +42,17 @@ func spinner(delay time.Duration) {
 
 // MyOnFaxFinished ran when Faxing Action finishes
 func MyOnFaxFinished(faxAction *signalwire.FaxAction) {
-	log.Printf("Faxing finished.\n")
+	signalwire.Log.Info("Faxing finished.\n")
 }
 
 // MyOnFaxPage ran when a document page is sent/received
 func MyOnFaxPage(faxAction *signalwire.FaxAction) {
-	log.Printf("Fax page event\n")
+	signalwire.Log.Info("Fax page event\n")
 }
 
-// MyOnFaxError
+// MyOnFaxError used for logging
 func MyOnFaxError(faxAction *signalwire.FaxAction) {
-	log.Printf("Faxing error.\n")
+	signalwire.Log.Info("Faxing error.\n")
 }
 
 // MyOnIncomingCall - gets executed when we receive an incoming call
@@ -61,7 +60,7 @@ func MyOnIncomingCall(consumer *signalwire.Consumer, call *signalwire.CallObj) {
 	resultAnswer := call.Answer()
 	if !resultAnswer.Successful {
 		if err := consumer.Stop(); err != nil {
-			log.Errorf("Error occurred while trying to stop Consumer")
+			signalwire.Log.Error("Error occurred while trying to stop Consumer\n")
 		}
 
 		return
@@ -75,17 +74,17 @@ func MyOnIncomingCall(consumer *signalwire.Consumer, call *signalwire.CallObj) {
 
 	faxResult, err := call.ReceiveFax()
 	if err != nil {
-		log.Errorf("Error occurred while trying to receive fax")
+		signalwire.Log.Error("Error occurred while trying to receive fax\n")
 	}
 
-	log.Infof("Download Document from %s\n Pages #%d\n", faxResult.Document, faxResult.Pages)
+	signalwire.Log.Info("Download Document from %s\n Pages #%d\n", faxResult.Document, faxResult.Pages)
 
 	if err := call.Hangup(); err != nil {
-		log.Errorf("Error occurred while trying to hangup call. Err: %v\n", err)
+		signalwire.Log.Error("Error occurred while trying to hangup call. Err: %v\n", err)
 	}
 
 	if err := consumer.Stop(); err != nil {
-		log.Errorf("Error occurred while trying to stop Consumer. Err: %v\n", err)
+		signalwire.Log.Error("Error occurred while trying to stop Consumer. Err: %v\n", err)
 	}
 }
 
@@ -111,7 +110,7 @@ func main() {
 	}
 
 	if verbose {
-		log.SetLevel(log.DebugLevel)
+		signalwire.Log.SetLevel(signalwire.DebugLevelLog)
 	}
 
 	go func() {
@@ -125,7 +124,7 @@ func main() {
 			case syscall.SIGTERM:
 				fallthrough
 			case syscall.SIGINT:
-				log.Printf("Exit")
+				signalwire.Log.Info("Exit")
 				os.Exit(0)
 			}
 		}
@@ -137,9 +136,9 @@ func main() {
 	// register callback
 	consumer.OnIncomingCall = MyOnIncomingCall
 
-	log.Info("Wait incoming call..")
+	signalwire.Log.Info("Wait incoming call..")
 	// start
 	if err := consumer.Run(); err != nil {
-		log.Errorf("Error occurred while starting Signalwire Consumer")
+		signalwire.Log.Error("Error occurred while starting Signalwire Consumer\n")
 	}
 }

@@ -65,7 +65,8 @@ type IPlayAction interface {
 
 func (callobj *CallObj) checkPlayFinished(ctx context.Context, ctrlID string, res *PlayResult) (*PlayResult, error) {
 	if ret := callobj.call.WaitPlayState(ctx, ctrlID, PlayPlaying); !ret {
-		log.Debugf("Playing did not start successfully. CtrlID: %s\n", ctrlID)
+		Log.Debug("Playing did not start successfully. CtrlID: %s\n", ctrlID)
+
 		return res, nil
 	}
 
@@ -219,7 +220,7 @@ func (callobj *CallObj) callbacksRunPlay(ctrlID string, res *PlayAction) {
 
 				res.Unlock()
 
-				log.Debugf("Play finished. ctrlID: %s res [%p] Completed [%v] Successful [%v]\n", ctrlID, res, res.Completed, res.Result.Successful)
+				Log.Debug("Play finished. ctrlID: %s res [%p] Completed [%v] Successful [%v]\n", ctrlID, res, res.Completed, res.Result.Successful)
 
 				if callobj.OnPlayFinished != nil {
 					callobj.OnPlayFinished(res)
@@ -233,13 +234,13 @@ func (callobj *CallObj) callbacksRunPlay(ctrlID string, res *PlayAction) {
 
 				res.Unlock()
 
-				log.Debugf("Playing. ctrlID: %s\n", ctrlID)
+				Log.Debug("Playing. ctrlID: %s\n", ctrlID)
 
 				if callobj.OnPlayPlaying != nil {
 					callobj.OnPlayPlaying(res)
 				}
 			case PlayError:
-				log.Debugf("Play error. ctrlID: %s\n", ctrlID)
+				Log.Debug("Play error. ctrlID: %s\n", ctrlID)
 
 				res.Lock()
 
@@ -258,13 +259,13 @@ func (callobj *CallObj) callbacksRunPlay(ctrlID string, res *PlayAction) {
 
 				res.Unlock()
 
-				log.Debugf("Play paused. ctrlID: %s\n", ctrlID)
+				Log.Debug("Play paused. ctrlID: %s\n", ctrlID)
 
 				if callobj.OnPlayPaused != nil {
 					callobj.OnPlayPaused(res)
 				}
 			default:
-				log.Debugf("Unknown state. ctrlID: %s\n", ctrlID)
+				Log.Debug("Unknown state. ctrlID: %s\n", ctrlID)
 			}
 
 			if prevstate != playstate && callobj.OnPlayStateChange != nil {

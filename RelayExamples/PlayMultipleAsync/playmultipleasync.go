@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/signalwire/signalwire-golang/signalwire"
-	log "github.com/sirupsen/logrus"
 )
 
 // App consts
@@ -44,20 +43,20 @@ func spinner(delay time.Duration) {
 // MyOnPlayFinished ran when Play Action finishes
 func MyOnPlayFinished(playAction *signalwire.PlayAction) {
 	if playAction.State == signalwire.PlayFinished {
-		log.Printf("Playing audio stopped.\n")
+		signalwire.Log.Info("Playing audio stopped.\n")
 	}
 }
 
 // MyOnPlayPlaying ran when Playing starts on the call
 func MyOnPlayPlaying(playAction *signalwire.PlayAction) {
 	if playAction.State == signalwire.PlayPlaying {
-		log.Printf("Playing audio\n")
+		signalwire.Log.Info("Playing audio\n")
 	}
 }
 
 // MyOnPlayStateChange ran when Play State changes, eg: Playing->Finished
 func MyOnPlayStateChange(playAction *signalwire.PlayAction) {
-	log.Printf("Playing State changed.\n")
+	signalwire.Log.Info("Playing State changed.\n")
 
 	switch playAction.State {
 	case signalwire.PlayPlaying:
@@ -69,17 +68,17 @@ func MyOnPlayStateChange(playAction *signalwire.PlayAction) {
 // MyOnRecordFinished ran when Record Action finishes
 func MyOnRecordFinished(recordAction *signalwire.RecordAction) {
 	if recordAction.State == signalwire.RecordFinished {
-		log.Printf("Recording audio stopped.\n")
+		signalwire.Log.Info("Recording audio stopped.\n")
 	}
 
-	log.Infof("Recording is at: %s\n", recordAction.Result.URL)
-	log.Infof("Recording Duration: %d\n", recordAction.Result.Duration)
-	log.Infof("Recording File Size: %d\n", recordAction.Result.Size)
+	signalwire.Log.Info("Recording is at: %s\n", recordAction.Result.URL)
+	signalwire.Log.Info("Recording Duration: %d\n", recordAction.Result.Duration)
+	signalwire.Log.Info("Recording File Size: %d\n", recordAction.Result.Size)
 }
 
 // MyReady - gets executed when Blade is successfully setup (after signalwire.receive)
 func MyReady(consumer *signalwire.Consumer) {
-	log.Printf("calling out...\n")
+	signalwire.Log.Info("calling out...\n")
 
 	fromNumber := "+132XXXXXXXX"
 
@@ -92,7 +91,7 @@ func MyReady(consumer *signalwire.Consumer) {
 	resultDial := consumer.Client.Calling.DialPhone(fromNumber, toNumber)
 	if !resultDial.Successful {
 		if err := consumer.Stop(); err != nil {
-			log.Errorf("Error occurred while trying to stop Consumer")
+			signalwire.Log.Error("Error occurred while trying to stop Consumer\n")
 		}
 
 		return
@@ -116,65 +115,65 @@ func MyReady(consumer *signalwire.Consumer) {
 
 	_, err := resultDial.Call.RecordAudioAsync(&rec)
 	if err != nil {
-		log.Errorf("Error occurred while trying to record audio")
+		signalwire.Log.Error("Error occurred while trying to record audio\n")
 	}
 
 	PlayAction, err := resultDial.Call.PlayAudioAsync("https://www.phatdrumloops.com/audio/wav/space_funk1.wav")
 	if err != nil {
-		log.Errorf("Error occurred while trying to Play audio")
+		signalwire.Log.Error("Error occurred while trying to Play audio\n")
 	}
 
 	PlayAction2, err2 := resultDial.Call.PlayAudioAsync("https://www.phatdrumloops.com/audio/wav/smokinatt2.wav")
 	if err2 != nil {
-		log.Errorf("Error occurred while trying to Play audio")
+		signalwire.Log.Error("Error occurred while trying to Play audio\n")
 	}
 
 	_, err3 := resultDial.Call.PlayTTSAsync("Welcome to Signalwire !", "en-US", "female")
 	if err3 != nil {
-		log.Errorf("Error occurred while trying to Play audio")
+		signalwire.Log.Error("Error occurred while trying to Play audio\n")
 	}
 
 	go spinner(100 * time.Millisecond)
 	time.Sleep(2 * time.Second)
 
-	log.Infof("Stopping first Playing...\n")
+	signalwire.Log.Info("Stopping first Playing...\n")
 
 	if !PlayAction.Completed {
 		PlayAction.Stop()
 	}
 
-	log.Debugf("App - Play finished. ctrlID: %s res [%p] Completed [%v] Successful [%v]\n", PlayAction2.ControlID, PlayAction, PlayAction.Completed, PlayAction.Result.Successful)
+	signalwire.Log.Debug("App - Play finished. ctrlID: %s res [%p] Completed [%v] Successful [%v]\n", PlayAction2.ControlID, PlayAction, PlayAction.Completed, PlayAction.Result.Successful)
 
 	for ok := true; ok; ok = !(PlayAction.State == signalwire.PlayFinished) {
-		log.Infof("Completed 1: %v\n", PlayAction.GetCompleted())
+		signalwire.Log.Info("Completed 1: %v\n", PlayAction.GetCompleted())
 		time.Sleep(1 * time.Second)
 	}
 
-	log.Infof("...Done.\n")
+	signalwire.Log.Info("...Done.\n")
 
 	time.Sleep(2 * time.Second)
 
-	log.Infof("Stopping second Playing...\n")
+	signalwire.Log.Info("Stopping second Playing...\n")
 
 	if !PlayAction2.Completed {
 		PlayAction2.Stop()
 	}
 
-	log.Debugf("App2 - Play finished. ctrlID: %s res [%p] Completed [%v] Successful [%v]\n", PlayAction2.ControlID, PlayAction2, PlayAction2.Completed, PlayAction2.Result.Successful)
+	signalwire.Log.Debug("App2 - Play finished. ctrlID: %s res [%p] Completed [%v] Successful [%v]\n", PlayAction2.ControlID, PlayAction2, PlayAction2.Completed, PlayAction2.Result.Successful)
 
 	for ok := true; ok; ok = !(PlayAction2.State == signalwire.PlayFinished) {
-		log.Infof("Completed 2: %v\n", PlayAction2.GetCompleted())
+		signalwire.Log.Info("Completed 2: %v\n", PlayAction2.GetCompleted())
 		time.Sleep(1 * time.Second)
 	}
 
-	log.Infof("...Done.\n")
+	signalwire.Log.Info("...Done.\n")
 
 	if err := resultDial.Call.Hangup(); err != nil {
-		log.Errorf("Error occurred while trying to hangup call. Err: %v\n", err)
+		signalwire.Log.Error("Error occurred while trying to hangup call. Err: %v\n", err)
 	}
 
 	if err := consumer.Stop(); err != nil {
-		log.Errorf("Error occurred while trying to stop Consumer. Err: %v\n", err)
+		signalwire.Log.Error("Error occurred while trying to stop Consumer. Err: %v\n", err)
 	}
 }
 
@@ -200,7 +199,7 @@ func main() {
 	}
 
 	if verbose {
-		log.SetLevel(log.DebugLevel)
+		signalwire.Log.SetLevel(signalwire.DebugLevelLog)
 	}
 
 	go func() {
@@ -214,7 +213,7 @@ func main() {
 			case syscall.SIGTERM:
 				fallthrough
 			case syscall.SIGINT:
-				log.Printf("Exit")
+				signalwire.Log.Info("Exit")
 				os.Exit(0)
 			}
 		}
@@ -227,6 +226,6 @@ func main() {
 	consumer.Ready = MyReady
 	// start
 	if err := consumer.Run(); err != nil {
-		log.Errorf("Error occurred while starting Signalwire Consumer")
+		signalwire.Log.Error("Error occurred while starting Signalwire Consumer\n")
 	}
 }

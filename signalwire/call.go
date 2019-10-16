@@ -390,14 +390,14 @@ func (c *CallSession) SetTo(to string) {
 
 // UpdateCallConnectState TODO DESCRIPTION
 func (c *CallSession) UpdateCallConnectState(s CallConnectState) {
-	Logger.Debugf("[%p] [%v]\n", c, s)
+	Log.Debug("[%p] [%v]\n", c, s)
 
 	c.CallConnectState = s
 }
 
 // UpdateConnectPeer TODO DESCRIPTION
 func (c *CallSession) UpdateConnectPeer(p PeerDeviceStruct) {
-	Logger.Debugf("[%p] [%v]\n", c, p)
+	Log.Debug("[%p] [%v]\n", c, p)
 
 	c.CallPeer.CallID = p.CallID
 	c.CallPeer.NodeID = p.NodeID

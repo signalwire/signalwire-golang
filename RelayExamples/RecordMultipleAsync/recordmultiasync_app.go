@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/signalwire/signalwire-golang/signalwire"
-	log "github.com/sirupsen/logrus"
 )
 
 // App consts
@@ -44,24 +43,24 @@ func spinner(delay time.Duration) {
 // MyOnRecordFinished ran when Record Action finishes
 func MyOnRecordFinished(recordAction *signalwire.RecordAction) {
 	if recordAction.State == signalwire.RecordFinished {
-		log.Printf("Recording audio stopped.\n")
+		signalwire.Log.Info("Recording audio stopped.\n")
 	}
 
-	log.Infof("Recording is at: %s\n", recordAction.Result.URL)
-	log.Infof("Recording Duration: %d\n", recordAction.Result.Duration)
-	log.Infof("Recording File Size: %d\n", recordAction.Result.Size)
+	signalwire.Log.Info("Recording is at: %s\n", recordAction.Result.URL)
+	signalwire.Log.Info("Recording Duration: %d\n", recordAction.Result.Duration)
+	signalwire.Log.Info("Recording File Size: %d\n", recordAction.Result.Size)
 }
 
 // MyOnRecordRecording ran when Recording starts on the call
 func MyOnRecordRecording(recordAction *signalwire.RecordAction) {
 	if recordAction.State == signalwire.RecordRecording {
-		log.Printf("Recording audio\n")
+		signalwire.Log.Info("Recording audio\n")
 	}
 }
 
 // MyOnRecordStateChange ran when Record State changes, eg: Recording->Finished
 func MyOnRecordStateChange(recordAction *signalwire.RecordAction) {
-	log.Printf("Recording State changed.\n")
+	signalwire.Log.Info("Recording State changed.\n")
 
 	switch recordAction.State {
 	case signalwire.RecordRecording:
@@ -72,7 +71,7 @@ func MyOnRecordStateChange(recordAction *signalwire.RecordAction) {
 
 // MyReady - gets executed when Blade is successfully setup (after signalwire.receive)
 func MyReady(consumer *signalwire.Consumer) {
-	log.Printf("calling out...\n")
+	signalwire.Log.Info("calling out...\n")
 
 	fromNumber := "+132XXXXXXXX"
 
@@ -85,7 +84,7 @@ func MyReady(consumer *signalwire.Consumer) {
 	resultDial := consumer.Client.Calling.DialPhone(fromNumber, toNumber)
 	if !resultDial.Successful {
 		if err := consumer.Stop(); err != nil {
-			log.Errorf("Error occurred while trying to stop Consumer")
+			signalwire.Log.Error("Error occurred while trying to stop Consumer\n")
 		}
 
 		return
@@ -105,10 +104,10 @@ func MyReady(consumer *signalwire.Consumer) {
 	rec.EndSilenceTimeout = 3
 	rec.Terminators = "#*"
 
-	/*example assumes audio will be played from the callee side. */
+	/* example assumes audio will be played from the callee side. */
 	recordAction, err := resultDial.Call.RecordAudioAsync(&rec)
 	if err != nil {
-		log.Errorf("Error occurred while trying to record audio")
+		signalwire.Log.Error("Error occurred while trying to record audio\n")
 	}
 
 	var rec2 signalwire.RecordParams
@@ -123,13 +122,13 @@ func MyReady(consumer *signalwire.Consumer) {
 
 	recordAction2, err2 := resultDial.Call.RecordAudioAsync(&rec2)
 	if err2 != nil {
-		log.Errorf("Error occurred while trying to record audio")
+		signalwire.Log.Error("Error occurred while trying to record audio\n")
 	}
 
 	go spinner(100 * time.Millisecond)
 	time.Sleep(3 * time.Second)
 
-	log.Infof("Stopping first recording...\n")
+	signalwire.Log.Info("Stopping first recording...\n")
 	recordAction.Stop()
 
 	for {
@@ -140,10 +139,10 @@ func MyReady(consumer *signalwire.Consumer) {
 		}
 	}
 
-	log.Infof("...Done.\n")
+	signalwire.Log.Info("...Done.\n")
 
 	time.Sleep(5 * time.Second)
-	log.Infof("Stopping second recording...\n")
+	signalwire.Log.Info("Stopping second recording...\n")
 	recordAction2.Stop()
 
 	for {
@@ -154,14 +153,14 @@ func MyReady(consumer *signalwire.Consumer) {
 		}
 	}
 
-	log.Infof("...Done.\n")
+	signalwire.Log.Info("...Done.\n")
 
 	if err := resultDial.Call.Hangup(); err != nil {
-		log.Errorf("Error occurred while trying to hangup call. Err: %v\n", err)
+		signalwire.Log.Error("Error occurred while trying to hangup call. Err: %v\n", err)
 	}
 
 	if err := consumer.Stop(); err != nil {
-		log.Errorf("Error occurred while trying to stop Consumer. Err: %v\n", err)
+		signalwire.Log.Error("Error occurred while trying to stop Consumer. Err: %v\n", err)
 	}
 }
 
@@ -187,7 +186,7 @@ func main() {
 	}
 
 	if verbose {
-		log.SetLevel(log.DebugLevel)
+		signalwire.Log.SetLevel(signalwire.DebugLevelLog)
 	}
 
 	go func() {
@@ -201,7 +200,7 @@ func main() {
 			case syscall.SIGTERM:
 				fallthrough
 			case syscall.SIGINT:
-				log.Printf("Exit")
+				signalwire.Log.Info("Exit")
 				os.Exit(0)
 			}
 		}
@@ -214,6 +213,6 @@ func main() {
 	consumer.Ready = MyReady
 	// start
 	if err := consumer.Run(); err != nil {
-		log.Errorf("Error occurred while starting Signalwire Consumer")
+		signalwire.Log.Error("Error occurred while starting Signalwire Consumer\n")
 	}
 }

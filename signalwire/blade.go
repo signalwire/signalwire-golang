@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"reflect"
 	"sync"
 	"time"
 
@@ -152,7 +153,7 @@ func (blade *BladeSession) BladeWSOpenConn(ctx context.Context, u url.URL) (*web
 		return nil, errors.New("empty blade session object")
 	}
 
-	Logger.Debugf("connecting to %s\n", u.String())
+	Log.Debug("connecting to %s\n", u.String())
 
 	c, _, err := websocket.DefaultDialer.DialContext(ctx, u.String(), nil)
 	if err != nil {
@@ -298,7 +299,7 @@ func (blade *BladeSession) BladeConnect(ctx context.Context, bladeAuth *BladeAut
 
 	blade.SessionState = BladeConnected
 
-	Logger.Debugf("reply ReplyBladeConnect: %v\n", ReplyConnectDecode)
+	Log.Debug("reply ReplyBladeConnect: %v\n", ReplyConnectDecode)
 
 	return nil
 }
@@ -329,7 +330,7 @@ func (blade *BladeSession) BladeDisconnect(ctx context.Context) error {
 
 	blade.SessionState = BladeShutdown
 
-	Logger.Debugf("reply ReplyDisconnectDecode: %v\n", ReplyDisconnectDecode)
+	Log.Debug("reply ReplyDisconnectDecode: %v\n", ReplyDisconnectDecode)
 
 	return nil
 }
@@ -348,12 +349,14 @@ func (blade *BladeSession) BladeSetup(ctx context.Context) error {
 		Params:   ParamsSignalwireSetupStruct{},
 	}
 
-	Logger.Debugf("blade.BladeExecute: %p\n", blade.BladeExecute)
+	Log.Debug("blade.BladeExecute: %p\n", blade.BladeExecute)
 
 	reply, err := blade.I.BladeExecute(ctx, &v, &ReplySetupDecode)
 	if err != nil {
 		return err
 	}
+
+	Log.Debug("reflect.TypeOf(reply): %s\n", reflect.TypeOf(reply).String())
 
 	r, ok := reply.(*ReplyResultSetup)
 	if !ok {
@@ -362,8 +365,8 @@ func (blade *BladeSession) BladeSetup(ctx context.Context) error {
 
 	blade.Protocol = r.Result.Protocol
 
-	Logger.Debugf("reply ReplySetupDecode: %v\n", ReplySetupDecode)
-	Logger.Debugf("reply Reply r: %v\n", r)
+	Log.Debug("reply ReplySetupDecode: %v\n", ReplySetupDecode)
+	Log.Debug("reply Reply r: %v\n", r)
 
 	return nil
 }
@@ -394,7 +397,7 @@ func (blade *BladeSession) BladeAddSubscription(ctx context.Context, signalwireC
 		return err
 	}
 
-	Logger.Debugf("reply ReplySubscriptionDecode: %v\n", ReplySubscriptionDecode)
+	Log.Debug("reply ReplySubscriptionDecode: %v\n", ReplySubscriptionDecode)
 
 	return nil
 }
@@ -448,7 +451,7 @@ func (blade *BladeSession) BladeSignalwireReceive(ctx context.Context, signalwir
 		return errors.New(r.Result.Message)
 	}
 
-	Logger.Debugf("r.Result.Message: [%s]\n", r.Result.Message)
+	Log.Debug("r.Result.Message: [%s]\n", r.Result.Message)
 
 	return nil
 }
@@ -469,16 +472,16 @@ func (blade *BladeSession) handleBladeBroadcast(ctx context.Context, req *jsonrp
 		return err
 	}
 
-	Logger.Debugf("broadcast.Event: %v\n", broadcast.Event)
-	Logger.Debugf("broadcast.Channel: %v\n", broadcast.Channel)
-	Logger.Debugf("broadcast.Params.EventType: %v\n", broadcast.Params.EventType)
-	Logger.Debugf("broadcast.Params.Params: %v\n", broadcast.Params.Params)
+	Log.Debug("broadcast.Event: %v\n", broadcast.Event)
+	Log.Debug("broadcast.Channel: %v\n", broadcast.Channel)
+	Log.Debug("broadcast.Params.EventType: %v\n", broadcast.Params.EventType)
+	Log.Debug("broadcast.Params.Params: %v\n", broadcast.Params.Params)
 
 	if err := blade.EventCalling.callingNotif(ctx, broadcast); err != nil {
 		return err
 	}
 
-	Logger.Debugf("broadcast: %v\n", broadcast)
+	Log.Debug("broadcast: %v\n", broadcast)
 
 	return nil
 }
@@ -529,7 +532,7 @@ func (blade *BladeSession) handleBladeNetcast(_ context.Context, req *jsonrpc2.R
 	case "access.remove":
 	}
 
-	Logger.Debugf("netcast.Command: %v %p\n", netcast.Command, blade)
+	Log.Debug("netcast.Command: %v %p\n", netcast.Command, blade)
 
 	return nil
 }
@@ -540,7 +543,7 @@ func (blade *BladeSession) handleBladeDisconnect(_ context.Context, c *jsonrpc2.
 		return errors.New("empty blade session object")
 	}
 
-	Logger.Debugf("handleBladeDisconnect conn [%p] [%p]\n", c, blade)
+	Log.Debug("handleBladeDisconnect conn [%p] [%p]\n", c, blade)
 
 	if blade.SessionState == BladeConnecting || blade.SessionState == BladeRunning {
 		blade.SessionState = BladeClosing
@@ -605,69 +608,69 @@ type ReqHandler struct {
 func (ReqHandler) Handle(ctx context.Context, c *jsonrpc2.Conn, req *jsonrpc2.Request) {
 	blade := GlobalBladeSessionControl.getBlade(c)
 	if blade == nil {
-		Logger.Warnf("no Blade session for this connection\n")
+		Log.Warn("no Blade session for this connection\n")
 
 		return
 	}
 
 	switch req.Method {
 	case "blade.broadcast":
-		Logger.Debugf("got blade.broadcast conn [%p]\n", c)
+		Log.Debug("got blade.broadcast conn [%p]\n", c)
 
 		if err := blade.I.handleBladeBroadcast(ctx, req); err != nil {
-			Logger.Errorf("HandleBladeBroadcast err: %s\n", err)
+			Log.Error("HandleBladeBroadcast err: %s\n", err)
 		}
 	case "blade.netcast":
-		Logger.Debugf("got blade.netcast conn [%p]\n", c)
+		Log.Debug("got blade.netcast conn [%p]\n", c)
 
 		if err := blade.I.handleBladeNetcast(ctx, req); err != nil {
-			Logger.Errorf("HandleBladeNetcast err: %s\n", err)
+			Log.Error("HandleBladeNetcast err: %s\n", err)
 		}
 	case "blade.disconnect":
-		Logger.Debugf("got blade.disconnect conn [%p]\n", c)
+		Log.Debug("got blade.disconnect conn [%p]\n", c)
 
 		if err := blade.I.handleBladeDisconnect(ctx, req); err != nil {
-			Logger.Errorf("HandleBladeDisconnect err: %s\n", err)
+			Log.Error("HandleBladeDisconnect err: %s\n", err)
 		}
 	}
 
-	Logger.Debugf("%s: %s\n", req.ID, *req.Params)
+	Log.Debug("%s: %s\n", req.ID, *req.Params)
 }
 
 // BladeWaitDisconnect TODO DESCRIPTION
 func (blade *BladeSession) BladeWaitDisconnect(_ context.Context) {
 	conn, err := blade.GetConnection()
 	if err != nil {
-		Logger.Errorln(err)
+		Log.Error("%v\n", err)
 
 		return
 	}
 
 	if conn == nil {
-		Logger.Errorln("Connection is nil")
+		Log.Error("Connection is nil\n")
 
 		return
 	}
 
 	select {
 	case <-conn.DisconnectNotify(): // remote disconnect
-		Logger.Debugf("got remote disconnect")
+		Log.Debug("got remote disconnect\n")
 	case <-blade.DisconnectChan: // local disconnect
-		Logger.Debugf("got local disconnect")
+		Log.Debug("got local disconnect\n")
 	}
 }
 
 func (blade *BladeSession) handleInboundCall(_ context.Context, callID string) bool {
-	Logger.Debugf("handleInboundCall callID: %s\n", callID)
+	Log.Debug("handleInboundCall callID: %s\n", callID)
 
 	// new inbound call
 	select {
 	case blade.Inbound <- callID:
-		Logger.Debugf("sent callID to Inbound handler go routine\n")
+		Log.Debug("sent callID to Inbound handler go routine\n")
 		return true
 	default:
 		// channel not open - we're not waiting for inbound calls
-		Logger.Debugf("no new call signal sent\n")
+		Log.Debug("no new call signal sent\n")
 	}
 
 	return false

@@ -25,6 +25,15 @@ type ClientSession struct {
 	Cancel      context.CancelFunc
 	Operational chan struct{}
 	I           IClientSession
+
+	Log LoggerWrapper
+}
+
+// NewClientSession TODO DESCRIPTION
+func NewClientSession() *ClientSession {
+	return &ClientSession{
+		Log: Log,
+	}
 }
 
 // IClientSession TODO DESCRIPTION
@@ -72,17 +81,20 @@ func (client *ClientSession) Connect(ctx context.Context, cancel context.CancelF
 	client.Calling.Relay.Blade = blade
 
 	if err := blade.BladeInit(ctx, client.Host); err != nil {
-		log.Debugf("cannot init Blade: %v\n", err)
+		Log.Debug("cannot init Blade: %v\n", err)
+
 		return err
 	}
 
 	if err := blade.BladeConnect(ctx, &blade.bladeAuth); err != nil {
-		log.Debugf("cannot connect to Blade Network: %v\n", err)
+		Log.Debug("cannot connect to Blade Network: %v\n", err)
+
 		return err
 	}
 
 	if blade.SessionState != BladeConnected {
-		log.Debugf("not in connected state\n")
+		Log.Debug("not in connected state\n")
+
 		return errors.New("not in connected state")
 	}
 
@@ -98,37 +110,42 @@ func (client *ClientSession) Connect(ctx context.Context, cancel context.CancelF
 		wg.Done()
 	}()
 
-	log.Debugf("execute Setup\n")
+	Log.Debug("execute Setup\n")
 
 	if err := blade.BladeSetup(ctx); err != nil {
-		log.Debugf("cannot setup protocol on Blade Network: %v\n", err)
+		Log.Debug("cannot setup protocol on Blade Network: %v\n", err)
+
 		return err
 	}
 
-	log.Debugf("waiting for Netcast (protocol.add)...")
+	Log.Debug("waiting for Netcast (protocol.add)...\n")
 
 	wg.Wait()
 
 	if sProtocol != blade.Protocol {
-		log.Debugf("cannot setup protocol on Blade Network / different protocol received [%s:%s]\n", sProtocol, blade.Protocol)
+		Log.Debug("cannot setup protocol on Blade Network / different protocol received [%s:%s]\n", sProtocol, blade.Protocol)
+
 		return errors.New("different protocol received (netcast)")
 	}
 
 	blade.SignalwireChannels = []string{"notifications"}
 	if err := blade.BladeAddSubscription(ctx, blade.SignalwireChannels); err != nil {
-		log.Debugf("cannot subscribe to notifications on Blade Network: %v\n", err)
+		Log.Debug("cannot subscribe to notifications on Blade Network: %v\n", err)
+
 		return err
 	}
 
 	if err := blade.BladeSignalwireReceive(ctx, blade.SignalwireContexts); err != nil {
-		log.Debugf("cannot subscribe to inbound context on Blade Network: %v\n", err)
+		Log.Debug("cannot subscribe to inbound context on Blade Network: %v\n", err)
+
 		return err
 	}
 
 	client.Operational <- struct{}{}
 
 	blade.BladeWaitDisconnect(ctx)
-	log.Debugf("got Disconnect")
+	Log.Debug("got Disconnect\n")
+
 	cancel()
 	runWG.Done()
 
@@ -140,22 +157,23 @@ func (client *ClientSession) Disconnect() error {
 	blade := client.Relay.Blade
 
 	if err := blade.BladeDisconnect(client.Ctx); err != nil {
-		log.Debugf("Blade: error disconnecting\n")
+		Log.Debug("Blade: error disconnecting\n")
+
 		return err
 	}
 
 	select {
 	case blade.InboundDone <- struct{}{}:
-		Logger.Debugf("sent InboundDone to go routine\n")
+		Log.Debug("sent InboundDone to go routine\n")
 	default:
-		Logger.Debugf("cannot send InboundDone to go routine\n")
+		Log.Debug("cannot send InboundDone to go routine\n")
 	}
 
 	select {
 	case blade.DisconnectChan <- struct{}{}:
-		Logger.Debugf("sent DisconnectChan to go routine\n")
+		Log.Debug("sent DisconnectChan to go routine\n")
 	default:
-		Logger.Debugf("cannot send DisconnectChan to go routine\n")
+		Log.Debug("cannot send DisconnectChan to go routine\n")
 	}
 
 	client.Cancel()
