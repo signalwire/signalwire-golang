@@ -1,0 +1,32 @@
+run:
+  deadline: 5m
+  skip-dirs:
+    - autogen/.*
+    - vendor/.*
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+  govet:
+    check-shadowing: true
+  gocyclo:
+    min-complexity: 26
+  maligned:
+    suggest-new: true
+  misspell:
+    locale: US
+  unparam:
+    algo: cha
+  prealloc:
+    for-loops: true
+linters:
+  enable-all: true
+  disable:
+    - depguard
+    - dupl
+    - funlen
+    - gochecknoglobals
+    - gocyclo
+    - godox
+    - lll
+    - unused
+    - gocognit

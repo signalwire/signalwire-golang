@@ -1,0 +1,14 @@
+{
+  "profiles": {
+    "Calling_Outbound": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "TEST_HOST": "replaceme",
+        "TEST_PROJECT": "replaceme",
+        "TEST_TOKEN": "replaceme",
+        "TEST_FROM_NUMBER": "+replaceme",
+        "TEST_TO_NUMBER": "+replaceme"
+      }
+    }
+  }
+}
