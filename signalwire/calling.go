@@ -39,14 +39,14 @@ type CallObj struct {
 	OnFaxFinished       func(*FaxAction)
 	OnFaxPage           func(*FaxAction)
 	OnFaxError          func(*FaxAction)
-	Timeout             uint32
+	Timeout             uint32 // ring timeout
 	Active              bool
 }
 
 // ICallObj these are for unit-testing
 type ICallObj interface {
-	Hangup() error
-	Answer() ResultAnswer
+	Hangup() (*ResultHangup, error)
+	Answer() (*ResultAnswer, error)
 	PlayAudio(url string) (*PlayResult, error)
 	PlayStop(ctrlID *string) error
 	PlayTTS(text, language, gender string) (*PlayResult, error)
@@ -84,6 +84,12 @@ type ResultDial struct {
 // ResultAnswer TODO DESCRIPTION
 type ResultAnswer struct {
 	Successful bool
+}
+
+// ResultHangup TODO DESCRIPTION
+type ResultHangup struct {
+	Successful bool
+	Reason     CallDisconnectReason
 }
 
 // ICalling object visible to the end user
@@ -137,11 +143,13 @@ func (calling *Calling) DialPhone(fromNumber, toNumber string) ResultDial {
 }
 
 // Hangup TODO DESCRIPTION
-func (callobj *CallObj) Hangup() error {
+func (callobj *CallObj) Hangup() (*ResultHangup, error) {
+	res := new(ResultHangup)
 	call := callobj.call
+
 	if call.CallState != Ending && call.CallState != Ended {
 		if err := callobj.Calling.Relay.RelayCallEnd(callobj.Calling.Ctx, call); err != nil {
-			return err
+			return res, err
 		}
 	}
 
@@ -151,14 +159,17 @@ func (callobj *CallObj) Hangup() error {
 
 	if call.CallState == Ended {
 		// todo: handle race conds on hangup (don't write on closed channels)
+		res.Reason = call.CallDisconnectReason
 		call.CallCleanup(callobj.Calling.Ctx)
 	}
 
-	return nil
+	res.Successful = true
+
+	return res, nil
 }
 
 // Answer TODO DESCRIPTION
-func (callobj *CallObj) Answer() ResultAnswer {
+func (callobj *CallObj) Answer() (*ResultAnswer, error) {
 	call := callobj.call
 
 	res := new(ResultAnswer)
@@ -167,22 +178,22 @@ func (callobj *CallObj) Answer() ResultAnswer {
 		if err := callobj.Calling.Relay.RelayCallAnswer(callobj.Calling.Ctx, call); err != nil {
 			Log.Debug("cannot answer call. err: %v\n", err)
 
-			return *res
+			return res, err
 		}
 	}
 
 	// 'Answered' state event may have already come before we get the 200 for calling.answer command.
 	if call.CallState != Answered {
 		if ret := call.WaitCallStateInternal(callobj.Calling.Ctx, Answered); !ret {
-			Log.Debug("did not get Answered state for call\n")
+			Log.Debug("did not get Answered state for inbound call\n")
 
-			return *res
+			return res, nil
 		}
 	}
 
 	res.Successful = true
 
-	return *res
+	return res, nil
 }
 
 // GetCallState TODO DESCRIPTION
@@ -294,4 +305,14 @@ func (calling *Calling) Dial(c *CallObj) ResultDial {
 	res.Successful = true
 
 	return *res
+}
+
+// GetReason TODO DESCRIPTION
+func (resultHangup *ResultHangup) GetReason() CallDisconnectReason {
+	return resultHangup.Reason
+}
+
+// GetSuccessful TODO DESCRIPTION
+func (resultHangup *ResultHangup) GetSuccessful() bool {
+	return resultHangup.Successful
 }

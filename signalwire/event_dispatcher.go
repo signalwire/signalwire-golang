@@ -29,6 +29,7 @@ type IEventCalling interface {
 	callRecordStateFromStr(s string) (RecordState, error)
 	callDetectEventFromStr(event, detType string) (interface{}, error)
 	callFaxEventFromStr(t string) (FaxEventType, error)
+	callDisconnectReasonFromStr(r string) (CallDisconnectReason, error)
 	dispatchStateNotif(ctx context.Context, callParams CallParams) error
 	dispatchConnectStateNotif(ctx context.Context, callParams CallParams, peer PeerDeviceStruct, ccstate CallConnectState) error
 	dispatchPlayState(ctx context.Context, callID, ctrlID string, playState PlayState) error
@@ -110,7 +111,7 @@ func (*EventCalling) callPlayStateFromStr(s string) (PlayState, error) {
 		state = PlayPlaying
 	case "paused":
 		state = PlayPaused
-	case "error":
+	case StrError:
 		state = PlayError
 	case Finished:
 		state = PlayFinished
@@ -237,10 +238,33 @@ func (*EventCalling) callFaxEventFromStr(t string) (FaxEventType, error) {
 	case "error":
 		faxtype = FaxError
 	default:
-		return faxtype, errors.New("invalid FaxEventType")
+		return faxtype, errors.New("invalid Fax Detector Event")
 	}
 
 	return faxtype, nil
+}
+
+func (*EventCalling) callDisconnectReasonFromStr(r string) (CallDisconnectReason, error) {
+	var reason CallDisconnectReason
+
+	switch strings.ToLower(r) {
+	case "hangup":
+		reason = CallHangup
+	case "cancel":
+		reason = CallCancel
+	case "busy":
+		reason = CallBusy
+	case "noanswer":
+		reason = CallNoAnswer
+	case "decline":
+		reason = CallDecline
+	case "error":
+		reason = CallGenericError
+	default:
+		return reason, errors.New("invalid Disconnect Reason")
+	}
+
+	return reason, nil
 }
 
 func (*EventCalling) getBroadcastParams(_ context.Context, in, out interface{}) error {
@@ -317,6 +341,7 @@ func (calling *EventCalling) onCallingEventState(ctx context.Context, broadcast 
 	callParams.ToNumber = params.Device.Params.ToNumber
 	callParams.FromNumber = params.Device.Params.FromNumber
 	callParams.CallState = state
+	callParams.EndReason = params.EndReason
 
 	return calling.I.dispatchStateNotif(ctx, callParams)
 }
@@ -584,6 +609,14 @@ func (calling *EventCalling) dispatchStateNotif(ctx context.Context, callParams 
 		calling.blade.I.handleInboundCall(ctx, callParams.CallID)
 	}
 
+	if callParams.CallState == Ended {
+		disconnectReason, err := calling.I.callDisconnectReasonFromStr(callParams.EndReason)
+		if err != nil {
+			return err
+		}
+
+		call.CallDisconnectReason = disconnectReason
+	}
 	select {
 	case call.CallStateChan <- callParams.CallState:
 		Log.Debug("sent callstate\n")

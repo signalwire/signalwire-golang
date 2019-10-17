@@ -57,7 +57,7 @@ func MyOnFaxError(faxAction *signalwire.FaxAction) {
 
 // MyOnIncomingCall - gets executed when we receive an incoming call
 func MyOnIncomingCall(consumer *signalwire.Consumer, call *signalwire.CallObj) {
-	resultAnswer := call.Answer()
+	resultAnswer, _ := call.Answer()
 	if !resultAnswer.Successful {
 		if err := consumer.Stop(); err != nil {
 			signalwire.Log.Error("Error occurred while trying to stop Consumer\n")
@@ -80,7 +80,7 @@ func MyOnIncomingCall(consumer *signalwire.Consumer, call *signalwire.CallObj) {
 
 	signalwire.Log.Info("Download Document from %s\n Pages #%d\n", faxResult.Document, faxResult.Pages)
 
-	if err := call.Hangup(); err != nil {
+	if _, err := call.Hangup(); err != nil {
 		signalwire.Log.Error("Error occurred while trying to hangup call. Err: %v\n", err)
 	}
 

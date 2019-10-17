@@ -27,16 +27,16 @@ type CallDisconnectReason int
 
 // Call disconnection constants
 const (
-	Hangup CallDisconnectReason = iota
-	Cancel
-	Busy
-	NoAnswer
-	Decline
-	GenericError
+	CallHangup CallDisconnectReason = iota
+	CallCancel
+	CallBusy
+	CallNoAnswer
+	CallDecline
+	CallGenericError
 )
 
 func (s CallDisconnectReason) String() string {
-	return [...]string{"Hangup", "Cancel", "Busy", "NoAnswer", "Decline", "GenericError"}[s]
+	return [...]string{"Hangup", "Cancel", "Busy", "NoAnswer", "Decline", "Error"}[s]
 }
 
 // CallSession TODO DESCRIPTION
@@ -423,6 +423,7 @@ type CallParams struct {
 	ToNumber   string
 	FromNumber string
 	CallState  CallState
+	EndReason  string
 }
 
 // ITagToCallID TODO DESCRIPTION

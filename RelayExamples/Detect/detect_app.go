@@ -66,7 +66,7 @@ func MyOnDetectUpdate(det interface{}) {
 
 	_, ok3 := det.(*signalwire.DetectDigitAction)
 	if ok3 {
-		signalwire.Log.Info("Fax Digits Action.\n")
+		signalwire.Log.Info("Digits Detect Action.\n")
 	}
 }
 
@@ -174,7 +174,7 @@ func MyReady(consumer *signalwire.Consumer) {
 	}
 
 	if resultDial.Call.GetCallState() != signalwire.Ending && resultDial.Call.GetCallState() != signalwire.Ended {
-		if err := resultDial.Call.Hangup(); err != nil {
+		if _, err := resultDial.Call.Hangup(); err != nil {
 			signalwire.Log.Error("Error occurred while trying to hangup call. Err: %v\n", err)
 		}
 	}
