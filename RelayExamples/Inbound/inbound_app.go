@@ -45,7 +45,7 @@ func spinner(delay time.Duration) {
 func MyOnIncomingCall(consumer *signalwire.Consumer, call *signalwire.CallObj) {
 	fmt.Printf("got incoming call.\n")
 
-	resultAnswer := call.Answer()
+	resultAnswer, _ := call.Answer()
 	if !resultAnswer.Successful {
 		if err := consumer.Stop(); err != nil {
 			signalwire.Log.Error("Error occurred while trying to stop Consumer\n")
@@ -58,12 +58,27 @@ func MyOnIncomingCall(consumer *signalwire.Consumer, call *signalwire.CallObj) {
 
 	go spinner(100 * time.Millisecond)
 
-	if _, err := call.PlayAudio("https://cdn.signalwire.com/default-music/welcome.mp3"); err != nil {
-		signalwire.Log.Error("Error occurred while trying to play audio\n")
+	// run the blocking PlayAudio() in a go-routine , we could have run PlayAudioAsync(), without the need to put it in a go-routine
+	go func() {
+		// blocking until media file finishes playing.
+		if _, err := call.PlayAudio("https://cdn.signalwire.com/default-music/welcome.mp3"); err != nil {
+			signalwire.Log.Error("Error occurred while trying to play audio\n")
+		}
+	}()
+
+	timer := time.NewTimer(10 * time.Second)
+
+	<-timer.C
+	signalwire.Log.Info("Hangup call..\n")
+
+	hangupResult, err := call.Hangup()
+	if err != nil {
+		// RELAY error
+		signalwire.Log.Error("Error occurred while trying to hangup call\n")
 	}
 
-	if err := call.Hangup(); err != nil {
-		signalwire.Log.Error("Error occurred while trying to hangup call\n")
+	if hangupResult.GetSuccessful() {
+		signalwire.Log.Info("Call disconnect result: %s\n", hangupResult.GetReason().String())
 	}
 
 	if err := consumer.Stop(); err != nil {

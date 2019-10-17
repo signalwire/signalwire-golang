@@ -168,7 +168,7 @@ func MyReady(consumer *signalwire.Consumer) {
 
 	signalwire.Log.Info("...Done.\n")
 
-	if err := resultDial.Call.Hangup(); err != nil {
+	if _, err := resultDial.Call.Hangup(); err != nil {
 		signalwire.Log.Error("Error occurred while trying to hangup call. Err: %v\n", err)
 	}
 
