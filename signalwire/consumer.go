@@ -104,7 +104,11 @@ func (consumer *Consumer) Run() error {
 				call, ierr := consumer.Client.I.WaitInbound()
 				if ierr != nil {
 					Log.Error("Error processing incoming call: %v\n", ierr)
-				} else {
+				} else if call == nil && ierr == nil {
+					wg.Done()
+					return
+				}
+				if call != nil {
 					var I ICallObj = CallObjNew()
 
 					c := &CallObj{I: I}

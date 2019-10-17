@@ -676,7 +676,7 @@ func (blade *BladeSession) handleInboundCall(_ context.Context, callID string) b
 // BladeSetupInbound TODO DESCRIPTION
 func (blade *BladeSession) BladeSetupInbound(_ context.Context) {
 	blade.Inbound = make(chan string)
-	blade.InboundDone = make(chan struct{})
+	blade.InboundDone = make(chan struct{}, 1)
 }
 
 // BladeWaitInboundCall TODO DESCRIPTION
@@ -702,13 +702,14 @@ func (blade *BladeSession) BladeWaitInboundCall(ctx context.Context) (*CallSessi
 		}
 	}
 
+	if !ret {
+		// shutdown
+		return nil, nil
+	}
+
 	call, _ := blade.EventCalling.I.getCall(ctx, "", callID)
 	if call == nil {
 		return nil, fmt.Errorf("error, nil CallSession")
-	}
-
-	if !ret {
-		return nil, fmt.Errorf("error, could not process Inbound Call")
 	}
 
 	return call, nil
