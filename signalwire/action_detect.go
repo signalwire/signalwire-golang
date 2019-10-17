@@ -694,8 +694,8 @@ func (detectaction *DetectMachineAction) GetResult() DetectResult {
 	return ret
 }
 
-// GetEvent TODO DESCRIPTION
-func (detectaction *DetectMachineAction) GetEvent() DetectMachineEvent {
+// GetDetectEvent TODO DESCRIPTION
+func (detectaction *DetectMachineAction) GetDetectorEvent() DetectMachineEvent {
 	detectaction.RLock()
 
 	ret := detectaction.Event
@@ -727,8 +727,8 @@ func (detectaction *DetectDigitAction) GetResult() DetectResult {
 	return ret
 }
 
-// GetEvent TODO DESCRIPTION
-func (detectaction *DetectDigitAction) GetEvent() DetectDigitEvent {
+// GetDetectEvent TODO DESCRIPTION
+func (detectaction *DetectDigitAction) GetDetectorEvent() DetectDigitEvent {
 	detectaction.RLock()
 
 	ret := detectaction.Event
@@ -760,8 +760,8 @@ func (detectaction *DetectFaxAction) GetResult() DetectResult {
 	return ret
 }
 
-// GetEvent TODO DESCRIPTION
-func (detectaction *DetectFaxAction) GetEvent() DetectFaxEvent {
+// GetDetectEvent TODO DESCRIPTION
+func (detectaction *DetectFaxAction) GetDetectorEvent() DetectFaxEvent {
 	detectaction.RLock()
 
 	ret := detectaction.Event
