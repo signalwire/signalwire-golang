@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-// DetectMachineevent keeps the event of a detect action
+// DetectMachineEvent keeps the event of a detect action
 type DetectMachineEvent int
 
 // Machine detector event constants
@@ -23,6 +23,7 @@ func (s DetectMachineEvent) String() string {
 	return [...]string{"Unknown", "Machine", "Human", "Ready", "Not_Ready", "Finished"}[s]
 }
 
+// DetectResultType TODO DESCRIPTION
 type DetectResultType int
 
 // Type of detector (used only in the Result)
@@ -57,8 +58,10 @@ type DetectMachineAction struct {
 	sync.RWMutex
 }
 
+// DetectDigitEvent TODO DESCRIPTION
 type DetectDigitEvent int
 
+// Digit Detector events
 const (
 	DetectDigitZero DetectDigitEvent = iota
 	DetectDigitOne
@@ -79,6 +82,7 @@ func (s DetectDigitEvent) String() string {
 	return [...]string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "#", "*", "Finished"}[s]
 }
 
+// DetectFaxEvent TODO DESCRIPTION
 type DetectFaxEvent int
 
 // Call event constants
@@ -545,6 +549,7 @@ func (callobj *CallObj) DetectFaxAsync(det *DetectFaxParams) (*DetectFaxAction, 
 	return res, nil
 }
 
+// DetectAction TODO DESCRIPTION
 type DetectAction interface{}
 
 func detectInternalStop(v interface{}) error {
@@ -694,7 +699,7 @@ func (detectaction *DetectMachineAction) GetResult() DetectResult {
 	return ret
 }
 
-// GetDetectEvent TODO DESCRIPTION
+// GetDetectorEvent TODO DESCRIPTION
 func (detectaction *DetectMachineAction) GetDetectorEvent() DetectMachineEvent {
 	detectaction.RLock()
 
@@ -727,7 +732,7 @@ func (detectaction *DetectDigitAction) GetResult() DetectResult {
 	return ret
 }
 
-// GetDetectEvent TODO DESCRIPTION
+// GetDetectorEvent TODO DESCRIPTION
 func (detectaction *DetectDigitAction) GetDetectorEvent() DetectDigitEvent {
 	detectaction.RLock()
 
@@ -760,7 +765,7 @@ func (detectaction *DetectFaxAction) GetResult() DetectResult {
 	return ret
 }
 
-// GetDetectEvent TODO DESCRIPTION
+// GetDetectorEvent TODO DESCRIPTION
 func (detectaction *DetectFaxAction) GetDetectorEvent() DetectFaxEvent {
 	detectaction.RLock()
 

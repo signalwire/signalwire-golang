@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-// FaxType: type of a Faxing (Send/Receive) event
+// FaxEventType type of a Faxing (Send/Receive) event
 type FaxEventType int
 
 // Call state constants
@@ -20,7 +20,7 @@ func (s FaxEventType) String() string {
 	return [...]string{"Error", "Page", Finished}[s]
 }
 
-// FaxDirection: direction of a fax Action (send/receive)
+// FaxDirection direction of a fax Action (send/receive)
 type FaxDirection int
 
 // Call state constants
@@ -33,6 +33,7 @@ func (s FaxDirection) String() string {
 	return [...]string{"send", "receive"}[s]
 }
 
+// FaxResult TODO DESCRIPTION
 type FaxResult struct {
 	Identity       string
 	RemoteIdentity string
@@ -61,6 +62,7 @@ type IFaxAction interface {
 	GetResult() FaxResult
 }
 
+// generic name for error event
 const (
 	StrError = "error"
 )

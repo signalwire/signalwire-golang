@@ -279,7 +279,7 @@ func (relay *RelaySession) RelayPlayTTS(ctx context.Context, call *CallSession, 
 	return relay.RelayPlay(ctx, call, ctrlID, play)
 }
 
-// RelayPlaySilence TODO DESCRIPTION
+// RelayPlayRingtone TODO DESCRIPTION
 func (relay *RelaySession) RelayPlayRingtone(ctx context.Context, call *CallSession, ctrlID string, name string, duration float64) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
@@ -616,7 +616,7 @@ func (relay *RelaySession) RelayRecordAudioStop(ctx context.Context, call *CallS
 	return nil
 }
 
-// RelayDetectFax TODO DESCRIPTION
+// RelayDetectDigit TODO DESCRIPTION
 func (relay *RelaySession) RelayDetectDigit(ctx context.Context, call *CallSession, controlID string, digits string) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")

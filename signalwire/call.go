@@ -160,7 +160,7 @@ func (c *CallSession) CallCleanup(_ context.Context) {
 	c = nil /*let the garbage collector clean it up */
 }
 
-// WaitCallState wait for a certain call state and return true when it arrives.
+// WaitCallStateInternal wait for a certain call state and return true when it arrives.
 // return false if timeout.
 func (c *CallSession) WaitCallStateInternal(_ context.Context, want CallState) bool {
 	var ret bool
@@ -380,10 +380,12 @@ func (c *CallSession) SetParams(callID, nodeID, direction, to, from string) {
 	c.From = from
 }
 
+// SetFrom TODO DESCRIPTION
 func (c *CallSession) SetFrom(from string) {
 	c.From = from
 }
 
+// SetTo TODO DESCRIPTION
 func (c *CallSession) SetTo(to string) {
 	c.To = to
 }

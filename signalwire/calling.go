@@ -185,7 +185,7 @@ func (callobj *CallObj) Answer() ResultAnswer {
 	return *res
 }
 
-// Answer TODO DESCRIPTION
+// GetCallState TODO DESCRIPTION
 func (callobj *CallObj) GetCallState() CallState {
 	callobj.call.Lock()
 	s := callobj.call.CallState
@@ -194,6 +194,7 @@ func (callobj *CallObj) GetCallState() CallState {
 	return s
 }
 
+// WaitFor TODO DESCRIPTION
 func (callobj *CallObj) WaitFor(want CallState) bool {
 	if ret := callobj.call.WaitCallStateInternal(callobj.Calling.Ctx, want); !ret {
 		Log.Error("did not get %s state for call\n", want.String())
@@ -203,6 +204,7 @@ func (callobj *CallObj) WaitFor(want CallState) bool {
 	return true
 }
 
+// WaitForRinging TODO DESCRIPTION
 func (callobj *CallObj) WaitForRinging() bool {
 	if ret := callobj.call.WaitCallStateInternal(callobj.Calling.Ctx, Ringing); !ret {
 		Log.Error("did not get Ringing state for call\n")
@@ -212,6 +214,7 @@ func (callobj *CallObj) WaitForRinging() bool {
 	return true
 }
 
+// WaitForAnswered TODO DESCRIPTION
 func (callobj *CallObj) WaitForAnswered() bool {
 	if ret := callobj.call.WaitCallStateInternal(callobj.Calling.Ctx, Answered); !ret {
 		Log.Error("did not get Answered state for call\n")
@@ -221,6 +224,7 @@ func (callobj *CallObj) WaitForAnswered() bool {
 	return true
 }
 
+// WaitForEnding TODO DESCRIPTION
 func (callobj *CallObj) WaitForEnding() bool {
 	if ret := callobj.call.WaitCallStateInternal(callobj.Calling.Ctx, Ending); !ret {
 		Log.Error("did not get Ending state for call\n")
@@ -230,6 +234,7 @@ func (callobj *CallObj) WaitForEnding() bool {
 	return true
 }
 
+// WaitForEnded TODO DESCRIPTION
 func (callobj *CallObj) WaitForEnded() bool {
 	if ret := callobj.call.WaitCallStateInternal(callobj.Calling.Ctx, Ended); !ret {
 		Log.Error("did not get Ended state for call\n")
