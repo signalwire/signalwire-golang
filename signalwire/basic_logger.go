@@ -1,6 +1,7 @@
 package signalwire
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -23,31 +24,31 @@ func CreateNewBasicLogger() *BasicLogger {
 		TraceLevel: log.New(
 			os.Stderr,
 			"TRACE: ",
-			log.Ldate|log.Ltime),
+			log.Ldate|log.Lshortfile|log.Ltime),
 		DebugLevel: log.New(
 			os.Stderr,
 			"DEBUG: ",
-			log.Ldate|log.Ltime),
+			log.Ldate|log.Lshortfile|log.Ltime),
 		InfoLevel: log.New(
 			os.Stderr,
 			"INFO: ",
-			log.Ldate|log.Ltime),
+			log.Ldate|log.Lshortfile|log.Ltime),
 		WarnLevel: log.New(
 			os.Stderr,
 			"WARN: ",
-			log.Ldate|log.Ltime),
+			log.Ldate|log.Lshortfile|log.Ltime),
 		ErrorLevel: log.New(
 			os.Stderr,
 			"ERROR: ",
-			log.Ldate|log.Ltime),
+			log.Ldate|log.Lshortfile|log.Ltime),
 		FatalLevel: log.New(
 			os.Stderr,
 			"FATAL: ",
-			log.Ldate|log.Ltime),
+			log.Ldate|log.Lshortfile|log.Ltime),
 		PanicLevel: log.New(
 			os.Stderr,
 			"PANIC: ",
-			log.Ldate|log.Ltime),
+			log.Ldate|log.Lshortfile|log.Ltime),
 	}
 }
 
@@ -61,7 +62,9 @@ func (l *BasicLogger) Trace(format string, args ...interface{}) {
 		panic("trace logger undefined")
 	}
 
-	l.TraceLevel.Printf(format, args...)
+	if err := l.TraceLevel.Output(2, fmt.Sprintf(format, args...)); err != nil {
+		panic(err)
+	}
 }
 
 // Debug is a debug level logger
@@ -74,7 +77,9 @@ func (l *BasicLogger) Debug(format string, args ...interface{}) {
 		panic("debug logger undefined")
 	}
 
-	l.DebugLevel.Printf(format, args...)
+	if err := l.DebugLevel.Output(2, fmt.Sprintf(format, args...)); err != nil {
+		panic(err)
+	}
 }
 
 // Info is a info level logger
@@ -87,7 +92,9 @@ func (l *BasicLogger) Info(format string, args ...interface{}) {
 		panic("info logger undefined")
 	}
 
-	l.InfoLevel.Printf(format, args...)
+	if err := l.InfoLevel.Output(2, fmt.Sprintf(format, args...)); err != nil {
+		panic(err)
+	}
 }
 
 // Warn is a warn level logger
@@ -100,7 +107,9 @@ func (l *BasicLogger) Warn(format string, args ...interface{}) {
 		panic("warn logger undefined")
 	}
 
-	l.WarnLevel.Printf(format, args...)
+	if err := l.WarnLevel.Output(2, fmt.Sprintf(format, args...)); err != nil {
+		panic(err)
+	}
 }
 
 // Error is a error level logger
@@ -113,8 +122,12 @@ func (l *BasicLogger) Error(format string, args ...interface{}) {
 		panic("error logger undefined")
 	}
 
-	l.ErrorLevel.Printf(format, args...)
+	if err := l.ErrorLevel.Output(2, fmt.Sprintf(format, args...)); err != nil {
+		panic(err)
+	}
 }
+
+//revive:disable:deep-exit
 
 // Fatal is a fatal level logger
 func (l *BasicLogger) Fatal(format string, args ...interface{}) {
@@ -126,8 +139,14 @@ func (l *BasicLogger) Fatal(format string, args ...interface{}) {
 		panic("fatal logger undefined")
 	}
 
-	l.FatalLevel.Fatalf(format, args...)
+	if err := l.FatalLevel.Output(2, fmt.Sprintf(format, args...)); err != nil {
+		panic(err)
+	}
+
+	os.Exit(1)
 }
+
+//revive:disable:deep-exit
 
 // Panic is a panic level logger
 func (l *BasicLogger) Panic(format string, args ...interface{}) {
@@ -139,7 +158,13 @@ func (l *BasicLogger) Panic(format string, args ...interface{}) {
 		panic("panic logger undefined")
 	}
 
-	l.PanicLevel.Fatalf(format, args...)
+	s := fmt.Sprintf(format, args...)
+
+	if err := l.PanicLevel.Output(2, s); err != nil {
+		panic(err)
+	}
+
+	panic(s)
 }
 
 // SetLevel defines maximum level of a logger output
