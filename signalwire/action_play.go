@@ -63,6 +63,28 @@ type IPlayAction interface {
 	Resume() error
 }
 
+// PlayAudio TODO DESCRIPTION
+type PlayAudio struct {
+	URL string
+}
+
+// PlayTTS TODO DESCRIPTION
+type PlayTTS struct {
+	Text     string
+	Language string
+	Gender   string
+}
+
+// PlaySilence TODO DESCRIPTION
+type PlaySilence struct {
+	Duration float64
+}
+
+// PlayGenericParams TODO DESCRIPTION
+type PlayGenericParams struct {
+	SpecificParams interface{}
+}
+
 func (callobj *CallObj) checkPlayFinished(ctx context.Context, ctrlID string, res *PlayResult) (*PlayResult, error) {
 	if ret := callobj.call.WaitPlayState(ctx, ctrlID, PlayPlaying); !ret {
 		Log.Debug("Playing did not start successfully. CtrlID: %s\n", ctrlID)
@@ -562,4 +584,100 @@ func (playaction *PlayAction) PlayResume() (*PlayVolumeResult, error) {
 	res.Successful = true
 
 	return res, nil
+}
+
+// Play TODO DESCRIPTION
+func (callobj *CallObj) Play(g [MaxPlay]PlayGenericParams) ([]PlayResult, error) {
+	var result []PlayResult
+
+	for _, playParams := range g {
+		var ok bool
+
+		_, ok = playParams.SpecificParams.(*PlayAudio)
+		if ok {
+			params, _ := playParams.SpecificParams.(*PlayAudio)
+
+			res, err := callobj.PlayAudio(params.URL)
+			if err != nil {
+				return result, err
+			}
+
+			result = append(result, *res)
+		}
+
+		_, ok = playParams.SpecificParams.(*PlayTTS)
+		if ok {
+			params, _ := playParams.SpecificParams.(*PlayTTS)
+
+			res, err := callobj.PlayTTS(params.Text, params.Language, params.Gender)
+			if err != nil {
+				return result, err
+			}
+
+			result = append(result, *res)
+		}
+
+		_, ok = playParams.SpecificParams.(*PlaySilence)
+		if ok {
+			params, _ := playParams.SpecificParams.(*PlaySilence)
+
+			res, err := callobj.PlaySilence(params.Duration)
+			if err != nil {
+				return result, err
+			}
+
+			result = append(result, *res)
+		}
+	}
+
+	return result, nil
+}
+
+// PlayAsync TODO DESCRIPTION
+func (callobj *CallObj) PlayAsync(g [MaxPlay]PlayGenericParams) ([]*PlayAction, error) {
+	var result []*PlayAction
+
+	for _, playParams := range g {
+		var ok bool
+		_, ok = playParams.SpecificParams.(*PlayAudio)
+
+		if ok {
+			params, _ := playParams.SpecificParams.(*PlayAudio)
+
+			res, err := callobj.PlayAudioAsync(params.URL)
+			if err != nil {
+				return result, err
+			}
+
+			result = append(result, res)
+		}
+
+		_, ok = playParams.SpecificParams.(*PlayTTS)
+
+		if ok {
+			params, _ := playParams.SpecificParams.(*PlayTTS)
+
+			res, err := callobj.PlayTTSAsync(params.Text, params.Language, params.Gender)
+			if err != nil {
+				return result, err
+			}
+
+			result = append(result, res)
+		}
+
+		_, ok = playParams.SpecificParams.(*PlaySilence)
+
+		if ok {
+			params, _ := playParams.SpecificParams.(*PlaySilence)
+
+			res, err := callobj.PlaySilenceAsync(params.Duration)
+			if err != nil {
+				return result, err
+			}
+
+			result = append(result, res)
+		}
+	}
+
+	return result, nil
 }

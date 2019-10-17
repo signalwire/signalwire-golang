@@ -316,3 +316,13 @@ func (resultHangup *ResultHangup) GetReason() CallDisconnectReason {
 func (resultHangup *ResultHangup) GetSuccessful() bool {
 	return resultHangup.Successful
 }
+
+// GetSuccessful TODO DESCRIPTION
+func (resultAnswer *ResultAnswer) GetSuccessful() bool {
+	return resultAnswer.Successful
+}
+
+// GetSuccessful TODO DESCRIPTION
+func (resultDial *ResultDial) GetSuccessful() bool {
+	return resultDial.Successful
+}
