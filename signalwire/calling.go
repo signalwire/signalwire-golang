@@ -45,6 +45,8 @@ type CallObj struct {
 
 // ICallObj these are for unit-testing
 type ICallObj interface {
+	Hangup() error
+	Answer() ResultAnswer
 	PlayAudio(url string) (*PlayResult, error)
 	PlayStop(ctrlID *string) error
 	PlayTTS(text, language, gender string) (*PlayResult, error)
@@ -87,8 +89,6 @@ type ResultAnswer struct {
 // ICalling object visible to the end user
 type ICalling interface {
 	DialPhone(fromNumber, toNumber string) ResultDial
-	Hangup() error
-	Answer() ResultAnswer
 	NewCall() *CallObj
 	Dial(c *CallObj) ResultDial
 }
@@ -272,6 +272,15 @@ func (calling *Calling) Dial(c *CallObj) ResultDial {
 
 	if err := calling.Relay.RelayPhoneDial(calling.Ctx, c.call, c.call.From, c.call.To, DefaultRingTimeout); err != nil {
 		Log.Error("fields From or To not set for call\n")
+
+		return *res
+	}
+
+	if ret := c.call.WaitCallStateInternal(calling.Ctx, Answered); !ret {
+		Log.Debug("did not get Answered state\n")
+
+		c.call = nil
+		res.Call = c
 
 		return *res
 	}
