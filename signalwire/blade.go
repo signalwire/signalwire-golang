@@ -194,7 +194,13 @@ func (blade *BladeSession) BladeInit(ctx context.Context, addr string) error {
 	}
 
 	stream := ws.NewObjectStream(c)
-	blade.conn = jsonrpc2.NewConn(ctx, stream, blade.BladeHandlerIncoming)
+	l := new(Jsonrpc2Logger)
+
+	blade.conn = jsonrpc2.NewConn(
+		ctx, stream,
+		blade.BladeHandlerIncoming,
+		jsonrpc2.LogMessages(l),
+	)
 
 	if blade.conn == nil {
 		return errors.New("failed to initialize jsonrpc2 (invalid connection)")
