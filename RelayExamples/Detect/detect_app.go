@@ -46,8 +46,28 @@ func MyOnDetectFinished(_ interface{}) {
 }
 
 // MyOnDetectUpdate ran on Detector update
-func MyOnDetectUpdate(_ interface{}) {
+func MyOnDetectUpdate(det interface{}) {
 	signalwire.Log.Info("Detect update.\n")
+
+	detectAction, ok := det.(*signalwire.DetectMachineAction)
+	if ok {
+		signalwire.Log.Info("Machine Detect Action.\n")
+		// stop the Machine detector if READY
+		if detectAction.GetDetectorEvent() == signalwire.DetectMachineReady {
+			signalwire.Log.Info("Machine READY.\n")
+			detectAction.Stop()
+		}
+	}
+
+	_, ok2 := det.(*signalwire.DetectFaxAction)
+	if ok2 {
+		signalwire.Log.Info("Fax Detect Action.\n")
+	}
+
+	_, ok3 := det.(*signalwire.DetectDigitAction)
+	if ok3 {
+		signalwire.Log.Info("Fax Digits Action.\n")
+	}
 }
 
 // MyOnDetectError ran on Detector error
@@ -128,7 +148,7 @@ func MyReady(consumer *signalwire.Consumer) {
 			break
 		}
 
-		signalwire.Log.Info("Last Machine event: %s", detectMachineAction.GetEvent().String())
+		signalwire.Log.Info("Last Machine event: %s", detectMachineAction.GetDetectorEvent().String())
 	}
 
 	for {
@@ -139,7 +159,7 @@ func MyReady(consumer *signalwire.Consumer) {
 			break
 		}
 
-		signalwire.Log.Info("Last Digit event: %s", detectDigitAction.GetEvent().String())
+		signalwire.Log.Info("Last Digit event: %s", detectDigitAction.GetDetectorEvent().String())
 	}
 
 	for {
@@ -150,7 +170,7 @@ func MyReady(consumer *signalwire.Consumer) {
 			break
 		}
 
-		signalwire.Log.Info("Last Fax event: %s", detectFaxAction.GetEvent().String())
+		signalwire.Log.Info("Last Fax event: %s", detectFaxAction.GetDetectorEvent().String())
 	}
 
 	if resultDial.Call.GetCallState() != signalwire.Ending && resultDial.Call.GetCallState() != signalwire.Ended {
