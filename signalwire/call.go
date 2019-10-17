@@ -120,7 +120,7 @@ func NewCallTagToCallID() *CallTagToCallID {
 // CallInit creates the channels communicating call states
 func (c *CallSession) CallInit(_ context.Context) {
 	c.CallStateChan = make(chan CallState, EventQueue)
-	c.CallConnectStateChan = make(chan CallConnectState)
+	c.CallConnectStateChan = make(chan CallConnectState, EventQueue)
 
 	c.CallPlayChans = make(map[string](chan PlayState))
 	c.CallPlayControlIDs = make(chan string, SimActionsOfTheSameKind)
