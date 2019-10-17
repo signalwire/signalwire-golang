@@ -286,11 +286,13 @@ type ParamsEventCallingCallDetect struct {
 	Detect    DetectEventStruct `json:"detect"`
 }
 
+// FaxTypeParamsPage TODO DESCRIPTION
 type FaxTypeParamsPage struct {
 	Direction string `json:"direction"`
 	Number    uint16 `json:"number"`
 }
 
+// FaxTypeParamsFinished  TODO DESCRIPTION
 type FaxTypeParamsFinished struct {
 	Direction      string `json:"direction"`
 	Identity       string `json:"identity"`
@@ -303,10 +305,12 @@ type FaxTypeParamsFinished struct {
 	Format         string `json:"format"`
 }
 
+// FaxTypeParamsError TODO DESCRIPTION
 type FaxTypeParamsError struct {
 	Description string `json:"description"`
 }
 
+// FaxEventStruct TODO DESCRIPTION
 type FaxEventStruct struct {
 	EventType string                 `json:"type"`
 	Params    map[string]interface{} `json:"params"`
@@ -491,6 +495,7 @@ type ParamsCallDetect struct {
 // ParamsCallDetectStop TODO DESCRIPTION
 type ParamsCallDetectStop ParamsGenericAction
 
+// ParamsSendFax  TODO DESCRIPTION
 type ParamsSendFax struct {
 	CallID     string `json:"call_id"`
 	NodeID     string `json:"node_id"`
@@ -500,5 +505,5 @@ type ParamsSendFax struct {
 	HeaderInfo string `json:"header_info"`
 }
 
-// ParamsSendFaxStop TODO DESCRIPTION
+// ParamsFaxStop TODO DESCRIPTION
 type ParamsFaxStop ParamsGenericAction

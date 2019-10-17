@@ -6,6 +6,7 @@ import (
 	"sync"
 )
 
+// GlobalOverwriteHost TODO DESCRIPTION
 var GlobalOverwriteHost string
 
 // Consumer TODO DESCRIPTION

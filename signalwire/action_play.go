@@ -157,7 +157,7 @@ func (callobj *CallObj) PlaySilence(duration float64) (*PlayResult, error) {
 	return callobj.checkPlayFinished(callobj.Calling.Ctx, ctrlID, res)
 }
 
-// PlaySilence TODO DESCRIPTION
+// PlayRingtone TODO DESCRIPTION
 func (callobj *CallObj) PlayRingtone(name string, duration float64) (*PlayResult, error) {
 	res := new(PlayResult)
 
@@ -463,7 +463,7 @@ func (playaction *PlayAction) GetCompleted() bool {
 	return ret
 }
 
-// GetCompleted TODO DESCRIPTION
+// GetResult TODO DESCRIPTION
 func (playaction *PlayAction) GetResult() PlayResult {
 	playaction.RLock()
 

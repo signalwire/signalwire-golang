@@ -24,6 +24,7 @@ type ConnectResult struct {
 	Successful bool
 }
 
+// Connect TODO DESCRIPTION
 func (callobj *CallObj) Connect(fromNumber, toNumber string) (*ConnectResult, error) {
 	res := new(ConnectResult)
 

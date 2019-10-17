@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"reflect"
 	"sync"
 	"time"
 
@@ -355,8 +354,6 @@ func (blade *BladeSession) BladeSetup(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
-	Log.Debug("reflect.TypeOf(reply): %s\n", reflect.TypeOf(reply).String())
 
 	r, ok := reply.(*ReplyResultSetup)
 	if !ok {

@@ -346,3 +346,14 @@ func (recordaction *RecordAction) GetSize() uint {
 
 	return ret
 }
+
+// GetState TODO DESCRIPTION
+func (recordaction *RecordAction) GetState() RecordState {
+	recordaction.RLock()
+
+	ret := recordaction.State
+
+	recordaction.RUnlock()
+
+	return ret
+}

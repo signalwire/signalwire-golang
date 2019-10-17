@@ -44,10 +44,18 @@ func TestCall(t *testing.T) {
 			wg.Wait()
 			assert.Equal(t, ret, true, "call should have received Hangup state")
 			ret = false
+			var wg2 sync.WaitGroup
+			wg2.Add(1)
 			go func() {
+				defer wg2.Done()
 				ret = call.WaitCallConnectState(ctx, Disconnected)
 			}()
-			call.CallConnectStateChan <- Disconnected
+			select {
+			case call.CallConnectStateChan <- Disconnected:
+			default:
+				t.Errorf("cannot write to channel")
+			}
+			wg2.Wait()
 			assert.Equal(t, ret, true, "call should have received Disconnected state")
 			call.CallCleanup(ctx)
 		},
