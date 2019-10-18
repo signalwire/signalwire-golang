@@ -10,6 +10,7 @@ const (
 	BladeVersionMinor = 3
 	BladeRevision     = 0
 	MaxSimCalls       = 100
+	MaxPlay           = 10
 	/* internal */
 	BroadcastEventTimeout   = 10 /*seconds*/
 	DefaultRingTimeout      = 30 /*seconds*/
