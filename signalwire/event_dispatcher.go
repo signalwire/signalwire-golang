@@ -63,13 +63,13 @@ func (*EventCalling) callConnectStateFromStr(s string) (CallConnectState, error)
 
 	switch strings.ToLower(s) {
 	case "connecting":
-		state = Connecting
+		state = CallConnectConnecting
 	case "connected":
-		state = Connected
+		state = CallConnectConnected
 	case "disconnected":
-		state = Disconnected
+		state = CallConnectDisconnected
 	case "failed":
-		state = Failed
+		state = CallConnectFailed
 	default:
 		return state, errors.New("invalid CallConnectState")
 	}
@@ -610,6 +610,7 @@ func (calling *EventCalling) dispatchStateNotif(ctx context.Context, callParams 
 	}
 
 	if callParams.CallState == Ended {
+		call.SetActive(false)
 		disconnectReason, err := calling.I.callDisconnectReasonFromStr(callParams.EndReason)
 		if err != nil {
 			return err
@@ -639,7 +640,7 @@ func (calling *EventCalling) dispatchConnectStateNotif(ctx context.Context, call
 
 	call.UpdateCallConnectState(ccstate)
 
-	if ccstate == Connected {
+	if ccstate == CallConnectConnected {
 		call.UpdateConnectPeer(peer)
 	}
 

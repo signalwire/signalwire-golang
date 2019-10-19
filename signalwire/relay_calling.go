@@ -54,7 +54,7 @@ func (relay *RelaySession) RelayPhoneDial(ctx context.Context, call *CallSession
 		Params: ParamsCallingBeginStruct{
 			Device: DeviceStruct{
 				Type: "phone",
-				Params: DeviceParamsStruct{
+				Params: DevicePhoneParams{
 					ToNumber:   toNumber,
 					FromNumber: fromNumber,
 					Timeout:    call.Timeout,
@@ -103,7 +103,7 @@ func (relay *RelaySession) RelayPhoneConnect(ctx context.Context, call *CallSess
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
 
-	deviceParams := DeviceParamsStruct{
+	deviceParams := DevicePhoneParams{
 		ToNumber:   toNumber,
 		FromNumber: fromNumber,
 		Timeout:    call.Timeout,
@@ -124,6 +124,67 @@ func (relay *RelaySession) RelayPhoneConnect(ctx context.Context, call *CallSess
 			NodeID:  call.NodeID,
 			CallID:  call.CallID,
 		},
+	}
+
+	var ReplyBladeExecuteDecode ReplyBladeExecute
+
+	reply, err := relay.Blade.I.BladeExecute(ctx, &v, &ReplyBladeExecuteDecode)
+	if err != nil {
+		return err
+	}
+
+	r, ok := reply.(*ReplyBladeExecute)
+	if !ok {
+		return errors.New("type assertion failed")
+	}
+
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
+
+	return nil
+}
+
+// RelayConnect TODO DESCRIPTION
+func (relay *RelaySession) RelayConnect(ctx context.Context, call *CallSession, ringback *[]RingbackStruct, devices *[][]DeviceStruct) error {
+	if relay == nil {
+		return errors.New("empty relay object")
+	}
+
+	if relay.Blade == nil {
+		return errors.New("blade server object not defined")
+	}
+
+	if call == nil {
+		return errors.New("empty call object")
+	}
+
+	if len(call.CallID) == 0 {
+		Log.Error("no CallID\n")
+
+		return fmt.Errorf("no CallID for call [%p]", call)
+	}
+
+	var v interface{}
+	if ringback == nil {
+		v = ParamsBladeExecuteStruct{
+			Protocol: relay.Blade.Protocol,
+			Method:   "calling.connect",
+			Params: ParamsCallConnectStruct{
+				Devices: *devices,
+				NodeID:  call.NodeID,
+				CallID:  call.CallID,
+			},
+		}
+	} else {
+		v = ParamsBladeExecuteStruct{
+			Protocol: relay.Blade.Protocol,
+			Method:   "calling.connect",
+			Params: ParamsCallConnectStruct{
+				Ringback: *ringback,
+				Devices:  *devices,
+				NodeID:   call.NodeID,
+				CallID:   call.CallID,
+			},
+		}
 	}
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute

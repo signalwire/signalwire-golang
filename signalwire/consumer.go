@@ -109,12 +109,14 @@ func (consumer *Consumer) Run() error {
 					return
 				}
 				if call != nil {
-					var I ICallObj = CallObjNew()
+					go func() {
+						var I ICallObj = CallObjNew()
 
-					c := &CallObj{I: I}
-					c.call = call
-					c.Calling = &consumer.Client.Calling
-					consumer.OnIncomingCall(consumer, c)
+						c := &CallObj{I: I}
+						c.call = call
+						c.Calling = &consumer.Client.Calling
+						consumer.OnIncomingCall(consumer, c)
+					}()
 				}
 			}
 		}()

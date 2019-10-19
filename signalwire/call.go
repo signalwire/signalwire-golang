@@ -41,16 +41,18 @@ func (s CallDisconnectReason) String() string {
 
 // CallSession TODO DESCRIPTION
 type CallSession struct {
+	Active               bool
 	To                   string
 	From                 string
 	TagID                string
-	Timeout              uint
+	Timeout              uint // ring timeout
 	CallID               string
 	NodeID               string
 	ProjectID            string
 	SpaceID              string
 	Direction            string
 	CallState            CallState
+	PrevCallState        CallState
 	CallDisconnectReason CallDisconnectReason
 	CallConnectState     CallConnectState
 	CallStateChan        chan CallState
@@ -373,21 +375,42 @@ func (c *CallSession) UpdateCallState(s CallState) {
 
 // SetParams setting Params that stay the same during the call*/
 func (c *CallSession) SetParams(callID, nodeID, direction, to, from string) {
+	c.Lock()
 	c.CallID = callID
 	c.NodeID = nodeID
 	c.Direction = direction
 	c.To = to
 	c.From = from
+	c.Unlock()
 }
 
 // SetFrom TODO DESCRIPTION
 func (c *CallSession) SetFrom(from string) {
+	c.Lock()
 	c.From = from
+	c.Unlock()
 }
 
 // SetTo TODO DESCRIPTION
 func (c *CallSession) SetTo(to string) {
+	c.Lock()
 	c.To = to
+	c.Unlock()
+}
+
+// SetAction TODO DESCRIPTION
+func (c *CallSession) SetActive(active bool) {
+	c.Lock()
+	c.Active = active
+	c.Unlock()
+}
+
+// SetAction TODO DESCRIPTION
+func (c *CallSession) GetActive() bool {
+	c.RLock()
+	a := c.Active
+	c.RUnlock()
+	return a
 }
 
 // UpdateCallConnectState TODO DESCRIPTION

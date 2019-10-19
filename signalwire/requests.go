@@ -1,16 +1,25 @@
 package signalwire
 
-// DeviceParamsStruct TODO DESCRIPTION
-type DeviceParamsStruct struct {
+// DevicePhoneParams TODO DESCRIPTION
+type DevicePhoneParams struct {
 	ToNumber   string `json:"to_number"`
 	FromNumber string `json:"from_number"`
 	Timeout    uint   `json:"timeout"`
 }
 
+// DeviceAgoraParams TODO DESCRIPTION
+type DeviceAgoraParams struct {
+	To      string `json:"to"`
+	From    string `json:"from"`
+	Appid   string `json:"appid"`
+	Channel string `json:"channel"`
+}
+
 // DeviceStruct TODO DESCRIPTION
 type DeviceStruct struct {
-	Type   string             `json:"type"`
-	Params DeviceParamsStruct `json:"params"`
+	Type string `json:"type"`
+	// todo: make Params interface{}
+	Params DevicePhoneParams `json:"params"`
 }
 
 // ParamsCallingBeginStruct TODO DESCRIPTION
@@ -24,11 +33,23 @@ type ParamsSignalwireReceive struct {
 	Contexts []string `json:"contexts"`
 }
 
+type RingbackRingtoneParams PlayRingtoneParams
+type RingbackSilenceParams PlaySilenceParams
+type RingbackTTSParams PlayTTSParams
+type RingbackAudioParams PlayAudioParams
+
+type RingbackStruct struct {
+	Type   string      `json:"type"`
+	Params interface{} `json:"params"`
+}
+
 // ParamsCallConnectStruct TODO DESCRIPTION
 type ParamsCallConnectStruct struct {
-	Devices [][]DeviceStruct `json:"devices"`
-	NodeID  string           `json:"node_id"`
-	CallID  string           `json:"call_id"`
+	Ringback []RingbackStruct `json:"ringback, omitempty"`
+	Devices  [][]DeviceStruct `json:"devices"`
+	NodeID   string           `json:"node_id"`
+	CallID   string           `json:"call_id"`
+	Tag      string           `json:"tag,omitempty"`
 }
 
 // ParamsCommandStruct TODO DESCRIPTION
@@ -382,8 +403,8 @@ type PlayAudioParams struct {
 // PlayTTSParams TODO DESCRIPTION
 type PlayTTSParams struct {
 	Text     string `json:"text"`
-	Language string `json:"language"`
-	Gender   string `json:"gender"`
+	Language string `json:"language,omitempty"`
+	Gender   string `json:"gender,omitempty"`
 }
 
 // PlaySilenceParams TODO DESCRIPTION

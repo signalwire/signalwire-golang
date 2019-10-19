@@ -18,29 +18,32 @@ type CallObj struct {
 	Calling *Calling
 	Context string
 
-	OnStateChange       func()
-	OnRinging           func()
-	OnAnswered          func()
-	OnEnding            func()
-	OnEnded             func()
-	OnPlayFinished      func(*PlayAction)
-	OnPlayPaused        func(*PlayAction)
-	OnPlayError         func(*PlayAction)
-	OnPlayPlaying       func(*PlayAction)
-	OnPlayStateChange   func(*PlayAction)
-	OnRecordStateChange func(*RecordAction)
-	OnRecordRecording   func(*RecordAction)
-	OnRecordPaused      func(*RecordAction)
-	OnRecordFinished    func(*RecordAction)
-	OnRecordNoInput     func(*RecordAction)
-	OnDetectUpdate      func(interface{})
-	OnDetectError       func(interface{})
-	OnDetectFinished    func(interface{})
-	OnFaxFinished       func(*FaxAction)
-	OnFaxPage           func(*FaxAction)
-	OnFaxError          func(*FaxAction)
-	Timeout             uint32 // ring timeout
-	Active              bool
+	OnStateChange         func()
+	OnRinging             func()
+	OnAnswered            func()
+	OnEnding              func()
+	OnEnded               func()
+	OnPlayFinished        func(*PlayAction)
+	OnPlayPaused          func(*PlayAction)
+	OnPlayError           func(*PlayAction)
+	OnPlayPlaying         func(*PlayAction)
+	OnPlayStateChange     func(*PlayAction)
+	OnRecordStateChange   func(*RecordAction)
+	OnRecordRecording     func(*RecordAction)
+	OnRecordPaused        func(*RecordAction)
+	OnRecordFinished      func(*RecordAction)
+	OnRecordNoInput       func(*RecordAction)
+	OnDetectUpdate        func(interface{})
+	OnDetectError         func(interface{})
+	OnDetectFinished      func(interface{})
+	OnFaxFinished         func(*FaxAction)
+	OnFaxPage             func(*FaxAction)
+	OnFaxError            func(*FaxAction)
+	OnConnectStateChange  func(*ConnectAction)
+	OnConnectFailed       func(*ConnectAction)
+	OnConnectConnecting   func(*ConnectAction)
+	OnConnectConnected    func(*ConnectAction)
+	OnConnectDisconnected func(*ConnectAction)
 }
 
 // ICallObj these are for unit-testing
@@ -117,7 +120,9 @@ func (calling *Calling) DialPhone(fromNumber, toNumber string) ResultDial {
 	}
 
 	newcall := new(CallSession)
+	newcall.SetActive(true)
 	if err := calling.Relay.RelayPhoneDial(calling.Ctx, newcall, fromNumber, toNumber, DefaultRingTimeout); err != nil {
+		newcall.SetActive(false)
 		return *res
 	}
 
@@ -130,7 +135,7 @@ func (calling *Calling) DialPhone(fromNumber, toNumber string) ResultDial {
 	if ret := newcall.WaitCallStateInternal(calling.Ctx, Answered); !ret {
 		Log.Debug("did not get Answered state\n")
 
-		c.call = nil
+		c.call.SetActive(false)
 		res.Call = c
 
 		return *res
@@ -175,6 +180,7 @@ func (callobj *CallObj) Answer() (*ResultAnswer, error) {
 	res := new(ResultAnswer)
 
 	if call.CallState != Answered {
+		Log.Info("Answering call [%p]\n", call)
 		if err := callobj.Calling.Relay.RelayCallAnswer(callobj.Calling.Ctx, call); err != nil {
 			Log.Debug("cannot answer call. err: %v\n", err)
 
@@ -286,16 +292,18 @@ func (calling *Calling) Dial(c *CallObj) ResultDial {
 		return *res
 	}
 
+	c.call.SetActive(true)
 	if err := calling.Relay.RelayPhoneDial(calling.Ctx, c.call, c.call.From, c.call.To, DefaultRingTimeout); err != nil {
 		Log.Error("fields From or To not set for call\n")
 
+		c.call.SetActive(false)
 		return *res
 	}
 
 	if ret := c.call.WaitCallStateInternal(calling.Ctx, Answered); !ret {
 		Log.Debug("did not get Answered state\n")
 
-		c.call = nil
+		c.call.SetActive(false)
 		res.Call = c
 
 		return *res

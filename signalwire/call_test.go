@@ -26,8 +26,8 @@ func TestCall(t *testing.T) {
 			assert.NotEqual(t, len(call.Direction), 0, "call direction must be set")
 			call.UpdateCallState(Answered)
 			assert.Equal(t, call.CallState, Answered, "call must be in Answered state")
-			call.UpdateCallConnectState(Connected)
-			assert.Equal(t, call.CallConnectState, Connected, "call must be in Answered state")
+			call.UpdateCallConnectState(CallConnectConnected)
+			assert.Equal(t, call.CallConnectState, CallConnectConnected, "call must be in Answered state")
 			var ret bool
 			var wg sync.WaitGroup
 			wg.Add(1)
@@ -48,10 +48,10 @@ func TestCall(t *testing.T) {
 			wg2.Add(1)
 			go func() {
 				defer wg2.Done()
-				ret = call.WaitCallConnectState(ctx, Disconnected)
+				ret = call.WaitCallConnectState(ctx, CallConnectDisconnected)
 			}()
 			select {
-			case call.CallConnectStateChan <- Disconnected:
+			case call.CallConnectStateChan <- CallConnectDisconnected:
 			default:
 				t.Errorf("cannot write to channel")
 			}
