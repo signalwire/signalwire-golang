@@ -121,6 +121,7 @@ func (calling *Calling) DialPhone(fromNumber, toNumber string) ResultDial {
 
 	newcall := new(CallSession)
 	newcall.SetActive(true)
+
 	if err := calling.Relay.RelayPhoneDial(calling.Ctx, newcall, fromNumber, toNumber, DefaultRingTimeout); err != nil {
 		newcall.SetActive(false)
 		return *res
@@ -181,6 +182,7 @@ func (callobj *CallObj) Answer() (*ResultAnswer, error) {
 
 	if call.CallState != Answered {
 		Log.Info("Answering call [%p]\n", call)
+
 		if err := callobj.Calling.Relay.RelayCallAnswer(callobj.Calling.Ctx, call); err != nil {
 			Log.Debug("cannot answer call. err: %v\n", err)
 
@@ -293,10 +295,12 @@ func (calling *Calling) Dial(c *CallObj) ResultDial {
 	}
 
 	c.call.SetActive(true)
+
 	if err := calling.Relay.RelayPhoneDial(calling.Ctx, c.call, c.call.From, c.call.To, DefaultRingTimeout); err != nil {
 		Log.Error("fields From or To not set for call\n")
 
 		c.call.SetActive(false)
+
 		return *res
 	}
 

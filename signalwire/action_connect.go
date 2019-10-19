@@ -55,6 +55,7 @@ func (callobj *CallObj) Connect(ringback *[]RingbackStruct, devices *[][]DeviceS
 	}
 
 	callobj.callbacksRunConnect(callobj.Calling.Ctx, a)
+
 	return res, nil
 }
 
@@ -133,7 +134,6 @@ func (callobj *CallObj) callbacksRunConnect(_ context.Context, res *ConnectActio
 					callobj.OnConnectConnecting(res)
 				}
 			case CallConnectFailed:
-
 				res.Lock()
 
 				res.Completed = true

@@ -410,6 +410,7 @@ func (c *CallSession) GetActive() bool {
 	c.RLock()
 	a := c.Active
 	c.RUnlock()
+
 	return a
 }
 

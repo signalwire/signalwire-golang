@@ -611,6 +611,7 @@ func (calling *EventCalling) dispatchStateNotif(ctx context.Context, callParams 
 
 	if callParams.CallState == Ended {
 		call.SetActive(false)
+
 		disconnectReason, err := calling.I.callDisconnectReasonFromStr(callParams.EndReason)
 		if err != nil {
 			return err

@@ -45,7 +45,7 @@ type RingbackStruct struct {
 
 // ParamsCallConnectStruct TODO DESCRIPTION
 type ParamsCallConnectStruct struct {
-	Ringback []RingbackStruct `json:"ringback, omitempty"`
+	Ringback []RingbackStruct `json:"ringback,omitempty"`
 	Devices  [][]DeviceStruct `json:"devices"`
 	NodeID   string           `json:"node_id"`
 	CallID   string           `json:"call_id"`
