@@ -82,6 +82,11 @@ type CallSession struct {
 	CallFaxEventChan chan FaxEventStruct
 	CallFaxReadyChan chan struct{}
 
+	CallTapChans      map[string](chan TapState)
+	CallTapControlIDs chan string
+	CallTapEventChans map[string](chan ParamsEventCallingCallTap)
+	CallTapReadyChans map[string](chan struct{})
+
 	Hangup   chan struct{}
 	CallPeer PeerDeviceStruct
 	Actions  Actions
@@ -146,6 +151,11 @@ func (c *CallSession) CallInit(_ context.Context) {
 	c.CallFaxControlID = make(chan string, 1)
 	c.CallFaxReadyChan = make(chan struct{})
 	c.CallFaxEventChan = make(chan FaxEventStruct)
+
+	c.CallTapChans = make(map[string](chan TapState))
+	c.CallTapControlIDs = make(chan string, 1)
+	c.CallTapEventChans = make(map[string](chan ParamsEventCallingCallTap))
+	c.CallTapReadyChans = make(map[string](chan struct{}))
 
 	c.Hangup = make(chan struct{})
 	c.Actions.m = make(map[string]string)

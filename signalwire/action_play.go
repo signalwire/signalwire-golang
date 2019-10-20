@@ -126,6 +126,7 @@ func (callobj *CallObj) PlayAudio(s string) (*PlayResult, error) {
 	}
 
 	ctrlID, _ := GenUUIDv4()
+
 	err := callobj.Calling.Relay.RelayPlayAudio(callobj.Calling.Ctx, callobj.call, ctrlID, s)
 
 	if err != nil {
@@ -218,11 +219,9 @@ func (callobj *CallObj) PlayStop(ctrlID *string) error {
 func (callobj *CallObj) callbacksRunPlay(_ context.Context, ctrlID string, res *PlayAction) {
 	for {
 		var out bool
-
 		select {
 		// get play states
 		case playstate := <-callobj.call.CallPlayChans[ctrlID]:
-
 			res.RLock()
 
 			prevstate := res.State
@@ -240,6 +239,7 @@ func (callobj *CallObj) callbacksRunPlay(_ context.Context, ctrlID string, res *
 				res.Unlock()
 
 				Log.Debug("Play finished. ctrlID: %s res [%p] Completed [%v] Successful [%v]\n", ctrlID, res, res.Completed, res.Result.Successful)
+
 				out = true
 
 				if callobj.OnPlayFinished != nil {

@@ -522,9 +522,56 @@ type ParamsSendFax struct {
 	NodeID     string `json:"node_id"`
 	ControlID  string `json:"control_id"`
 	Document   string `json:"document"`
-	Identity   string `json:"identity"`
-	HeaderInfo string `json:"header_info"`
+	Identity   string `json:"identity,omitempty"`
+	HeaderInfo string `json:"header_info,omitempty"`
 }
 
 // ParamsFaxStop TODO DESCRIPTION
 type ParamsFaxStop ParamsGenericAction
+
+// TapAudioParams TODO DESCRIPTION
+type TapAudioParams struct {
+	Direction string `json:"direction"`
+}
+
+// TapStruct TODO DESCRIPTION
+type TapStruct struct {
+	Type   string         `json:"type"`
+	Params TapAudioParams `json:"params"`
+}
+
+// TapDeviceParams TODO DESCRIPTION
+type TapDeviceParams struct {
+	Addr  string `json:"addr"`
+	Codec string `json:"codec"`
+	Port  uint16 `json:"port"`
+	Ptime uint8  `json:"ptime"`
+}
+
+// TapDevice TODO DESCRIPTION
+type TapDevice struct {
+	Type   string          `json:"type"`
+	Params TapDeviceParams `json:"params"`
+}
+
+// ParamsCallTap TODO DESCRIPTION
+type ParamsCallTap struct {
+	CallID    string    `json:"call_id"`
+	NodeID    string    `json:"node_id"`
+	ControlID string    `json:"control_id"`
+	Tap       TapStruct `json:"tap"`
+	Device    TapDevice `json:"device"`
+}
+
+// ParamsCallTapStop TODO DESCRIPTION
+type ParamsCallTapStop ParamsGenericAction
+
+// ParamsEventCallingCallTap TODO DESCRIPTION
+type ParamsEventCallingCallTap struct {
+	TapState  string    `json:"state"`
+	CallID    string    `json:"call_id"`
+	NodeID    string    `json:"node_id"`
+	ControlID string    `json:"control_id"`
+	Tap       TapStruct `json:"tap"`
+	Device    TapDevice `json:"device"`
+}

@@ -44,6 +44,9 @@ type CallObj struct {
 	OnConnectConnecting   func(*ConnectAction)
 	OnConnectConnected    func(*ConnectAction)
 	OnConnectDisconnected func(*ConnectAction)
+	OnTapStateChange      func(*TapAction)
+	OnTapFinished         func(*TapAction)
+	OnTapTapping          func(*TapAction)
 }
 
 // ICallObj these are for unit-testing

@@ -1009,3 +1009,111 @@ func (relay *RelaySession) RelayReceiveFaxStop(ctx context.Context, call *CallSe
 
 	return nil
 }
+
+// RelayTapAudio TODO DESCRIPTION
+func (relay *RelaySession) RelayTapAudio(ctx context.Context, call *CallSession, ctrlID, direction string, device *TapDevice) error {
+	if len(call.CallID) == 0 {
+		Log.Error("no CallID\n")
+
+		return fmt.Errorf("no CallID for call [%p]", call)
+	}
+
+	tapAudioParams := TapAudioParams{
+		Direction: direction,
+	}
+
+	tap := TapStruct{
+		Type:   "audio",
+		Params: tapAudioParams,
+	}
+
+	return relay.RelayTap(ctx, call, ctrlID, tap, device)
+}
+
+// RelayTap TODO DESCRIPTION
+func (relay *RelaySession) RelayTap(ctx context.Context, call *CallSession, controlID string, tap TapStruct, device *TapDevice) error {
+	if len(call.CallID) == 0 {
+		Log.Error("no CallID\n")
+
+		return fmt.Errorf("no CallID for call [%p]", call)
+	}
+
+	v := ParamsBladeExecuteStruct{
+		Protocol: relay.Blade.Protocol,
+		Method:   "calling.tap",
+		Params: ParamsCallTap{
+			NodeID:    call.NodeID,
+			CallID:    call.CallID,
+			ControlID: controlID,
+			Tap:       tap,
+			Device:    *device,
+		},
+	}
+
+	call.Lock()
+
+	call.CallTapChans[controlID] = make(chan TapState, EventQueue)
+	call.CallTapEventChans[controlID] = make(chan ParamsEventCallingCallTap, EventQueue)
+	call.CallTapReadyChans[controlID] = make(chan struct{})
+
+	call.Unlock()
+
+	select {
+	case call.CallTapControlIDs <- controlID:
+		// send the ctrlID to go routine that fires Consumer callbacks
+		Log.Debug("sent controlID to go routine\n")
+	default:
+		Log.Debug("controlID was not sent to go routine\n")
+	}
+
+	var ReplyBladeExecuteDecode ReplyBladeExecute
+
+	reply, err := relay.Blade.BladeExecute(ctx, &v, &ReplyBladeExecuteDecode)
+	if err != nil {
+		return err
+	}
+
+	r, ok := reply.(*ReplyBladeExecute)
+	if !ok {
+		return errors.New("type assertion failed")
+	}
+
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
+
+	return nil
+}
+
+// RelayTapStop TODO DESCRIPTION
+func (relay *RelaySession) RelayTapStop(ctx context.Context, call *CallSession, ctrlID *string) error {
+	if len(call.CallID) == 0 {
+		Log.Error("no CallID\n")
+
+		return fmt.Errorf("no CallID for call [%p]", call)
+	}
+
+	v := ParamsBladeExecuteStruct{
+		Protocol: relay.Blade.Protocol,
+		Method:   "calling.tap.stop",
+		Params: ParamsCallPlayStop{
+			NodeID:    call.NodeID,
+			CallID:    call.CallID,
+			ControlID: *ctrlID,
+		},
+	}
+
+	var ReplyBladeExecuteDecode ReplyBladeExecute
+
+	reply, err := relay.Blade.BladeExecute(ctx, &v, &ReplyBladeExecuteDecode)
+	if err != nil {
+		return err
+	}
+
+	r, ok := reply.(*ReplyBladeExecute)
+	if !ok {
+		return errors.New("type assertion failed")
+	}
+
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
+
+	return nil
+}

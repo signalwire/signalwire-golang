@@ -78,6 +78,7 @@ func (consumer *Consumer) getIncomingCall(ctx context.Context, wg *sync.WaitGrou
 			wg.Done()
 			return
 		}
+
 		if call != nil {
 			go consumer.runOnIncomingCall(ctx, call)
 		}
