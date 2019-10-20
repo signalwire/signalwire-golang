@@ -60,6 +60,30 @@ func (consumer *Consumer) Setup(project, token string, contexts []string) {
 	consumer.Client = c
 }
 
+func (consumer *Consumer) runOnIncomingCall(_ context.Context, call *CallSession) {
+	var I ICallObj = CallObjNew()
+
+	c := &CallObj{I: I}
+	c.call = call
+	c.Calling = &consumer.Client.Calling
+	consumer.OnIncomingCall(consumer, c)
+}
+
+func (consumer *Consumer) getIncomingCall(ctx context.Context, wg *sync.WaitGroup) {
+	for {
+		call, ierr := consumer.Client.I.WaitInbound(ctx)
+		if ierr != nil {
+			Log.Error("Error processing incoming call: %v\n", ierr)
+		} else if call == nil && ierr == nil {
+			wg.Done()
+			return
+		}
+		if call != nil {
+			go consumer.runOnIncomingCall(ctx, call)
+		}
+	}
+}
+
 // Run TODO DESCRIPTION
 func (consumer *Consumer) Run() error {
 	consumer.Client.SetClient(consumer.Host, consumer.Contexts)
@@ -99,28 +123,7 @@ func (consumer *Consumer) Run() error {
 	}
 
 	if consumer.OnIncomingCall != nil {
-		go func() {
-			for {
-				call, ierr := consumer.Client.I.WaitInbound()
-				if ierr != nil {
-					Log.Error("Error processing incoming call: %v\n", ierr)
-				} else if call == nil && ierr == nil {
-					wg.Done()
-					return
-				}
-				if call != nil {
-					go func() {
-						var I ICallObj = CallObjNew()
-
-						c := &CallObj{I: I}
-						c.call = call
-						c.Calling = &consumer.Client.Calling
-						consumer.OnIncomingCall(consumer, c)
-					}()
-				}
-			}
-		}()
-
+		go consumer.getIncomingCall(ctx, &wg)
 		Log.Debug("OnIncomingCall CB enabled\n")
 	}
 

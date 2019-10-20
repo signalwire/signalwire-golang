@@ -69,6 +69,9 @@ func MyOnIncomingCall(consumer *signalwire.Consumer, call *signalwire.CallObj) {
 	CountIncomingCalls++
 
 	if CountIncomingCalls > 2 {
+		/*if the callee number in Connect() is assigned
+		to our context, the call originated by Connect()
+		will end up here as well. Avoid a loop.*/
 		return
 	}
 
@@ -86,8 +89,6 @@ func MyOnIncomingCall(consumer *signalwire.Consumer, call *signalwire.CallObj) {
 	call.OnConnectConnecting = MyOnConnectConnecting
 	call.OnConnectConnected = MyOnConnectConnected
 	call.OnConnectDisconnected = MyOnConnectDisconnected
-
-	timer := time.NewTimer(20 * time.Second)
 
 	go spinner(100 * time.Millisecond)
 
@@ -109,7 +110,7 @@ func MyOnIncomingCall(consumer *signalwire.Consumer, call *signalwire.CallObj) {
 		signalwire.Log.Error("error running call Connect()\n")
 	}
 
-	<-timer.C
+	time.Sleep(20 * time.Second)
 	signalwire.Log.Info("Hangup call..\n")
 
 	hangupResult, err := call.Hangup()
@@ -120,10 +121,6 @@ func MyOnIncomingCall(consumer *signalwire.Consumer, call *signalwire.CallObj) {
 
 	if hangupResult.GetSuccessful() {
 		signalwire.Log.Info("Call disconnect result: %s\n", hangupResult.GetReason().String())
-	}
-
-	if err := consumer.Stop(); err != nil {
-		signalwire.Log.Error("Error occurred while trying to stop Consumer\n")
 	}
 }
 
@@ -175,10 +172,20 @@ func main() {
 	// register callback
 	consumer.OnIncomingCall = MyOnIncomingCall
 
+	timer := time.NewTimer(25 * time.Second)
 	signalwire.Log.Info("Wait incoming call..\n")
 
 	// start
 	if err := consumer.Run(); err != nil {
 		signalwire.Log.Error("Error occurred while starting Signalwire Consumer\n")
 	}
+
+	<-timer.C
+
+	if err := consumer.Stop(); err != nil {
+		signalwire.Log.Error("Error occurred while trying to stop Consumer\n")
+	}
+
+	signalwire.Log.Info("End Program")
+
 }

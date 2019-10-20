@@ -43,7 +43,7 @@ type IClientSession interface {
 	Connect(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup) error
 	Disconnect() error
 	SetupInbound()
-	WaitInbound() (*CallSession, error)
+	WaitInbound(ctx context.Context) (*CallSession, error)
 	//	OnReady()
 	//	OnDisconnected()
 }
@@ -189,7 +189,7 @@ func (client *ClientSession) SetupInbound() {
 }
 
 // WaitInbound TODO DESCRIPTION
-func (client *ClientSession) WaitInbound() (*CallSession, error) {
+func (client *ClientSession) WaitInbound(_ context.Context) (*CallSession, error) {
 	blade := client.Relay.Blade
 	call, err := blade.BladeWaitInboundCall(client.Ctx)
 
