@@ -483,6 +483,13 @@ func (c *CallSession) GetTimeout() uint {
 	return t
 }
 
+// SetDisconnectReason TODO DESCRIPTION
+func (c *CallSession) SetDisconnectReason(reason CallDisconnectReason) {
+	c.Lock()
+	c.CallDisconnectReason = reason
+	c.Unlock()
+}
+
 // UpdateCallConnectState TODO DESCRIPTION
 func (c *CallSession) UpdateCallConnectState(s CallConnectState) {
 	Log.Debug("[%p] [%v]\n", c, s)
@@ -528,6 +535,15 @@ func (c *CallSession) GetCallID() string {
 	return s
 }
 
+// GetTagID TODO DESCRIPTION
+func (c *CallSession) GetTagID() string {
+	c.RLock()
+	s := c.TagID
+	c.RUnlock()
+
+	return s
+}
+
 // Actions TODO DESCRIPTION
 type Actions struct {
 	sync.RWMutex
@@ -544,7 +560,7 @@ type CallParams struct {
 	FromNumber string
 	CallState  CallState
 	EndReason  string
-	Context    string
+	Context    string // inbound
 }
 
 // ITagToCallID TODO DESCRIPTION
