@@ -87,6 +87,10 @@ type CallSession struct {
 	CallTapEventChans map[string](chan ParamsEventCallingCallTap)
 	CallTapReadyChans map[string](chan struct{})
 
+	CallSendDigitsChans      map[string](chan SendDigitsState)
+	CallSendDigitsControlIDs chan string
+	CallSenDigitsEventChans  map[string](chan ParamsEventCallingCallSendDigits)
+
 	Hangup   chan struct{}
 	CallPeer PeerDeviceStruct
 	Actions  Actions
@@ -156,6 +160,9 @@ func (c *CallSession) CallInit(_ context.Context) {
 	c.CallTapControlIDs = make(chan string, 1)
 	c.CallTapEventChans = make(map[string](chan ParamsEventCallingCallTap))
 	c.CallTapReadyChans = make(map[string](chan struct{}))
+
+	c.CallSendDigitsChans = make(map[string](chan SendDigitsState))
+	c.CallSendDigitsControlIDs = make(chan string, 1)
 
 	c.Hangup = make(chan struct{})
 	c.Actions.m = make(map[string]string)
@@ -408,14 +415,14 @@ func (c *CallSession) SetTo(to string) {
 	c.Unlock()
 }
 
-// SetAction TODO DESCRIPTION
+// SetActive TODO DESCRIPTION
 func (c *CallSession) SetActive(active bool) {
 	c.Lock()
 	c.Active = active
 	c.Unlock()
 }
 
-// SetAction TODO DESCRIPTION
+// GetActive TODO DESCRIPTION
 func (c *CallSession) GetActive() bool {
 	c.RLock()
 	a := c.Active

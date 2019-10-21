@@ -1117,3 +1117,53 @@ func (relay *RelaySession) RelayTapStop(ctx context.Context, call *CallSession, 
 
 	return nil
 }
+
+// RelaySendDigits TODO DESCRIPTION
+func (relay *RelaySession) RelaySendDigits(ctx context.Context, call *CallSession, controlID, digits string) error {
+	if len(call.CallID) == 0 {
+		Log.Error("no CallID\n")
+
+		return fmt.Errorf("no CallID for call [%p]", call)
+	}
+
+	v := ParamsBladeExecuteStruct{
+		Protocol: relay.Blade.Protocol,
+		Method:   "calling.send_digits",
+		Params: ParamsCallSendDigits{
+			NodeID:    call.NodeID,
+			CallID:    call.CallID,
+			ControlID: controlID,
+			Digits:    digits,
+		},
+	}
+
+	call.Lock()
+
+	call.CallSendDigitsChans[controlID] = make(chan SendDigitsState, EventQueue)
+
+	call.Unlock()
+
+	select {
+	case call.CallSendDigitsControlIDs <- controlID:
+		// send the ctrlID to go routine that fires Consumer callbacks
+		Log.Debug("sent controlID to go routine\n")
+	default:
+		Log.Debug("controlID was not sent to go routine\n")
+	}
+
+	var ReplyBladeExecuteDecode ReplyBladeExecute
+
+	reply, err := relay.Blade.BladeExecute(ctx, &v, &ReplyBladeExecuteDecode)
+	if err != nil {
+		return err
+	}
+
+	r, ok := reply.(*ReplyBladeExecute)
+	if !ok {
+		return errors.New("type assertion failed")
+	}
+
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
+
+	return nil
+}

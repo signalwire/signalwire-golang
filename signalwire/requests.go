@@ -33,11 +33,19 @@ type ParamsSignalwireReceive struct {
 	Contexts []string `json:"contexts"`
 }
 
+// RingbackRingtoneParams TODO DESCRIPTION
 type RingbackRingtoneParams PlayRingtoneParams
+
+// RingbackSilenceParams TODO DESCRIPTION
 type RingbackSilenceParams PlaySilenceParams
+
+// RingbackTTSParams TODO DESCRIPTION
 type RingbackTTSParams PlayTTSParams
+
+// RingbackAudioParams TODO DESCRIPTION
 type RingbackAudioParams PlayAudioParams
 
+// RingbackStruct TODO DESCRIPTION
 type RingbackStruct struct {
 	Type   string      `json:"type"`
 	Params interface{} `json:"params"`
@@ -574,4 +582,20 @@ type ParamsEventCallingCallTap struct {
 	ControlID string    `json:"control_id"`
 	Tap       TapStruct `json:"tap"`
 	Device    TapDevice `json:"device"`
+}
+
+// ParamsEventCallingCallSendDigits TODO DESCRIPTION
+type ParamsEventCallingCallSendDigits struct {
+	SendDigitsState string `json:"state"`
+	CallID          string `json:"call_id"`
+	NodeID          string `json:"node_id"`
+	ControlID       string `json:"control_id"`
+}
+
+// ParamsCallSendDigits TODO DESCRIPTION
+type ParamsCallSendDigits struct {
+	CallID    string `json:"call_id"`
+	NodeID    string `json:"node_id"`
+	ControlID string `json:"control_id"`
+	Digits    string `json:"digits"`
 }

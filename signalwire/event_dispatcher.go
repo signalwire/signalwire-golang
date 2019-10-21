@@ -31,6 +31,7 @@ type IEventCalling interface {
 	callFaxEventFromStr(t string) (FaxEventType, error)
 	callDisconnectReasonFromStr(r string) (CallDisconnectReason, error)
 	callTapStateFromStr(s string) (TapState, error)
+	callSendDigitsStateFromStr(s string) (SendDigitsState, error)
 	dispatchStateNotif(ctx context.Context, callParams CallParams) error
 	dispatchConnectStateNotif(ctx context.Context, callParams CallParams, peer PeerDeviceStruct, ccstate CallConnectState) error
 	dispatchPlayState(ctx context.Context, callID, ctrlID string, playState PlayState) error
@@ -41,6 +42,7 @@ type IEventCalling interface {
 	dispatchFaxEventParams(ctx context.Context, callID, ctrlID string, params ParamsEventCallingFax) error
 	dispatchTapEventParams(ctx context.Context, callID, ctrlID string, params ParamsEventCallingCallTap) error
 	dispatchTapState(ctx context.Context, callID, ctrlID string, tapState TapState) error
+	dispatchSendDigitsState(ctx context.Context, callID, ctrlID string, sendDigitsState SendDigitsState) error
 	getCall(ctx context.Context, tag, callID string) (*CallSession, error)
 	getBroadcastParams(ctx context.Context, in, out interface{}) error
 	onCallingEventConnect(ctx context.Context, broadcast NotifParamsBladeBroadcast) error
@@ -288,6 +290,22 @@ func (*EventCalling) callTapStateFromStr(s string) (TapState, error) {
 	return state, nil
 }
 
+// callSendDigitsStateFromStr TODO DESCRIPTION
+func (*EventCalling) callSendDigitsStateFromStr(s string) (SendDigitsState, error) {
+	var state SendDigitsState
+
+	switch strings.ToLower(s) {
+	case Finished:
+		state = SendDigitsFinished
+	default:
+		return state, errors.New("invalid Send Digits State")
+	}
+
+	Log.Debug("state [%s] [%s]\n", s, state.String())
+
+	return state, nil
+}
+
 func (*EventCalling) getBroadcastParams(_ context.Context, in, out interface{}) error {
 	var (
 		jsonData []byte
@@ -523,7 +541,24 @@ func (calling *EventCalling) onCallingEventFax(ctx context.Context, broadcast No
 
 func (calling *EventCalling) onCallingEventSendDigits(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
 	Log.Debug("ctx: %p calling %p %v\n", ctx, calling, broadcast)
-	return nil
+
+	var params ParamsEventCallingCallSendDigits
+
+	if err := calling.getBroadcastParams(ctx, broadcast.Params.Params, &params); err != nil {
+		return err
+	}
+
+	state, err := calling.I.callSendDigitsStateFromStr(params.SendDigitsState)
+	if err != nil {
+		return err
+	}
+
+	return calling.I.dispatchSendDigitsState(
+		ctx,
+		params.CallID,
+		params.ControlID,
+		state,
+	)
 }
 
 // HandleBladeBroadcast TODO DESCRIPTION
@@ -908,6 +943,26 @@ func (calling *EventCalling) dispatchTapState(ctx context.Context, callID, ctrlI
 	<-call.CallTapReadyChans[ctrlID]
 	select {
 	case call.CallTapChans[ctrlID] <- tapState:
+		Log.Debug("sent recordstate\n")
+	default:
+		Log.Debug("no recordstate sent\n")
+	}
+
+	return nil
+}
+
+func (calling *EventCalling) dispatchSendDigitsState(ctx context.Context, callID, ctrlID string, sendDigitsState SendDigitsState) error {
+	Log.Debug("callid [%s] sendDigitsState [%s] blade [%p] ctrlID: %s\n", callID, sendDigitsState.String(), calling.blade, ctrlID)
+
+	call, _ := calling.I.getCall(ctx, "", callID)
+	if call == nil {
+		return fmt.Errorf("error, nil CallSession")
+	}
+
+	Log.Debug("call [%p]\n", call)
+
+	select {
+	case call.CallSendDigitsChans[ctrlID] <- sendDigitsState:
 		Log.Debug("sent recordstate\n")
 	default:
 		Log.Debug("no recordstate sent\n")

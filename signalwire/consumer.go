@@ -69,7 +69,7 @@ func (consumer *Consumer) runOnIncomingCall(_ context.Context, call *CallSession
 	consumer.OnIncomingCall(consumer, c)
 }
 
-func (consumer *Consumer) getIncomingCall(ctx context.Context, wg *sync.WaitGroup) {
+func (consumer *Consumer) incomingCall(ctx context.Context, wg *sync.WaitGroup) {
 	for {
 		call, ierr := consumer.Client.I.WaitInbound(ctx)
 		if ierr != nil {
@@ -124,7 +124,7 @@ func (consumer *Consumer) Run() error {
 	}
 
 	if consumer.OnIncomingCall != nil {
-		go consumer.getIncomingCall(ctx, &wg)
+		go consumer.incomingCall(ctx, &wg)
 		Log.Debug("OnIncomingCall CB enabled\n")
 	}
 
