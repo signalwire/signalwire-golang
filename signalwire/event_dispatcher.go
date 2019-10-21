@@ -716,7 +716,7 @@ func (calling *EventCalling) dispatchStateNotif(ctx context.Context, callParams 
 			return err
 		}
 
-		call.CallDisconnectReason = disconnectReason
+		call.SetDisconnectReason(disconnectReason)
 	}
 	select {
 	case call.CallStateChan <- callParams.CallState:

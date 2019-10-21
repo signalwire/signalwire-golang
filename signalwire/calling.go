@@ -17,11 +17,11 @@ type CallObj struct {
 	I       ICallObj
 	Calling *Calling
 
-	OnStateChange           func()
-	OnRinging               func()
-	OnAnswered              func()
-	OnEnding                func()
-	OnEnded                 func()
+	OnStateChange           func(*CallObj)
+	OnRinging               func(*CallObj)
+	OnAnswered              func(*CallObj)
+	OnEnding                func(*CallObj)
+	OnEnded                 func(*CallObj)
 	OnPlayFinished          func(*PlayAction)
 	OnPlayPaused            func(*PlayAction)
 	OnPlayError             func(*PlayAction)
@@ -79,10 +79,13 @@ type ICallObj interface {
 	WaitForAnswered() bool
 	WaitForEnding() bool
 	WaitForEnded() bool
-	GetActive() bool
+	Active() bool
 	GetState() CallState
 	GetPrevState() CallState
-	GetCallID() string
+	GetID() string
+	GetTempID() string
+	GetTo() string
+	GetFrom() string
 }
 
 // ResultDial TODO DESCRIPTION
@@ -348,7 +351,7 @@ func (resultDial *ResultDial) GetSuccessful() bool {
 }
 
 // GetActive TODO DESCRIPTION
-func (callobj *CallObj) GetActive() bool {
+func (callobj *CallObj) Active() bool {
 	return callobj.call.GetActive()
 }
 
@@ -362,9 +365,14 @@ func (callobj *CallObj) GetPrevState() CallState {
 	return callobj.call.GetPrevState()
 }
 
-// GetCallID TODO DESCRIPTION
-func (callobj *CallObj) GetCallID() string {
+// GetID TODO DESCRIPTION
+func (callobj *CallObj) GetID() string {
 	return callobj.call.GetCallID()
+}
+
+// GetTempID TODO DESCRIPTION
+func (callobj *CallObj) GetTempID() string {
+	return callobj.call.GetTagID()
 }
 
 // SetTimeout TODO DESCRIPTION
@@ -385,4 +393,19 @@ func (callobj *CallObj) GetFrom() string {
 // GetTo TODO DESCRIPTION
 func (callobj *CallObj) GetTo() string {
 	return callobj.call.GetTo()
+}
+
+// Answered TODO DESCRIPTION
+func (callobj *CallObj) Answered() bool {
+	return callobj.call.GetState() == Answered
+}
+
+// Busy TODO DESCRIPTION
+func (callobj *CallObj) Busy() bool {
+	return callobj.call.CallDisconnectReason == CallBusy
+}
+
+// Ended TODO DESCRIPTION
+func (callobj *CallObj) Ended() bool {
+	return callobj.call.GetState() == Ended
 }
