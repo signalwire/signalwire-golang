@@ -67,11 +67,10 @@ var CountIncomingCalls int
 func MyOnIncomingCall(consumer *signalwire.Consumer, call *signalwire.CallObj) {
 	fmt.Printf("got incoming call.\n")
 	CountIncomingCalls++
-
+	/*if the callee number in Connect() is assigned
+	to our context, the call originated by Connect()
+	will end up here as well. Avoid a loop.*/
 	if CountIncomingCalls > 2 {
-		/*if the callee number in Connect() is assigned
-		to our context, the call originated by Connect()
-		will end up here as well. Avoid a loop.*/
 		return
 	}
 
@@ -173,6 +172,7 @@ func main() {
 	consumer.OnIncomingCall = MyOnIncomingCall
 
 	timer := time.NewTimer(25 * time.Second)
+
 	signalwire.Log.Info("Wait incoming call..\n")
 
 	// start
@@ -187,5 +187,4 @@ func main() {
 	}
 
 	signalwire.Log.Info("End Program")
-
 }
