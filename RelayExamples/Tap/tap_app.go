@@ -69,11 +69,13 @@ func MyReady(consumer *signalwire.Consumer) {
 	tapdevice.Type = signalwire.TapRTP.String()
 	tapdevice.Params.Addr = "127.0.0.1" // replace this
 	tapdevice.Params.Port = 1234
+
 	if _, err := resultDial.Call.TapAudioAsync(signalwire.TapDirectionListen, &tapdevice); err != nil {
 		signalwire.Log.Error("Error occurred while trying to play audio\n")
 	}
 
 	time.Sleep(10 * time.Second)
+
 	if _, err := resultDial.Call.Hangup(); err != nil {
 		signalwire.Log.Error("Error occurred while trying to hangup call\n")
 	}
@@ -126,7 +128,7 @@ func main() {
 
 	consumer := new(signalwire.Consumer)
 	// setup the Client
-	signalwire.GlobalOverwriteHost = "relay.swire.io"
+
 	consumer.Setup(PProjectID, PTokenID, Contexts)
 	// register callback
 	consumer.Ready = MyReady
