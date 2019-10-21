@@ -134,7 +134,7 @@ func MyReady(consumer *signalwire.Consumer) {
 	for {
 		time.Sleep(1 * time.Second)
 
-		if recordAction.Completed {
+		if recordAction.GetCompleted() {
 			break
 		}
 	}
@@ -148,7 +148,7 @@ func MyReady(consumer *signalwire.Consumer) {
 	for {
 		time.Sleep(1 * time.Second)
 
-		if recordAction2.Completed {
+		if recordAction2.GetCompleted() {
 			break
 		}
 	}

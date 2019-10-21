@@ -112,7 +112,7 @@ func MyReady(consumer *signalwire.Consumer) {
 	go spinner(100 * time.Millisecond)
 	time.Sleep(3 * time.Second)
 	/*
-		for !recordAction.Completed {
+		for !recordAction.GetCompleted() {
 			// if the callee does not play/say anything the recording would stop on timeout, after EndSilenceTimeout
 			time.Sleep(1 * time.Second)
 		}
