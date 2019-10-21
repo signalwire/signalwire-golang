@@ -681,7 +681,7 @@ func (blade *BladeSession) handleInboundCall(_ context.Context, callID string) b
 
 // BladeSetupInbound TODO DESCRIPTION
 func (blade *BladeSession) BladeSetupInbound(_ context.Context) {
-	blade.Inbound = make(chan string)
+	blade.Inbound = make(chan string, 1)
 	blade.InboundDone = make(chan struct{}, 1)
 }
 

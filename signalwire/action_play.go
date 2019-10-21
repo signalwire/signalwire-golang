@@ -126,6 +126,7 @@ func (callobj *CallObj) PlayAudio(s string) (*PlayResult, error) {
 	}
 
 	ctrlID, _ := GenUUIDv4()
+
 	err := callobj.Calling.Relay.RelayPlayAudio(callobj.Calling.Ctx, callobj.call, ctrlID, s)
 
 	if err != nil {
@@ -215,17 +216,12 @@ func (callobj *CallObj) PlayStop(ctrlID *string) error {
 }
 
 // callbacksRunPlay TODO DESCRIPTION
-func (callobj *CallObj) callbacksRunPlay(ctrlID string, res *PlayAction) {
+func (callobj *CallObj) callbacksRunPlay(_ context.Context, ctrlID string, res *PlayAction) {
 	for {
 		var out bool
-
 		select {
 		// get play states
 		case playstate := <-callobj.call.CallPlayChans[ctrlID]:
-			if playstate == PlayFinished {
-				out = true
-			}
-
 			res.RLock()
 
 			prevstate := res.State
@@ -244,11 +240,12 @@ func (callobj *CallObj) callbacksRunPlay(ctrlID string, res *PlayAction) {
 
 				Log.Debug("Play finished. ctrlID: %s res [%p] Completed [%v] Successful [%v]\n", ctrlID, res, res.Completed, res.Result.Successful)
 
+				out = true
+
 				if callobj.OnPlayFinished != nil {
 					callobj.OnPlayFinished(res)
 				}
 
-				out = true
 			case PlayPlaying:
 				res.Lock()
 
@@ -270,6 +267,8 @@ func (callobj *CallObj) callbacksRunPlay(ctrlID string, res *PlayAction) {
 				res.State = playstate
 
 				res.Unlock()
+
+				out = true
 
 				if callobj.OnPlayError != nil {
 					callobj.OnPlayError(res)
@@ -321,7 +320,7 @@ func (callobj *CallObj) PlaySilenceAsync(duration float64) (*PlayAction, error) 
 		go func() {
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallPlayControlIDs
-			callobj.callbacksRunPlay(ctrlID, res)
+			callobj.callbacksRunPlay(callobj.Calling.Ctx, ctrlID, res)
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
@@ -364,7 +363,7 @@ func (callobj *CallObj) PlayTTSAsync(text, language, gender string) (*PlayAction
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallPlayControlIDs
 
-			callobj.callbacksRunPlay(ctrlID, res)
+			callobj.callbacksRunPlay(callobj.Calling.Ctx, ctrlID, res)
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
@@ -409,7 +408,7 @@ func (callobj *CallObj) PlayAudioAsync(url string) (*PlayAction, error) {
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallPlayControlIDs
 
-			callobj.callbacksRunPlay(ctrlID, res)
+			callobj.callbacksRunPlay(callobj.Calling.Ctx, ctrlID, res)
 		}()
 
 		newCtrlID, _ := GenUUIDv4()

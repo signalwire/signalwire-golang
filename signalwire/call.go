@@ -39,18 +39,34 @@ func (s CallDisconnectReason) String() string {
 	return [...]string{"Hangup", "Cancel", "Busy", "NoAnswer", "Decline", "Error"}[s]
 }
 
-// CallSession TODO DESCRIPTION
+// CallDirection has the direction of a call
+type CallDirection int
+
+// Call state constants
+const (
+	CallInbound CallDirection = iota
+	CallOutbound
+)
+
+func (s CallDirection) String() string {
+	return [...]string{"Inbound", "Outbound"}[s]
+}
+
+// CallSession internal representation of a call
 type CallSession struct {
+	Active               bool
 	To                   string
 	From                 string
 	TagID                string
-	Timeout              uint
+	Timeout              uint // ring timeout
 	CallID               string
 	NodeID               string
 	ProjectID            string
 	SpaceID              string
-	Direction            string
+	Direction            CallDirection
+	Context              string
 	CallState            CallState
+	PrevCallState        CallState
 	CallDisconnectReason CallDisconnectReason
 	CallConnectState     CallConnectState
 	CallStateChan        chan CallState
@@ -79,6 +95,15 @@ type CallSession struct {
 	CallFaxControlID chan string
 	CallFaxEventChan chan FaxEventStruct
 	CallFaxReadyChan chan struct{}
+
+	CallTapChans      map[string](chan TapState)
+	CallTapControlIDs chan string
+	CallTapEventChans map[string](chan ParamsEventCallingCallTap)
+	CallTapReadyChans map[string](chan struct{})
+
+	CallSendDigitsChans      map[string](chan SendDigitsState)
+	CallSendDigitsControlIDs chan string
+	CallSenDigitsEventChans  map[string](chan ParamsEventCallingCallSendDigits)
 
 	Hangup   chan struct{}
 	CallPeer PeerDeviceStruct
@@ -144,6 +169,14 @@ func (c *CallSession) CallInit(_ context.Context) {
 	c.CallFaxControlID = make(chan string, 1)
 	c.CallFaxReadyChan = make(chan struct{})
 	c.CallFaxEventChan = make(chan FaxEventStruct)
+
+	c.CallTapChans = make(map[string](chan TapState))
+	c.CallTapControlIDs = make(chan string, 1)
+	c.CallTapEventChans = make(map[string](chan ParamsEventCallingCallTap))
+	c.CallTapReadyChans = make(map[string](chan struct{}))
+
+	c.CallSendDigitsChans = make(map[string](chan SendDigitsState))
+	c.CallSendDigitsControlIDs = make(chan string, 1)
 
 	c.Hangup = make(chan struct{})
 	c.Actions.m = make(map[string]string)
@@ -368,26 +401,86 @@ func (c *CallSession) GetPeer(_ context.Context) (*CallSession, error) {
 
 // UpdateCallState TODO DESCRIPTION
 func (c *CallSession) UpdateCallState(s CallState) {
+	c.Lock()
+	c.PrevCallState = c.CallState
 	c.CallState = s
+	c.Unlock()
 }
 
 // SetParams setting Params that stay the same during the call*/
-func (c *CallSession) SetParams(callID, nodeID, direction, to, from string) {
+func (c *CallSession) SetParams(callID, nodeID, to, from, context string, direction CallDirection) {
+	c.Lock()
 	c.CallID = callID
 	c.NodeID = nodeID
 	c.Direction = direction
 	c.To = to
 	c.From = from
+	c.Context = context
+	c.Unlock()
 }
 
 // SetFrom TODO DESCRIPTION
 func (c *CallSession) SetFrom(from string) {
+	c.Lock()
 	c.From = from
+	c.Unlock()
+}
+
+// GetFrom TODO DESCRIPTION
+func (c *CallSession) GetFrom() string {
+	c.RLock()
+	from := c.From
+	c.RUnlock()
+
+	return from
 }
 
 // SetTo TODO DESCRIPTION
 func (c *CallSession) SetTo(to string) {
+	c.Lock()
 	c.To = to
+	c.Unlock()
+}
+
+// SetTo TODO DESCRIPTION
+func (c *CallSession) GetTo() string {
+	c.RLock()
+	to := c.To
+	c.RUnlock()
+
+	return to
+}
+
+// SetActive TODO DESCRIPTION
+func (c *CallSession) SetActive(active bool) {
+	c.Lock()
+	c.Active = active
+	c.Unlock()
+}
+
+// GetActive TODO DESCRIPTION
+func (c *CallSession) GetActive() bool {
+	c.RLock()
+	a := c.Active
+	c.RUnlock()
+
+	return a
+}
+
+// SetTimeout TODO DESCRIPTION
+func (c *CallSession) SetTimeout(t uint) {
+	c.Lock()
+	c.Timeout = t
+	c.Unlock()
+}
+
+// GetTimeout TODO DESCRIPTION
+func (c *CallSession) GetTimeout() uint {
+	c.RLock()
+	t := c.Timeout
+	c.RUnlock()
+
+	return t
 }
 
 // UpdateCallConnectState TODO DESCRIPTION
@@ -408,13 +501,40 @@ func (c *CallSession) UpdateConnectPeer(p PeerDeviceStruct) {
 	c.CallPeer.Device.Params.FromNumber = p.Device.Params.FromNumber
 }
 
+// GetActive TODO DESCRIPTION
+func (c *CallSession) GetState() CallState {
+	c.RLock()
+	s := c.CallState
+	c.RUnlock()
+
+	return s
+}
+
+// GetActive TODO DESCRIPTION
+func (c *CallSession) GetPrevState() CallState {
+	c.RLock()
+	s := c.PrevCallState
+	c.RUnlock()
+
+	return s
+}
+
+// GetCallID TODO DESCRIPTION
+func (c *CallSession) GetCallID() string {
+	c.RLock()
+	s := c.CallID
+	c.RUnlock()
+
+	return s
+}
+
 // Actions TODO DESCRIPTION
 type Actions struct {
 	sync.RWMutex
 	m map[string]string
 }
 
-// CallParams TODO DESCRIPTION
+// CallParams TODO DESCRIPTION (internal, to pass it around)
 type CallParams struct {
 	TagID      string
 	CallID     string
@@ -424,6 +544,7 @@ type CallParams struct {
 	FromNumber string
 	CallState  CallState
 	EndReason  string
+	Context    string
 }
 
 // ITagToCallID TODO DESCRIPTION

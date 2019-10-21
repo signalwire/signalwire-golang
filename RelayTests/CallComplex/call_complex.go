@@ -237,7 +237,7 @@ func main() {
 		// wait for "Connected"
 		signalwire.Log.Info("wait for 'Connected'...\n")
 
-		if ret := call.WaitCallConnectState(ctx, signalwire.Connected); !ret {
+		if ret := call.WaitCallConnectState(ctx, signalwire.CallConnectConnected); !ret {
 			signalwire.Log.Fatal("did not get CallConnected state\n")
 		}
 

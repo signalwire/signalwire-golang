@@ -93,7 +93,7 @@ func TestRelay(t *testing.T) {
 			relay.Blade = blade
 			call := new(CallSession)
 
-			call.SetParams("57f0e4d1-82a8-4af1-b74b-e1841b88a339", "61b04307-09b6-43d9-8702-0fbd364eaef0", "outbound", "+13333333", "+12222222")
+			call.SetParams("57f0e4d1-82a8-4af1-b74b-e1841b88a339", "61b04307-09b6-43d9-8702-0fbd364eaef0", "+13333333", "+12222222", "go-test", CallOutbound)
 			err = relay.RelayPhoneConnect(ctx, call, "+12222222", "+13333333")
 
 			assert.Nil(t, err, "RelayPhoneConnect return error must be nil")

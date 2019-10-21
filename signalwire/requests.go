@@ -1,16 +1,25 @@
 package signalwire
 
-// DeviceParamsStruct TODO DESCRIPTION
-type DeviceParamsStruct struct {
+// DevicePhoneParams TODO DESCRIPTION
+type DevicePhoneParams struct {
 	ToNumber   string `json:"to_number"`
 	FromNumber string `json:"from_number"`
 	Timeout    uint   `json:"timeout"`
 }
 
+// DeviceAgoraParams TODO DESCRIPTION
+type DeviceAgoraParams struct {
+	To      string `json:"to"`
+	From    string `json:"from"`
+	Appid   string `json:"appid"`
+	Channel string `json:"channel"`
+}
+
 // DeviceStruct TODO DESCRIPTION
 type DeviceStruct struct {
-	Type   string             `json:"type"`
-	Params DeviceParamsStruct `json:"params"`
+	Type string `json:"type"`
+	// todo: make Params interface{}
+	Params DevicePhoneParams `json:"params"`
 }
 
 // ParamsCallingBeginStruct TODO DESCRIPTION
@@ -24,11 +33,31 @@ type ParamsSignalwireReceive struct {
 	Contexts []string `json:"contexts"`
 }
 
+// RingbackRingtoneParams TODO DESCRIPTION
+type RingbackRingtoneParams PlayRingtoneParams
+
+// RingbackSilenceParams TODO DESCRIPTION
+type RingbackSilenceParams PlaySilenceParams
+
+// RingbackTTSParams TODO DESCRIPTION
+type RingbackTTSParams PlayTTSParams
+
+// RingbackAudioParams TODO DESCRIPTION
+type RingbackAudioParams PlayAudioParams
+
+// RingbackStruct TODO DESCRIPTION
+type RingbackStruct struct {
+	Type   string      `json:"type"`
+	Params interface{} `json:"params"`
+}
+
 // ParamsCallConnectStruct TODO DESCRIPTION
 type ParamsCallConnectStruct struct {
-	Devices [][]DeviceStruct `json:"devices"`
-	NodeID  string           `json:"node_id"`
-	CallID  string           `json:"call_id"`
+	Ringback []RingbackStruct `json:"ringback,omitempty"`
+	Devices  [][]DeviceStruct `json:"devices"`
+	NodeID   string           `json:"node_id"`
+	CallID   string           `json:"call_id"`
+	Tag      string           `json:"tag,omitempty"`
 }
 
 // ParamsCommandStruct TODO DESCRIPTION
@@ -220,6 +249,7 @@ type ParamsEventCallingCallState struct {
 // ParamsEventCallingCallReceive TODO DESCRIPTION
 type ParamsEventCallingCallReceive struct {
 	CallState string       `json:"call_state"`
+	Context   string       `json:"context"`
 	Direction string       `json:"direction"`
 	Device    DeviceStruct `json:"device"`
 	CallID    string       `json:"call_id"`
@@ -382,8 +412,8 @@ type PlayAudioParams struct {
 // PlayTTSParams TODO DESCRIPTION
 type PlayTTSParams struct {
 	Text     string `json:"text"`
-	Language string `json:"language"`
-	Gender   string `json:"gender"`
+	Language string `json:"language,omitempty"`
+	Gender   string `json:"gender,omitempty"`
 }
 
 // PlaySilenceParams TODO DESCRIPTION
@@ -501,9 +531,72 @@ type ParamsSendFax struct {
 	NodeID     string `json:"node_id"`
 	ControlID  string `json:"control_id"`
 	Document   string `json:"document"`
-	Identity   string `json:"identity"`
-	HeaderInfo string `json:"header_info"`
+	Identity   string `json:"identity,omitempty"`
+	HeaderInfo string `json:"header_info,omitempty"`
 }
 
 // ParamsFaxStop TODO DESCRIPTION
 type ParamsFaxStop ParamsGenericAction
+
+// TapAudioParams TODO DESCRIPTION
+type TapAudioParams struct {
+	Direction string `json:"direction"`
+}
+
+// TapStruct TODO DESCRIPTION
+type TapStruct struct {
+	Type   string         `json:"type"`
+	Params TapAudioParams `json:"params"`
+}
+
+// TapDeviceParams TODO DESCRIPTION
+type TapDeviceParams struct {
+	Addr  string `json:"addr"`
+	Codec string `json:"codec,omitempty"`
+	Port  uint16 `json:"port"`
+	Ptime uint8  `json:"ptime,omitempty"`
+}
+
+// TapDevice TODO DESCRIPTION
+type TapDevice struct {
+	Type   string          `json:"type"`
+	Params TapDeviceParams `json:"params"`
+}
+
+// ParamsCallTap TODO DESCRIPTION
+type ParamsCallTap struct {
+	CallID    string    `json:"call_id"`
+	NodeID    string    `json:"node_id"`
+	ControlID string    `json:"control_id"`
+	Tap       TapStruct `json:"tap"`
+	Device    TapDevice `json:"device"`
+}
+
+// ParamsCallTapStop TODO DESCRIPTION
+type ParamsCallTapStop ParamsGenericAction
+
+// ParamsEventCallingCallTap TODO DESCRIPTION
+type ParamsEventCallingCallTap struct {
+	TapState  string    `json:"state"`
+	CallID    string    `json:"call_id"`
+	NodeID    string    `json:"node_id"`
+	ControlID string    `json:"control_id"`
+	Tap       TapStruct `json:"tap"`
+	Device    TapDevice `json:"device"`
+}
+
+// ParamsEventCallingCallSendDigits TODO DESCRIPTION
+type ParamsEventCallingCallSendDigits struct {
+	SendDigitsState string `json:"state"`
+	CallID          string `json:"call_id"`
+	NodeID          string `json:"node_id"`
+	ControlID       string `json:"control_id"`
+}
+
+// ParamsCallSendDigits TODO DESCRIPTION
+type ParamsCallSendDigits struct {
+	CallID    string `json:"call_id"`
+	NodeID    string `json:"node_id"`
+	ControlID string `json:"control_id"`
+	Digits    string `json:"digits"`
+}

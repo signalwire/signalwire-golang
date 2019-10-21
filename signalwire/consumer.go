@@ -21,6 +21,7 @@ type Consumer struct {
 	OnIncomingMessage    func(*Consumer)
 	OnMessageStateChange func(*Consumer)
 	OnTask               func(*Consumer)
+	Teardown             func(*Consumer)
 
 	Log LoggerWrapper
 }
@@ -35,7 +36,6 @@ func NewConsumer() *Consumer {
 // IConsumer TODO DESCRIPTION
 type IConsumer interface {
 	Setup(projectID, token string)
-	Teardown()
 	Stop()
 	Run()
 }
@@ -58,6 +58,31 @@ func (consumer *Consumer) Setup(project, token string, contexts []string) {
 	c := &ClientSession{I: I}
 	c.I = c
 	consumer.Client = c
+}
+
+func (consumer *Consumer) runOnIncomingCall(_ context.Context, call *CallSession) {
+	var I ICallObj = CallObjNew()
+
+	c := &CallObj{I: I}
+	c.call = call
+	c.Calling = &consumer.Client.Calling
+	consumer.OnIncomingCall(consumer, c)
+}
+
+func (consumer *Consumer) incomingCall(ctx context.Context, wg *sync.WaitGroup) {
+	for {
+		call, ierr := consumer.Client.I.WaitInbound(ctx)
+		if ierr != nil {
+			Log.Error("Error processing incoming call: %v\n", ierr)
+		} else if call == nil && ierr == nil {
+			wg.Done()
+			return
+		}
+
+		if call != nil {
+			go consumer.runOnIncomingCall(ctx, call)
+		}
+	}
 }
 
 // Run TODO DESCRIPTION
@@ -99,26 +124,7 @@ func (consumer *Consumer) Run() error {
 	}
 
 	if consumer.OnIncomingCall != nil {
-		go func() {
-			for {
-				call, ierr := consumer.Client.I.WaitInbound()
-				if ierr != nil {
-					Log.Error("Error processing incoming call: %v\n", ierr)
-				} else if call == nil && ierr == nil {
-					wg.Done()
-					return
-				}
-				if call != nil {
-					var I ICallObj = CallObjNew()
-
-					c := &CallObj{I: I}
-					c.call = call
-					c.Calling = &consumer.Client.Calling
-					consumer.OnIncomingCall(consumer, c)
-				}
-			}
-		}()
-
+		go consumer.incomingCall(ctx, &wg)
 		Log.Debug("OnIncomingCall CB enabled\n")
 	}
 
@@ -131,5 +137,9 @@ func (consumer *Consumer) Run() error {
 
 // Stop TODO DESCRIPTION
 func (consumer *Consumer) Stop() error {
+	if consumer.Teardown != nil {
+		consumer.Teardown(consumer)
+	}
+
 	return consumer.Client.I.Disconnect()
 }
