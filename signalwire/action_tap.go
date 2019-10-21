@@ -3,6 +3,7 @@ package signalwire
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 )
 
@@ -19,6 +20,32 @@ func (s TapState) String() string {
 	return [...]string{"Tappping", "Finished"}[s]
 }
 
+// TapDeviceType  TODO DESCRIPTION
+type TapDeviceType int
+
+// Tap state constants
+const (
+	TapRTP TapDeviceType = iota
+	TapWS
+)
+
+func (s TapDeviceType) String() string {
+	return [...]string{"rtp", "ws"}[s]
+}
+
+// TapDirection TODO DESCRIPTION
+type TapDirection int
+
+// Tap state constants
+const (
+	TapDirectionListen TapDirection = iota
+	TapDirectionSpeak
+)
+
+func (s TapDirection) String() string {
+	return [...]string{"listen", "speak"}[s]
+}
+
 // TapResult TODO DESCRIPTION
 type TapResult struct {
 	Successful bool
@@ -26,12 +53,13 @@ type TapResult struct {
 
 // TapAction TODO DESCRIPTION
 type TapAction struct {
-	CallObj   *CallObj
-	ControlID string
-	Completed bool
-	Result    TapResult
-	State     TapState
-	err       error
+	CallObj       *CallObj
+	ControlID     string
+	Completed     bool
+	Result        TapResult
+	State         TapState
+	TapDeviceType TapDeviceType
+	err           error
 	sync.RWMutex
 }
 
@@ -66,7 +94,7 @@ func (callobj *CallObj) checkTapFinished(_ context.Context, ctrlID string, res *
 }
 
 // TapAudio TODO DESCRIPTION
-func (callobj *CallObj) TapAudio(direction string, tapdev *TapDevice) (*TapResult, error) {
+func (callobj *CallObj) TapAudio(direction fmt.Stringer, tapdev *TapDevice) (*TapResult, error) {
 	res := new(TapResult)
 
 	if callobj.Calling == nil {
@@ -78,7 +106,7 @@ func (callobj *CallObj) TapAudio(direction string, tapdev *TapDevice) (*TapResul
 	}
 
 	ctrlID, _ := GenUUIDv4()
-	err := callobj.Calling.Relay.RelayTapAudio(callobj.Calling.Ctx, callobj.call, ctrlID, direction, tapdev)
+	err := callobj.Calling.Relay.RelayTapAudio(callobj.Calling.Ctx, callobj.call, ctrlID, direction.String(), tapdev)
 
 	if err != nil {
 		return res, err
@@ -102,9 +130,9 @@ func (callobj *CallObj) TapStop(ctrlID *string) error {
 
 // callbacksRunTap TODO DESCRIPTION
 func (callobj *CallObj) callbacksRunTap(_ context.Context, ctrlID string, res *TapAction) {
-	for {
-		var out bool
+	var out bool
 
+	for {
 		select {
 		// get tap states
 		case tapstate := <-callobj.call.CallTapChans[ctrlID]:
@@ -151,6 +179,18 @@ func (callobj *CallObj) callbacksRunTap(_ context.Context, ctrlID string, res *T
 			if prevstate != tapstate && callobj.OnTapStateChange != nil {
 				callobj.OnTapStateChange(res)
 			}
+
+		case params := <-callobj.call.CallTapEventChans[ctrlID]:
+			Log.Debug("got params for ctrlID : %s %v\n", ctrlID, params)
+
+			res.Lock()
+
+			/*todo: get info from the event*/
+
+			res.Unlock()
+
+			callobj.call.CallTapReadyChans[ctrlID] <- struct{}{}
+
 		case <-callobj.call.Hangup:
 			out = true
 		}
@@ -162,7 +202,7 @@ func (callobj *CallObj) callbacksRunTap(_ context.Context, ctrlID string, res *T
 }
 
 // TapAudioAsync TODO DESCRIPTION
-func (callobj *CallObj) TapAudioAsync(direction string, tapdev *TapDevice) (*TapAction, error) {
+func (callobj *CallObj) TapAudioAsync(direction fmt.Stringer, tapdev *TapDevice) (*TapAction, error) {
 	res := new(TapAction)
 
 	if callobj.Calling == nil {
@@ -188,7 +228,7 @@ func (callobj *CallObj) TapAudioAsync(direction string, tapdev *TapDevice) (*Tap
 		res.ControlID = newCtrlID
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelayTapAudio(callobj.Calling.Ctx, callobj.call, newCtrlID, direction, tapdev)
+		err := callobj.Calling.Relay.RelayTapAudio(callobj.Calling.Ctx, callobj.call, newCtrlID, direction.String(), tapdev)
 
 		if err != nil {
 			res.Lock()

@@ -543,9 +543,9 @@ type TapStruct struct {
 // TapDeviceParams TODO DESCRIPTION
 type TapDeviceParams struct {
 	Addr  string `json:"addr"`
-	Codec string `json:"codec"`
+	Codec string `json:"codec,omitempty"`
 	Port  uint16 `json:"port"`
-	Ptime uint8  `json:"ptime"`
+	Ptime uint8  `json:"ptime,omitempty"`
 }
 
 // TapDevice TODO DESCRIPTION
