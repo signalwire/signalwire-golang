@@ -39,7 +39,20 @@ func (s CallDisconnectReason) String() string {
 	return [...]string{"Hangup", "Cancel", "Busy", "NoAnswer", "Decline", "Error"}[s]
 }
 
-// CallSession TODO DESCRIPTION
+// CallDirection has the direction of a call
+type CallDirection int
+
+// Call state constants
+const (
+	CallInbound CallDirection = iota
+	CallOutbound
+)
+
+func (s CallDirection) String() string {
+	return [...]string{"Inbound", "Outbound"}[s]
+}
+
+// CallSession internal representation of a call
 type CallSession struct {
 	Active               bool
 	To                   string
@@ -50,7 +63,8 @@ type CallSession struct {
 	NodeID               string
 	ProjectID            string
 	SpaceID              string
-	Direction            string
+	Direction            CallDirection
+	Context              string
 	CallState            CallState
 	PrevCallState        CallState
 	CallDisconnectReason CallDisconnectReason
@@ -387,17 +401,21 @@ func (c *CallSession) GetPeer(_ context.Context) (*CallSession, error) {
 
 // UpdateCallState TODO DESCRIPTION
 func (c *CallSession) UpdateCallState(s CallState) {
+	c.Lock()
+	c.PrevCallState = c.CallState
 	c.CallState = s
+	c.Unlock()
 }
 
 // SetParams setting Params that stay the same during the call*/
-func (c *CallSession) SetParams(callID, nodeID, direction, to, from string) {
+func (c *CallSession) SetParams(callID, nodeID, to, from, context string, direction CallDirection) {
 	c.Lock()
 	c.CallID = callID
 	c.NodeID = nodeID
 	c.Direction = direction
 	c.To = to
 	c.From = from
+	c.Context = context
 	c.Unlock()
 }
 
@@ -408,11 +426,29 @@ func (c *CallSession) SetFrom(from string) {
 	c.Unlock()
 }
 
+// GetFrom TODO DESCRIPTION
+func (c *CallSession) GetFrom() string {
+	c.RLock()
+	from := c.From
+	c.RUnlock()
+
+	return from
+}
+
 // SetTo TODO DESCRIPTION
 func (c *CallSession) SetTo(to string) {
 	c.Lock()
 	c.To = to
 	c.Unlock()
+}
+
+// SetTo TODO DESCRIPTION
+func (c *CallSession) GetTo() string {
+	c.RLock()
+	to := c.To
+	c.RUnlock()
+
+	return to
 }
 
 // SetActive TODO DESCRIPTION
@@ -429,6 +465,22 @@ func (c *CallSession) GetActive() bool {
 	c.RUnlock()
 
 	return a
+}
+
+// SetTimeout TODO DESCRIPTION
+func (c *CallSession) SetTimeout(t uint) {
+	c.Lock()
+	c.Timeout = t
+	c.Unlock()
+}
+
+// GetTimeout TODO DESCRIPTION
+func (c *CallSession) GetTimeout() uint {
+	c.RLock()
+	t := c.Timeout
+	c.RUnlock()
+
+	return t
 }
 
 // UpdateCallConnectState TODO DESCRIPTION
@@ -449,13 +501,40 @@ func (c *CallSession) UpdateConnectPeer(p PeerDeviceStruct) {
 	c.CallPeer.Device.Params.FromNumber = p.Device.Params.FromNumber
 }
 
+// GetActive TODO DESCRIPTION
+func (c *CallSession) GetState() CallState {
+	c.RLock()
+	s := c.CallState
+	c.RUnlock()
+
+	return s
+}
+
+// GetActive TODO DESCRIPTION
+func (c *CallSession) GetPrevState() CallState {
+	c.RLock()
+	s := c.PrevCallState
+	c.RUnlock()
+
+	return s
+}
+
+// GetCallID TODO DESCRIPTION
+func (c *CallSession) GetCallID() string {
+	c.RLock()
+	s := c.CallID
+	c.RUnlock()
+
+	return s
+}
+
 // Actions TODO DESCRIPTION
 type Actions struct {
 	sync.RWMutex
 	m map[string]string
 }
 
-// CallParams TODO DESCRIPTION
+// CallParams TODO DESCRIPTION (internal, to pass it around)
 type CallParams struct {
 	TagID      string
 	CallID     string
@@ -465,6 +544,7 @@ type CallParams struct {
 	FromNumber string
 	CallState  CallState
 	EndReason  string
+	Context    string
 }
 
 // ITagToCallID TODO DESCRIPTION

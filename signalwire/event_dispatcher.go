@@ -32,6 +32,7 @@ type IEventCalling interface {
 	callDisconnectReasonFromStr(r string) (CallDisconnectReason, error)
 	callTapStateFromStr(s string) (TapState, error)
 	callSendDigitsStateFromStr(s string) (SendDigitsState, error)
+	callDirectionFromStr(s string) (CallDirection, error)
 	dispatchStateNotif(ctx context.Context, callParams CallParams) error
 	dispatchConnectStateNotif(ctx context.Context, callParams CallParams, peer PeerDeviceStruct, ccstate CallConnectState) error
 	dispatchPlayState(ctx context.Context, callID, ctrlID string, playState PlayState) error
@@ -82,6 +83,21 @@ func (*EventCalling) callConnectStateFromStr(s string) (CallConnectState, error)
 	Log.Debug("state [%s] [%s]\n", s, state.String())
 
 	return state, nil
+}
+
+func (*EventCalling) callDirectionFromStr(s string) (CallDirection, error) {
+	var dir CallDirection
+
+	switch strings.ToLower(s) {
+	case "inbound":
+		dir = CallInbound
+	case "outbound":
+		dir = CallOutbound
+	default:
+		return dir, errors.New("invalid Call Direction")
+	}
+
+	return dir, nil
 }
 
 func (*EventCalling) callStateFromStr(s string) (CallState, error) {
@@ -407,6 +423,7 @@ func (calling *EventCalling) onCallingEventReceive(ctx context.Context, broadcas
 	callParams.ToNumber = params.Device.Params.ToNumber
 	callParams.FromNumber = params.Device.Params.FromNumber
 	callParams.CallState = state
+	callParams.Context = params.Context
 
 	// only state Created
 	return calling.I.dispatchStateNotif(ctx, callParams)
@@ -676,7 +693,12 @@ func (calling *EventCalling) dispatchStateNotif(ctx context.Context, callParams 
 
 	Log.Debug("call [%p]\n", call)
 
-	call.SetParams(callParams.CallID, callParams.NodeID, callParams.Direction, callParams.ToNumber, callParams.FromNumber)
+	direction, err := calling.I.callDirectionFromStr(callParams.Direction)
+	if err != nil {
+		return err
+	}
+
+	call.SetParams(callParams.CallID, callParams.NodeID, callParams.ToNumber, callParams.FromNumber, callParams.Context, direction)
 
 	call.UpdateCallState(callParams.CallState)
 

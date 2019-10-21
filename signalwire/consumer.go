@@ -21,6 +21,7 @@ type Consumer struct {
 	OnIncomingMessage    func(*Consumer)
 	OnMessageStateChange func(*Consumer)
 	OnTask               func(*Consumer)
+	Teardown             func(*Consumer)
 
 	Log LoggerWrapper
 }
@@ -35,7 +36,6 @@ func NewConsumer() *Consumer {
 // IConsumer TODO DESCRIPTION
 type IConsumer interface {
 	Setup(projectID, token string)
-	Teardown()
 	Stop()
 	Run()
 }
@@ -137,5 +137,9 @@ func (consumer *Consumer) Run() error {
 
 // Stop TODO DESCRIPTION
 func (consumer *Consumer) Stop() error {
+	if consumer.Teardown != nil {
+		consumer.Teardown(consumer)
+	}
+
 	return consumer.Client.I.Disconnect()
 }

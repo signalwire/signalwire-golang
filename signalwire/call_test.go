@@ -20,10 +20,10 @@ func TestCall(t *testing.T) {
 			/* zero-value of a channel is nil, CallInit() creates new channels */
 			assert.NotNil(t, call.CallStateChan, "channel must exist")
 			assert.NotNil(t, call.CallConnectStateChan, "channel must exist")
-			call.SetParams("01748c6a-d5e5-4f6b-bf56-f803f2e9ae33", "2097e3a2-42eb-4b07-b75f-e9f4aecb54c8", "outbound", "+123456", "+198765")
+			call.SetParams("01748c6a-d5e5-4f6b-bf56-f803f2e9ae33", "2097e3a2-42eb-4b07-b75f-e9f4aecb54c8", "+123456", "+198765", "go-test", CallOutbound)
 			assert.NotEqual(t, len(call.CallID), 0, "callID must be set")
 			assert.NotEqual(t, len(call.NodeID), 0, "nodeID must be set")
-			assert.NotEqual(t, len(call.Direction), 0, "call direction must be set")
+			assert.Equal(t, call.Direction, CallOutbound, "call direction must be set")
 			call.UpdateCallState(Answered)
 			assert.Equal(t, call.CallState, Answered, "call must be in Answered state")
 			call.UpdateCallConnectState(CallConnectConnected)

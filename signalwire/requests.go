@@ -249,6 +249,7 @@ type ParamsEventCallingCallState struct {
 // ParamsEventCallingCallReceive TODO DESCRIPTION
 type ParamsEventCallingCallReceive struct {
 	CallState string       `json:"call_state"`
+	Context   string       `json:"context"`
 	Direction string       `json:"direction"`
 	Device    DeviceStruct `json:"device"`
 	CallID    string       `json:"call_id"`

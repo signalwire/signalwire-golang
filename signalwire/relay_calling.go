@@ -45,7 +45,12 @@ func (relay *RelaySession) RelayPhoneDial(ctx context.Context, call *CallSession
 		return err
 	}
 
-	call.Timeout = timeout
+	if timeout == 0 {
+		call.SetTimeout(DefaultRingTimeout)
+	} else {
+		call.SetTimeout(timeout)
+	}
+
 	call.CallInit(ctx)
 
 	v := ParamsBladeExecuteStruct{

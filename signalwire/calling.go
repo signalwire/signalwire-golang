@@ -11,12 +11,11 @@ type Calling struct {
 	Relay  *RelaySession
 }
 
-// CallObj is the external Call object
+// CallObj is the external Call object (as exposed to the user)
 type CallObj struct {
 	call    *CallSession
 	I       ICallObj
 	Calling *Calling
-	Context string
 
 	OnStateChange           func()
 	OnRinging               func()
@@ -80,6 +79,10 @@ type ICallObj interface {
 	WaitForAnswered() bool
 	WaitForEnding() bool
 	WaitForEnded() bool
+	GetActive() bool
+	GetState() CallState
+	GetPrevState() CallState
+	GetCallID() string
 }
 
 // ResultDial TODO DESCRIPTION
@@ -301,7 +304,7 @@ func (calling *Calling) Dial(c *CallObj) ResultDial {
 
 	c.call.SetActive(true)
 
-	if err := calling.Relay.RelayPhoneDial(calling.Ctx, c.call, c.call.From, c.call.To, DefaultRingTimeout); err != nil {
+	if err := calling.Relay.RelayPhoneDial(calling.Ctx, c.call, c.call.From, c.call.To, c.call.Timeout); err != nil {
 		Log.Error("fields From or To not set for call\n")
 
 		c.call.SetActive(false)
@@ -342,4 +345,44 @@ func (resultAnswer *ResultAnswer) GetSuccessful() bool {
 // GetSuccessful TODO DESCRIPTION
 func (resultDial *ResultDial) GetSuccessful() bool {
 	return resultDial.Successful
+}
+
+// GetActive TODO DESCRIPTION
+func (callobj *CallObj) GetActive() bool {
+	return callobj.call.GetActive()
+}
+
+// GetState TODO DESCRIPTION
+func (callobj *CallObj) GetState() CallState {
+	return callobj.call.GetState()
+}
+
+// GetPrevState TODO DESCRIPTION
+func (callobj *CallObj) GetPrevState() CallState {
+	return callobj.call.GetPrevState()
+}
+
+// GetCallID TODO DESCRIPTION
+func (callobj *CallObj) GetCallID() string {
+	return callobj.call.GetCallID()
+}
+
+// SetTimeout TODO DESCRIPTION
+func (callobj *CallObj) SetTimeout(t uint) {
+	callobj.call.SetTimeout(t)
+}
+
+// GetTimeout TODO DESCRIPTION
+func (callobj *CallObj) GetTimeout() uint {
+	return callobj.call.GetTimeout()
+}
+
+// GetFrom TODO DESCRIPTION
+func (callobj *CallObj) GetFrom() string {
+	return callobj.call.GetFrom()
+}
+
+// GetTo TODO DESCRIPTION
+func (callobj *CallObj) GetTo() string {
+	return callobj.call.GetTo()
 }

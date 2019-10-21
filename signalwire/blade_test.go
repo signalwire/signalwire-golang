@@ -259,7 +259,7 @@ func TestBlade(t *testing.T) {
 			}
 			assert.Equal(t, "7bebef58-e3c0-4dc7-a2c7-a8c2ffc152fc", call.CallID, "CallId does not match")
 			assert.Equal(t, "61b04307-09b6-43d9-8702-0fbd364eaef0", call.NodeID, "NodeID does not match")
-			assert.Equal(t, "inbound", call.Direction, "Direction does not match")
+			assert.Equal(t, CallInbound, call.Direction, "Direction does not match")
 		},
 	)
 }
