@@ -95,7 +95,7 @@ func MyReady(consumer *signalwire.Consumer) {
 	rec.Beep = true
 	rec.Format = "wav"
 	rec.Stereo = false
-	rec.Direction = "both"
+	rec.Direction = signalwire.RecordDirectionBoth.String()
 	rec.InitialTimeout = 10
 	rec.EndSilenceTimeout = 3
 	rec.Terminators = "#*"

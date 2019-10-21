@@ -26,9 +26,9 @@ type RecordDirection int
 
 // Recording state constants
 const (
-	RecordDirListen RecordDirection = iota
-	RecordDirSpeak
-	RecordDirBoth
+	RecordDirectionListen RecordDirection = iota
+	RecordDirectionSpeak
+	RecordDirectionBoth
 )
 
 func (s RecordDirection) String() string {
