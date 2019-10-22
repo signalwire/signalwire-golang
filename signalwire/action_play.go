@@ -341,7 +341,50 @@ func (callobj *CallObj) PlaySilenceAsync(duration float64) (*PlayAction, error) 
 		}
 	}()
 
-	return res, nil
+	return res, res.err
+}
+
+// PlayRingtone TODO DESCRIPTION
+func (callobj *CallObj) PlayRingtoneAsync(name string, duration float64) (*PlayAction, error) {
+	res := new(PlayAction)
+
+	if callobj.Calling == nil {
+		return res, errors.New("nil Calling object")
+	}
+
+	if callobj.Calling.Relay == nil {
+		return res, errors.New("nil Relay object")
+	}
+
+	res.CallObj = callobj
+
+	go func() {
+		go func() {
+			// wait to get control ID (buffered channel)
+			ctrlID := <-callobj.call.CallPlayControlIDs
+
+			callobj.callbacksRunPlay(callobj.Calling.Ctx, ctrlID, res)
+		}()
+
+		newCtrlID, _ := GenUUIDv4()
+		res.Lock()
+		res.ControlID = newCtrlID
+		res.Unlock()
+
+		err := callobj.Calling.Relay.RelayPlayRingtone(callobj.Calling.Ctx, callobj.call, newCtrlID, name, duration)
+
+		if err != nil {
+			res.Lock()
+
+			res.err = err
+
+			res.Completed = true
+
+			res.Unlock()
+		}
+	}()
+
+	return res, res.err
 }
 
 // PlayTTSAsync TODO DESCRIPTION
@@ -381,12 +424,10 @@ func (callobj *CallObj) PlayTTSAsync(text, language, gender string) (*PlayAction
 			res.Completed = true
 
 			res.Unlock()
-
-			return
 		}
 	}()
 
-	return res, nil
+	return res, res.err
 }
 
 // PlayAudioAsync TODO DESCRIPTION
@@ -429,7 +470,7 @@ func (callobj *CallObj) PlayAudioAsync(url string) (*PlayAction, error) {
 		}
 	}()
 
-	return res, nil
+	return res, res.err
 }
 
 // ctrlIDCopy TODO DESCRIPTION
@@ -489,6 +530,39 @@ func (playaction *PlayAction) GetResult() PlayResult {
 	playaction.RLock()
 
 	ret := playaction.Result
+
+	playaction.RUnlock()
+
+	return ret
+}
+
+// GetError TODO DESCRIPTION
+func (playaction *PlayAction) GetError() error {
+	playaction.RLock()
+
+	ret := playaction.err
+
+	playaction.RUnlock()
+
+	return ret
+}
+
+// GetState TODO DESCRIPTION
+func (playaction *PlayAction) GetState() PlayState {
+	playaction.RLock()
+
+	ret := playaction.State
+
+	playaction.RUnlock()
+
+	return ret
+}
+
+// GetSuccessful TODO DESCRIPTION
+func (playaction *PlayAction) GetSuccessful() bool {
+	playaction.RLock()
+
+	ret := playaction.Result.Successful
 
 	playaction.RUnlock()
 
