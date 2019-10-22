@@ -1,6 +1,6 @@
 module github.com/signalwire/signalwire-golang/RelayTests/CallOutbound
 
-go 1.12
+go 1.11
 
 replace github.com/signalwire/signalwire-golang/signalwire => ../../signalwire
 

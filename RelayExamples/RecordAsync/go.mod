@@ -1,6 +1,6 @@
 module github.com/signalwire/signalwire-golang/RelayExamples/RecordAsync
 
-go 1.12
+go 1.11
 
 replace github.com/signalwire/signalwire-golang/signalwire => ../../signalwire
 
