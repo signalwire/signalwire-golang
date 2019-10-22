@@ -435,6 +435,10 @@ func (relay *RelaySession) RelayPlay(ctx context.Context, call *CallSession, con
 
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
+	if r.Result.Code != okCode {
+		return errors.New(r.Result.Message)
+	}
+
 	return nil
 }
 

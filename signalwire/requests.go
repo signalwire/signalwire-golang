@@ -441,7 +441,7 @@ type ParamsCallPlay struct {
 	CallID    string       `json:"call_id"`
 	NodeID    string       `json:"node_id"`
 	ControlID string       `json:"control_id"`
-	Volume    float64      `json:"volume"`
+	Volume    float64      `json:"volume,omitempty"`
 	Play      []PlayStruct `json:"play"`
 }
 
@@ -459,7 +459,7 @@ type ParamsCallPlayVolume struct {
 	CallID    string  `json:"call_id"`
 	NodeID    string  `json:"node_id"`
 	ControlID string  `json:"control_id"`
-	Volume    float64 `json:"volume"`
+	Volume    float64 `json:"volume,omitempty"`
 }
 
 // RecordParams TODO DESCRIPTION
@@ -656,7 +656,7 @@ type ParamsCallPlayAndCollect struct {
 	CallID    string        `json:"call_id"`
 	NodeID    string        `json:"node_id"`
 	ControlID string        `json:"control_id"`
-	Volume    float64       `json:"volume"`
+	Volume    float64       `json:"volume,omitempty"`
 	Play      []PlayStruct  `json:"play"`
 	Collect   CollectStruct `json:"collect"`
 }

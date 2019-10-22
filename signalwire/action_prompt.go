@@ -186,7 +186,7 @@ func (callobj *CallObj) PromptAsync(playlist *[]PlayStruct, collect *CollectStru
 
 	res.CallObj = callobj
 
-	fired := make(chan struct{})
+	done := make(chan struct{})
 
 	go func() {
 		go func() {
@@ -212,10 +212,10 @@ func (callobj *CallObj) PromptAsync(playlist *[]PlayStruct, collect *CollectStru
 
 			res.Unlock()
 		}
-		fired <- struct{}{}
+		done <- struct{}{}
 	}()
 
-	<-fired
+	<-done
 
 	return res, res.err
 }

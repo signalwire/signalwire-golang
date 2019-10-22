@@ -138,11 +138,11 @@ func MyReady(consumer *signalwire.Consumer) {
 
 	signalwire.Log.Info("Stopping first Playing...\n")
 
-	if !PlayAction.Completed {
+	if !PlayAction.GetCompleted() {
 		PlayAction.Stop()
 	}
 
-	signalwire.Log.Debug("App - Play finished. ctrlID: %s res [%p] Completed [%v] Successful [%v]\n", PlayAction2.ControlID, PlayAction, PlayAction.Completed, PlayAction.Result.Successful)
+	signalwire.Log.Debug("App - Play finished. ctrlID: %s res [%p] Completed [%v] Successful [%v]\n", PlayAction.ControlID, PlayAction, PlayAction.GetCompleted(), PlayAction.GetSuccessful())
 
 	for ok := true; ok; ok = !(PlayAction.State == signalwire.PlayFinished) {
 		signalwire.Log.Info("Completed 1: %v\n", PlayAction.GetCompleted())
@@ -155,11 +155,11 @@ func MyReady(consumer *signalwire.Consumer) {
 
 	signalwire.Log.Info("Stopping second Playing...\n")
 
-	if !PlayAction2.Completed {
+	if !PlayAction2.GetCompleted() {
 		PlayAction2.Stop()
 	}
 
-	signalwire.Log.Debug("App2 - Play finished. ctrlID: %s res [%p] Completed [%v] Successful [%v]\n", PlayAction2.ControlID, PlayAction2, PlayAction2.Completed, PlayAction2.Result.Successful)
+	signalwire.Log.Debug("App2 - Play finished. ctrlID: %s res [%p] Completed [%v] Successful [%v]\n", PlayAction2.ControlID, PlayAction2, PlayAction2.GetCompleted(), PlayAction2.GetSuccessful())
 
 	for ok := true; ok; ok = !(PlayAction2.State == signalwire.PlayFinished) {
 		signalwire.Log.Info("Completed 2: %v\n", PlayAction2.GetCompleted())
