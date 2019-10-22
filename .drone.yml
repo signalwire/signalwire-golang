@@ -6,13 +6,22 @@ platform:
   arch: amd64
 
 steps:
-- name: test
+- name: test-go1.12
   image: golang:1.12
   commands:
   - make update
   - make linter-install
   - make test
   - make lint
+
+#- name: test-go1.11
+#  image: golang:1.11
+#  commands:
+#  - find -name go.mod -exec sed -i 's/go 1.12/go 1.11/g' {} \;
+#  - make update
+#  - make linter-install
+#  - make test
+#  - make lint
 
 trigger:
   event: push
