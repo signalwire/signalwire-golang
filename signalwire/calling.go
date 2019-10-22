@@ -48,6 +48,7 @@ type CallObj struct {
 	OnTapTapping            func(*TapAction)
 	OnSendDigitsFinished    func(*SendDigitsAction)
 	OnSendDigitsStateChange func(*SendDigitsAction)
+	OnPrompt                func(*PromptAction)
 }
 
 // ICallObj these are for unit-testing

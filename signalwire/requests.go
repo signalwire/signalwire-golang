@@ -600,3 +600,60 @@ type ParamsCallSendDigits struct {
 	ControlID string `json:"control_id"`
 	Digits    string `json:"digits"`
 }
+
+// ResultCollectDigitParams TODO DESCRIPTION
+type ResultCollectDigitParams struct {
+	Digits     string `json:"digits"`
+	Terminator string `json:"terminator"`
+}
+
+// ResultCollectSpeechParams TODO DESCRIPTION
+type ResultCollectSpeechParams struct {
+	Text       string  `json:"text"`
+	Confidence float64 `json:"confidence"`
+}
+
+// ResultCollect TODO DESCRIPTION
+type ResultCollect struct {
+	Type   string      `json:"type"`
+	Params interface{} `json:"params,omitempty"`
+}
+
+// ParamsEventCallingCallPlayAndCollect TODO DESCRIPTION
+type ParamsEventCallingCallPlayAndCollect struct {
+	CallID    string        `json:"call_id"`
+	NodeID    string        `json:"node_id"`
+	ControlID string        `json:"control_id"`
+	Final     bool          `json:"final"`
+	Result    ResultCollect `json:"result"`
+}
+
+type CollectDigits struct {
+	Terminators  string `json:"terminators,omitempty"`
+	Max          uint16 `json:"max"`
+	DigitTimeout uint16 `json:"digit_timeout,omitempty"`
+}
+
+type CollectSpeech struct {
+	EndSilenceTimeout uint16   `json:"end_silence_timeout,omitempty"`
+	SpeechTimeout     uint16   `json:"speech_timeout,omitempty"`
+	Language          string   `json:"language,omitempty"`
+	Hints             []string `json:"hints,omitempty"`
+}
+
+type CollectStruct struct {
+	Digits         *CollectDigits `json:"digits,omitempty"`
+	Speech         *CollectSpeech `json:"speech,omitempty"`
+	InitialTimeout uint16         `json:"initial_timeout,omitempty"`
+	PartialResults bool           `json:"partial_results,omitempty"`
+}
+
+// ParamsCallPlayAndCollect TODO DESCRIPTION
+type ParamsCallPlayAndCollect struct {
+	CallID    string        `json:"call_id"`
+	NodeID    string        `json:"node_id"`
+	ControlID string        `json:"control_id"`
+	Volume    float64       `json:"volume"`
+	Play      []PlayStruct  `json:"play"`
+	Collect   CollectStruct `json:"collect"`
+}

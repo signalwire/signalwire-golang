@@ -105,6 +105,11 @@ type CallSession struct {
 	CallSendDigitsControlIDs chan string
 	CallSenDigitsEventChans  map[string](chan ParamsEventCallingCallSendDigits)
 
+	CallPlayAndCollectChans      map[string](chan CollectContinue)
+	CallPlayAndCollectControlID  chan string
+	CallPlayAndCollectEventChans map[string](chan ParamsEventCallingCallPlayAndCollect)
+	CallPlayAndCollectReadyChans map[string](chan struct{})
+
 	Hangup   chan struct{}
 	CallPeer PeerDeviceStruct
 	Actions  Actions
@@ -177,6 +182,11 @@ func (c *CallSession) CallInit(_ context.Context) {
 
 	c.CallSendDigitsChans = make(map[string](chan SendDigitsState))
 	c.CallSendDigitsControlIDs = make(chan string, 1)
+
+	c.CallPlayAndCollectChans = make(map[string](chan CollectContinue))
+	c.CallPlayAndCollectControlID = make(chan string)
+	c.CallPlayAndCollectEventChans = make(map[string](chan ParamsEventCallingCallPlayAndCollect))
+	c.CallPlayAndCollectReadyChans = make(map[string](chan struct{}))
 
 	c.Hangup = make(chan struct{})
 	c.Actions.m = make(map[string]string)

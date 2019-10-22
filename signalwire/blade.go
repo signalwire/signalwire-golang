@@ -14,6 +14,10 @@ import (
 	ws "github.com/sourcegraph/jsonrpc2/websocket"
 )
 
+const (
+	OKCode = "200"
+)
+
 // BladeAuth holds auth data for the WS connection
 type BladeAuth struct {
 	ProjectID string
@@ -450,7 +454,7 @@ func (blade *BladeSession) BladeSignalwireReceive(ctx context.Context, signalwir
 		return errors.New("type assertion failed")
 	}
 
-	if r.Result.Code != "200" {
+	if r.Result.Code != OKCode {
 		return errors.New(r.Result.Message)
 	}
 
