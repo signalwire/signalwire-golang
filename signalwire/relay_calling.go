@@ -1195,7 +1195,7 @@ func (relay *RelaySession) RelayPlayAndCollect(ctx context.Context, call *CallSe
 
 	call.Lock()
 
-	call.CallPlayAndCollectChans[controlID] = make(chan CollectContinue, EventQueue)
+	call.CallPlayAndCollectChans[controlID] = make(chan CollectResultType, EventQueue)
 	call.CallPlayAndCollectEventChans[controlID] = make(chan ParamsEventCallingCallPlayAndCollect, EventQueue)
 	call.CallPlayAndCollectReadyChans[controlID] = make(chan struct{})
 
@@ -1223,7 +1223,7 @@ func (relay *RelaySession) RelayPlayAndCollect(ctx context.Context, call *CallSe
 
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
-	if r.Result.Code != OKCode {
+	if r.Result.Code != okCode {
 		return errors.New(r.Result.Message)
 	}
 

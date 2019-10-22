@@ -351,7 +351,7 @@ func (resultDial *ResultDial) GetSuccessful() bool {
 	return resultDial.Successful
 }
 
-// GetActive TODO DESCRIPTION
+// Active TODO DESCRIPTION
 func (callobj *CallObj) Active() bool {
 	return callobj.call.GetActive()
 }

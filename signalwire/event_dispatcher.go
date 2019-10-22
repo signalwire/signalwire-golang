@@ -33,6 +33,7 @@ type IEventCalling interface {
 	callTapStateFromStr(s string) (TapState, error)
 	callSendDigitsStateFromStr(s string) (SendDigitsState, error)
 	callDirectionFromStr(s string) (CallDirection, error)
+	callPlayAndCollectStateFromStr(s string) (CollectResultType, error)
 	dispatchStateNotif(ctx context.Context, callParams CallParams) error
 	dispatchConnectStateNotif(ctx context.Context, callParams CallParams, peer PeerDeviceStruct, ccstate CallConnectState) error
 	dispatchPlayState(ctx context.Context, callID, ctrlID string, playState PlayState) error
@@ -44,6 +45,8 @@ type IEventCalling interface {
 	dispatchTapEventParams(ctx context.Context, callID, ctrlID string, params ParamsEventCallingCallTap) error
 	dispatchTapState(ctx context.Context, callID, ctrlID string, tapState TapState) error
 	dispatchSendDigitsState(ctx context.Context, callID, ctrlID string, sendDigitsState SendDigitsState) error
+	dispatchPlayAndCollectEventParams(ctx context.Context, callID, ctrlID string, params ParamsEventCallingCallPlayAndCollect) error
+	dispatchPlayAndCollectResType(ctx context.Context, callID, ctrlID string, resType CollectResultType) error
 	getCall(ctx context.Context, tag, callID string) (*CallSession, error)
 	getBroadcastParams(ctx context.Context, in, out interface{}) error
 	onCallingEventConnect(ctx context.Context, broadcast NotifParamsBladeBroadcast) error
@@ -322,6 +325,32 @@ func (*EventCalling) callSendDigitsStateFromStr(s string) (SendDigitsState, erro
 	return state, nil
 }
 
+// callPlayAndCollectStateFromStr TODO DESCRIPTION
+func (*EventCalling) callPlayAndCollectStateFromStr(s string) (CollectResultType, error) {
+	var resType CollectResultType
+
+	switch strings.ToLower(s) {
+	case StrError:
+		resType = CollectResultError
+	case "no_input":
+		resType = CollectResultNoInput
+	case "no_match":
+		resType = CollectResultNoMatch
+	case "Digit":
+		resType = CollectResultDigit
+	case "Speech":
+		resType = CollectResultSpeech
+	case "Start_of_speech":
+		resType = CollectResultStartOfSpeech
+	default:
+		return resType, errors.New("invalid PlayAndCollect result type")
+	}
+
+	Log.Debug("resType [%s] [%s]\n", s, resType.String())
+
+	return resType, nil
+}
+
 func (*EventCalling) getBroadcastParams(_ context.Context, in, out interface{}) error {
 	var (
 		jsonData []byte
@@ -453,7 +482,28 @@ func (calling *EventCalling) onCallingEventPlay(ctx context.Context, broadcast N
 
 func (calling *EventCalling) onCallingEventCollect(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
 	Log.Debug("ctx: %p calling %p %v\n", ctx, calling, broadcast)
-	return nil
+
+	var params ParamsEventCallingCallPlayAndCollect
+
+	if err := calling.getBroadcastParams(ctx, broadcast.Params.Params, &params); err != nil {
+		return err
+	}
+
+	state, err := calling.I.callPlayAndCollectStateFromStr(params.Result.Type)
+	if err != nil {
+		return err
+	}
+
+	if err := calling.I.dispatchPlayAndCollectEventParams(ctx, params.CallID, params.ControlID, params); err != nil {
+		return err
+	}
+
+	return calling.I.dispatchPlayAndCollectResType(
+		ctx,
+		params.CallID,
+		params.ControlID,
+		state,
+	)
 }
 
 func (calling *EventCalling) onCallingEventRecord(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
@@ -988,6 +1038,47 @@ func (calling *EventCalling) dispatchSendDigitsState(ctx context.Context, callID
 		Log.Debug("sent recordstate\n")
 	default:
 		Log.Debug("no recordstate sent\n")
+	}
+
+	return nil
+}
+
+func (calling *EventCalling) dispatchPlayAndCollectResType(ctx context.Context, callID, ctrlID string, resType CollectResultType) error {
+	Log.Debug("callid [%s] resType [%s] blade [%p] ctrlID: %s\n", callID, resType.String(), calling.blade, ctrlID)
+
+	call, _ := calling.I.getCall(ctx, "", callID)
+	if call == nil {
+		return fmt.Errorf("error, nil CallSession")
+	}
+
+	Log.Debug("call [%p]\n", call)
+
+	<-call.CallPlayAndCollectReadyChans[ctrlID]
+	select {
+	case call.CallPlayAndCollectChans[ctrlID] <- resType:
+		Log.Debug("sent collect resType\n")
+	default:
+		Log.Debug("no collect resType sent\n")
+	}
+
+	return nil
+}
+
+func (calling *EventCalling) dispatchPlayAndCollectEventParams(ctx context.Context, callID, ctrlID string, params ParamsEventCallingCallPlayAndCollect) error {
+	Log.Debug("callid [%s] blade [%p] ctrlID: %s\n", callID, calling.blade, ctrlID)
+
+	call, _ := calling.I.getCall(ctx, "", callID)
+	if call == nil {
+		return fmt.Errorf("error, nil CallSession")
+	}
+
+	Log.Debug("call [%p]\n", call)
+
+	select {
+	case call.CallPlayAndCollectEventChans[ctrlID] <- params:
+		Log.Debug("sent params (event)\n")
+	default:
+		Log.Debug("no params (event) sent\n")
 	}
 
 	return nil

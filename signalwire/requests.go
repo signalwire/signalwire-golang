@@ -628,12 +628,14 @@ type ParamsEventCallingCallPlayAndCollect struct {
 	Result    ResultCollect `json:"result"`
 }
 
+// CollectDigits TODO DESCRIPTION
 type CollectDigits struct {
 	Terminators  string `json:"terminators,omitempty"`
 	Max          uint16 `json:"max"`
 	DigitTimeout uint16 `json:"digit_timeout,omitempty"`
 }
 
+// CollectSpeech TODO DESCRIPTION
 type CollectSpeech struct {
 	EndSilenceTimeout uint16   `json:"end_silence_timeout,omitempty"`
 	SpeechTimeout     uint16   `json:"speech_timeout,omitempty"`
@@ -641,6 +643,7 @@ type CollectSpeech struct {
 	Hints             []string `json:"hints,omitempty"`
 }
 
+// CollectStruct TODO DESCRIPTION
 type CollectStruct struct {
 	Digits         *CollectDigits `json:"digits,omitempty"`
 	Speech         *CollectSpeech `json:"speech,omitempty"`

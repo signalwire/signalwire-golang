@@ -26,8 +26,13 @@ func (s CollectResultType) String() string {
 // CollectResult TODO DESCRIPTION
 type CollectResult struct {
 	Successful bool
+	Terminator string
+	Confidence float64
+	ResultType CollectResultType
+	Continue   CollectContinue
 }
 
+// PromptResult TODO DESCRIPTION
 type PromptResult CollectResult
 
 // CollectContinue  TODO DESCRIPTION
@@ -45,7 +50,6 @@ type PromptAction struct {
 	ControlID string
 	Completed bool
 	Result    CollectResult
-	State     CollectContinue
 	err       error
 	sync.RWMutex
 }
@@ -58,38 +62,16 @@ type IPromptAction interface {
 	GetResult() PlayResult
 }
 
-func (callobj *CallObj) checkPlayAndCollectFinished(_ context.Context, ctrlID string, res *CollectResult) (*CollectResult, error) {
-	var out bool
-
-	for {
-		select {
-		case state := <-callobj.call.CallPlayAndCollectChans[ctrlID]:
-			if state == CollectFinal {
-				out = true
-				res.Successful = true
-			}
-		case <-callobj.call.Hangup:
-			out = true
-		}
-
-		if out {
-			break
-		}
-	}
-
-	return res, nil
-}
-
 // Prompt TODO DESCRIPTION
 func (callobj *CallObj) Prompt(playlist *[]PlayStruct, collect *CollectStruct) (*CollectResult, error) {
-	res := new(CollectResult)
+	a := new(PromptAction)
 
 	if callobj.Calling == nil {
-		return res, errors.New("nil Calling object")
+		return &a.Result, errors.New("nil Calling object")
 	}
 
 	if callobj.Calling.Relay == nil {
-		return res, errors.New("nil Relay object")
+		return &a.Result, errors.New("nil Relay object")
 	}
 
 	ctrlID, _ := GenUUIDv4()
@@ -97,10 +79,12 @@ func (callobj *CallObj) Prompt(playlist *[]PlayStruct, collect *CollectStruct) (
 	err := callobj.Calling.Relay.RelayPlayAndCollect(callobj.Calling.Ctx, callobj.call, ctrlID, playlist, collect)
 
 	if err != nil {
-		return res, err
+		return &a.Result, err
 	}
 
-	return callobj.checkPlayAndCollectFinished(callobj.Calling.Ctx, ctrlID, res)
+	callobj.callbacksRunPlayAndCollect(callobj.Calling.Ctx, ctrlID, a)
+
+	return &a.Result, nil
 }
 
 // PromptStop TODO DESCRIPTION
@@ -118,17 +102,41 @@ func (callobj *CallObj) PromptStop(ctrlID *string) error {
 
 // callbacksRunPlayAndCollect TODO DESCRIPTION
 func (callobj *CallObj) callbacksRunPlayAndCollect(_ context.Context, ctrlID string, res *PromptAction) {
+	var cont bool
+
 	for {
 		var out bool
 		select {
-		case state := <-callobj.call.CallPlayAndCollectChans[ctrlID]:
-			switch state {
-			case CollectFinal:
+		case resType := <-callobj.call.CallPlayAndCollectChans[ctrlID]:
+			switch resType {
+			case CollectResultError:
+				fallthrough
+			case CollectResultNoInput:
+				fallthrough
+			case CollectResultNoMatch:
 				res.Lock()
 
-				res.State = state
-				res.Result.Successful = true
+				res.Result.ResultType = resType
+				res.Result.Successful = false
 				res.Completed = true
+
+				res.Unlock()
+
+				out = true
+
+			case CollectResultDigit:
+				fallthrough
+			case CollectResultSpeech:
+				fallthrough
+			case CollectResultStartOfSpeech:
+				res.Lock()
+
+				res.Result.ResultType = resType
+				res.Result.Successful = true
+
+				if !cont {
+					res.Completed = true
+				}
 
 				res.Unlock()
 
@@ -140,10 +148,19 @@ func (callobj *CallObj) callbacksRunPlayAndCollect(_ context.Context, ctrlID str
 					callobj.OnPrompt(res)
 				}
 
-			case CollectPartial:
 			default:
 				Log.Debug("Unknown state. ctrlID: %s\n", ctrlID)
 			}
+		case params := <-callobj.call.CallPlayAndCollectEventChans[ctrlID]:
+			Log.Debug("got params for ctrlID : %s params: %v\n", ctrlID, params)
+
+			res.Lock()
+
+			// TODO
+
+			res.Unlock()
+
+			callobj.call.CallPlayAndCollectReadyChans[ctrlID] <- struct{}{}
 
 		case <-callobj.call.Hangup:
 			out = true

@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	OKCode = "200"
+	okCode = "200"
 )
 
 // BladeAuth holds auth data for the WS connection
@@ -454,7 +454,7 @@ func (blade *BladeSession) BladeSignalwireReceive(ctx context.Context, signalwir
 		return errors.New("type assertion failed")
 	}
 
-	if r.Result.Code != OKCode {
+	if r.Result.Code != okCode {
 		return errors.New(r.Result.Message)
 	}
 
