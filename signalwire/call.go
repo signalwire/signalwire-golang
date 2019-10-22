@@ -105,6 +105,11 @@ type CallSession struct {
 	CallSendDigitsControlIDs chan string
 	CallSenDigitsEventChans  map[string](chan ParamsEventCallingCallSendDigits)
 
+	CallPlayAndCollectChans      map[string](chan CollectResultType)
+	CallPlayAndCollectControlID  chan string
+	CallPlayAndCollectEventChans map[string](chan ParamsEventCallingCallPlayAndCollect)
+	CallPlayAndCollectReadyChans map[string](chan struct{})
+
 	Hangup   chan struct{}
 	CallPeer PeerDeviceStruct
 	Actions  Actions
@@ -177,6 +182,11 @@ func (c *CallSession) CallInit(_ context.Context) {
 
 	c.CallSendDigitsChans = make(map[string](chan SendDigitsState))
 	c.CallSendDigitsControlIDs = make(chan string, 1)
+
+	c.CallPlayAndCollectChans = make(map[string](chan CollectResultType))
+	c.CallPlayAndCollectControlID = make(chan string, 1)
+	c.CallPlayAndCollectEventChans = make(map[string](chan ParamsEventCallingCallPlayAndCollect))
+	c.CallPlayAndCollectReadyChans = make(map[string](chan struct{}))
 
 	c.Hangup = make(chan struct{})
 	c.Actions.m = make(map[string]string)
@@ -408,14 +418,14 @@ func (c *CallSession) UpdateCallState(s CallState) {
 }
 
 // SetParams setting Params that stay the same during the call*/
-func (c *CallSession) SetParams(callID, nodeID, to, from, context string, direction CallDirection) {
+func (c *CallSession) SetParams(callID, nodeID, to, from, signalwireContext string, direction CallDirection) {
 	c.Lock()
 	c.CallID = callID
 	c.NodeID = nodeID
 	c.Direction = direction
 	c.To = to
 	c.From = from
-	c.Context = context
+	c.Context = signalwireContext
 	c.Unlock()
 }
 
@@ -442,7 +452,7 @@ func (c *CallSession) SetTo(to string) {
 	c.Unlock()
 }
 
-// SetTo TODO DESCRIPTION
+// GetTo TODO DESCRIPTION
 func (c *CallSession) GetTo() string {
 	c.RLock()
 	to := c.To
@@ -508,7 +518,7 @@ func (c *CallSession) UpdateConnectPeer(p PeerDeviceStruct) {
 	c.CallPeer.Device.Params.FromNumber = p.Device.Params.FromNumber
 }
 
-// GetActive TODO DESCRIPTION
+// GetState TODO DESCRIPTION
 func (c *CallSession) GetState() CallState {
 	c.RLock()
 	s := c.CallState
@@ -517,7 +527,7 @@ func (c *CallSession) GetState() CallState {
 	return s
 }
 
-// GetActive TODO DESCRIPTION
+// GetPrevState TODO DESCRIPTION
 func (c *CallSession) GetPrevState() CallState {
 	c.RLock()
 	s := c.PrevCallState

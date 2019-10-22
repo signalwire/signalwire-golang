@@ -40,42 +40,13 @@ func spinner(delay time.Duration) {
 	}
 }
 
-// MyOnRecordFinished ran when Record Action finishes
-func MyOnRecordFinished(recordAction *signalwire.RecordAction) {
-	if recordAction.State == signalwire.RecordFinished {
-		signalwire.Log.Info("Recording audio stopped.\n")
-	}
-
-	signalwire.Log.Info("Recording is at: %s\n", recordAction.Result.URL)
-	signalwire.Log.Info("Recording Duration: %d\n", recordAction.Result.Duration)
-	signalwire.Log.Info("Recording File Size: %d\n", recordAction.Result.Size)
-}
-
-// MyOnRecordRecording ran when Recording starts on the call
-func MyOnRecordRecording(recordAction *signalwire.RecordAction) {
-	if recordAction.State == signalwire.RecordRecording {
-		signalwire.Log.Info("Recording audio\n")
-	}
-}
-
-// MyOnRecordStateChange ran when Record State changes, eg: Recording->Finished
-func MyOnRecordStateChange(recordAction *signalwire.RecordAction) {
-	signalwire.Log.Info("Recording State changed.\n")
-
-	switch recordAction.State {
-	case signalwire.RecordRecording:
-	case signalwire.RecordFinished:
-	case signalwire.RecordNoInput:
-	}
-}
-
 // MyReady - gets executed when Blade is successfully setup (after signalwire.receive)
 func MyReady(consumer *signalwire.Consumer) {
 	signalwire.Log.Info("calling out...\n")
 
-	fromNumber := "+132XXXXXXXX"
+	fromNumber := "+13XXXXXXXXX"
 
-	var toNumber = "+166XXXXXXXX"
+	var toNumber = "+16XXXXXXXXX"
 
 	if len(CallThisNumber) > 0 {
 		toNumber = CallThisNumber
@@ -90,70 +61,62 @@ func MyReady(consumer *signalwire.Consumer) {
 		return
 	}
 
-	resultDial.Call.OnRecordRecording = MyOnRecordRecording
-	resultDial.Call.OnRecordFinished = MyOnRecordFinished
-	resultDial.Call.OnRecordStateChange = MyOnRecordStateChange
+	resultDial.Call.OnPrompt = func(promptaction *signalwire.PromptAction) {
+		// we could do somethin here and this gets called when the Prompt Action finishes.
+	}
 
-	var rec signalwire.RecordParams
+	playAudioParams := signalwire.PlayAudioParams{
+		URL: "https://www.voiptroubleshooter.com/open_speech/american/OSR_us_000_0010_8k.wav",
+	}
 
-	rec.Beep = true
-	rec.Format = "wav"
-	rec.Stereo = false
-	rec.Direction = signalwire.RecordDirectionBoth.String()
-	rec.InitialTimeout = 10
-	rec.EndSilenceTimeout = 3
-	rec.Terminators = "#*"
+	playTTSParams := signalwire.PlayTTSParams{
+		Text: "Hello from Signalwire!",
+	}
 
-	/* example assumes audio will be played from the callee side. */
-	recordAction, err := resultDial.Call.RecordAudioAsync(&rec)
+	playRingtoneParams := signalwire.PlayRingtoneParams{
+		Duration: 5,
+		Name:     "us",
+	}
+
+	play := []signalwire.PlayStruct{{
+		Type:   "audio",
+		Params: playAudioParams,
+	}, {
+		Type:   "tts",
+		Params: playTTSParams,
+	}, {
+		Type:   "ringtone",
+		Params: playRingtoneParams,
+	}}
+
+	collectDigits := new(signalwire.CollectDigits)
+	collectDigits.Max = 2
+
+	collectSpeech := new(signalwire.CollectSpeech)
+	collectSpeech.EndSilenceTimeout = 5
+	collectSpeech.SpeechTimeout = 10
+	collect := signalwire.CollectStruct{
+		Speech: collectSpeech,
+		Digits: collectDigits,
+	}
+
+	promptAction, err := resultDial.Call.PromptAsync(&play, &collect)
+
 	if err != nil {
-		signalwire.Log.Error("Error occurred while trying to record audio\n")
+		signalwire.Log.Error("Error occurred while trying to start Prompt Action\n")
+
+		if err := consumer.Stop(); err != nil {
+			signalwire.Log.Error("Error occurred while trying to stop Consumer. Err: %v\n", err)
+		}
+
+		return
 	}
 
-	var rec2 signalwire.RecordParams
-
-	rec2.Beep = true
-	rec2.Format = "wav"
-	rec2.Stereo = true
-	rec2.Direction = signalwire.RecordDirectionBoth.String()
-	rec2.InitialTimeout = 10
-	rec2.EndSilenceTimeout = 3
-	rec2.Terminators = "#*"
-
-	recordAction2, err2 := resultDial.Call.RecordAudioAsync(&rec2)
-	if err2 != nil {
-		signalwire.Log.Error("Error occurred while trying to record audio\n")
-	}
-
+	// do something here
 	go spinner(100 * time.Millisecond)
-	time.Sleep(3 * time.Second)
+	time.Sleep(10 * time.Second)
 
-	signalwire.Log.Info("Stopping first recording...\n")
-	recordAction.Stop()
-
-	for {
-		time.Sleep(1 * time.Second)
-
-		if recordAction.GetCompleted() {
-			break
-		}
-	}
-
-	signalwire.Log.Info("...Done.\n")
-
-	time.Sleep(5 * time.Second)
-	signalwire.Log.Info("Stopping second recording...\n")
-	recordAction2.Stop()
-
-	for {
-		time.Sleep(1 * time.Second)
-
-		if recordAction2.GetCompleted() {
-			break
-		}
-	}
-
-	signalwire.Log.Info("...Done.\n")
+	promptAction.Stop()
 
 	if _, err := resultDial.Call.Hangup(); err != nil {
 		signalwire.Log.Error("Error occurred while trying to hangup call. Err: %v\n", err)
@@ -174,7 +137,6 @@ func main() {
 	flag.StringVar(&PProjectID, "p", ProjectID, " ProjectID ")
 	flag.StringVar(&PTokenID, "t", TokenID, " TokenID ")
 	flag.BoolVar(&verbose, "d", false, " Enable debug mode ")
-
 	flag.Parse()
 
 	if printVersion {
@@ -200,7 +162,7 @@ func main() {
 			case syscall.SIGTERM:
 				fallthrough
 			case syscall.SIGINT:
-				signalwire.Log.Info("Exit")
+				signalwire.Log.Info("Exit\n")
 				os.Exit(0)
 			}
 		}

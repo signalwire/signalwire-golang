@@ -1172,3 +1172,139 @@ func (relay *RelaySession) RelaySendDigits(ctx context.Context, call *CallSessio
 
 	return nil
 }
+
+// RelayPlayAndCollect TODO DESCRIPTION
+func (relay *RelaySession) RelayPlayAndCollect(ctx context.Context, call *CallSession, controlID string, playlist *[]PlayStruct, collect *CollectStruct) error {
+	if len(call.CallID) == 0 {
+		Log.Error("no CallID\n")
+
+		return fmt.Errorf("no CallID for call [%p]", call)
+	}
+
+	v := ParamsBladeExecuteStruct{
+		Protocol: relay.Blade.Protocol,
+		Method:   "calling.play_and_collect",
+		Params: ParamsCallPlayAndCollect{
+			NodeID:    call.NodeID,
+			CallID:    call.CallID,
+			ControlID: controlID,
+			Play:      *playlist,
+			Collect:   *collect,
+		},
+	}
+
+	call.Lock()
+
+	call.CallPlayAndCollectChans[controlID] = make(chan CollectResultType, EventQueue)
+	call.CallPlayAndCollectEventChans[controlID] = make(chan ParamsEventCallingCallPlayAndCollect, EventQueue)
+	call.CallPlayAndCollectReadyChans[controlID] = make(chan struct{})
+
+	call.Unlock()
+
+	select {
+	case call.CallPlayAndCollectControlID <- controlID:
+		// send the ctrlID to go routine that fires Consumer callbacks
+		Log.Debug("sent controlID to go routine\n")
+	default:
+		Log.Debug("controlID was not sent to go routine\n")
+	}
+
+	var ReplyBladeExecuteDecode ReplyBladeExecute
+
+	reply, err := relay.Blade.BladeExecute(ctx, &v, &ReplyBladeExecuteDecode)
+	if err != nil {
+		return err
+	}
+
+	r, ok := reply.(*ReplyBladeExecute)
+	if !ok {
+		return errors.New("type assertion failed")
+	}
+
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
+
+	if r.Result.Code != okCode {
+		return errors.New(r.Result.Message)
+	}
+
+	return nil
+}
+
+// RelayPlayAndCollectVolume TODO DESCRIPTION
+func (relay *RelaySession) RelayPlayAndCollectVolume(ctx context.Context, call *CallSession, ctrlID *string, vol float64) error {
+	if len(call.CallID) == 0 {
+		Log.Error("no CallID\n")
+
+		return fmt.Errorf("no CallID for call [%p]", call)
+	}
+
+	v := ParamsBladeExecuteStruct{
+		Protocol: relay.Blade.Protocol,
+		Method:   "calling.play_and_collect.volume",
+		Params: ParamsCallPlayVolume{
+			NodeID:    call.NodeID,
+			CallID:    call.CallID,
+			ControlID: *ctrlID,
+			Volume:    vol,
+		},
+	}
+
+	var ReplyBladeExecuteDecode ReplyBladeExecute
+
+	reply, err := relay.Blade.BladeExecute(ctx, &v, &ReplyBladeExecuteDecode)
+	if err != nil {
+		return err
+	}
+
+	r, ok := reply.(*ReplyBladeExecute)
+	if !ok {
+		return errors.New("type assertion failed")
+	}
+
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
+
+	if r.Result.Code != "200" {
+		return errors.New(r.Result.Message)
+	}
+
+	return nil
+}
+
+// RelayPlayAndCollectStop TODO DESCRIPTION
+func (relay *RelaySession) RelayPlayAndCollectStop(ctx context.Context, call *CallSession, ctrlID *string) error {
+	if len(call.CallID) == 0 {
+		Log.Error("no CallID\n")
+
+		return fmt.Errorf("no CallID for call [%p]", call)
+	}
+
+	v := ParamsBladeExecuteStruct{
+		Protocol: relay.Blade.Protocol,
+		Method:   "calling.play_and_collect.stop",
+		Params: ParamsCallPlayStop{
+			NodeID:    call.NodeID,
+			CallID:    call.CallID,
+			ControlID: *ctrlID,
+		},
+	}
+
+	var ReplyBladeExecuteDecode ReplyBladeExecute
+
+	reply, err := relay.Blade.BladeExecute(ctx, &v, &ReplyBladeExecuteDecode)
+	if err != nil {
+		return err
+	}
+
+	r, ok := reply.(*ReplyBladeExecute)
+	if !ok {
+		return errors.New("type assertion failed")
+	}
+
+	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
+
+	if r.Result.Code != "200" {
+		return errors.New(r.Result.Message)
+	}
+
+	return nil
+}
