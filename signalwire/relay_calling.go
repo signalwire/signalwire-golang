@@ -85,6 +85,10 @@ func (relay *RelaySession) RelayPhoneDial(ctx context.Context, call *CallSession
 	Log.Debug("call [%p] tag_id [%s]\n", call, call.TagID)
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
+	if r.Result.Code != okCode {
+		return errors.New(r.Result.Message)
+	}
+
 	return relay.Blade.EventCalling.Cache.SetCallCache(call.TagID, call)
 }
 
@@ -144,6 +148,10 @@ func (relay *RelaySession) RelayPhoneConnect(ctx context.Context, call *CallSess
 	}
 
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
+
+	if r.Result.Code != okCode {
+		return errors.New(r.Result.Message)
+	}
 
 	return nil
 }
@@ -206,6 +214,10 @@ func (relay *RelaySession) RelayConnect(ctx context.Context, call *CallSession, 
 
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
+	if r.Result.Code != okCode {
+		return errors.New(r.Result.Message)
+	}
+
 	return nil
 }
 
@@ -239,6 +251,10 @@ func (relay *RelaySession) RelayCallAnswer(ctx context.Context, call *CallSessio
 	}
 
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
+
+	if r.Result.Code != okCode {
+		return errors.New(r.Result.Message)
+	}
 
 	return nil
 }
@@ -274,6 +290,10 @@ func (relay *RelaySession) RelayCallEnd(ctx context.Context, call *CallSession) 
 	}
 
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
+
+	if r.Result.Code != okCode {
+		return errors.New(r.Result.Message)
+	}
 
 	return nil
 }
@@ -475,6 +495,10 @@ func (relay *RelaySession) RelayPlayVolume(ctx context.Context, call *CallSessio
 
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
+	if r.Result.Code != okCode {
+		return errors.New(r.Result.Message)
+	}
+
 	return nil
 }
 
@@ -509,6 +533,10 @@ func (relay *RelaySession) RelayPlayResume(ctx context.Context, call *CallSessio
 	}
 
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
+
+	if r.Result.Code != okCode {
+		return errors.New(r.Result.Message)
+	}
 
 	return nil
 }
@@ -545,6 +573,10 @@ func (relay *RelaySession) RelayPlayPause(ctx context.Context, call *CallSession
 
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
+	if r.Result.Code != okCode {
+		return errors.New(r.Result.Message)
+	}
+
 	return nil
 }
 
@@ -579,6 +611,10 @@ func (relay *RelaySession) RelayPlayStop(ctx context.Context, call *CallSession,
 	}
 
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
+
+	if r.Result.Code != okCode {
+		return errors.New(r.Result.Message)
+	}
 
 	return nil
 }
@@ -648,6 +684,10 @@ func (relay *RelaySession) RelayRecordAudio(ctx context.Context, call *CallSessi
 
 	call.AddAction(controlID, "init")
 
+	if r.Result.Code != okCode {
+		return errors.New(r.Result.Message)
+	}
+
 	return nil
 }
 
@@ -682,6 +722,10 @@ func (relay *RelaySession) RelayRecordAudioStop(ctx context.Context, call *CallS
 	}
 
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
+
+	if r.Result.Code != okCode {
+		return errors.New(r.Result.Message)
+	}
 
 	return nil
 }
@@ -822,6 +866,10 @@ func (relay *RelaySession) RelayDetect(ctx context.Context, call *CallSession, c
 
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
+	if r.Result.Code != okCode {
+		return errors.New(r.Result.Message)
+	}
+
 	return nil
 }
 
@@ -856,6 +904,10 @@ func (relay *RelaySession) RelayDetectStop(ctx context.Context, call *CallSessio
 	}
 
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
+
+	if r.Result.Code != okCode {
+		return errors.New(r.Result.Message)
+	}
 
 	return nil
 }
@@ -903,6 +955,10 @@ func (relay *RelaySession) RelaySendFax(ctx context.Context, call *CallSession, 
 
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
+	if r.Result.Code != okCode {
+		return errors.New(r.Result.Message)
+	}
+
 	return nil
 }
 
@@ -946,6 +1002,10 @@ func (relay *RelaySession) RelayReceiveFax(ctx context.Context, call *CallSessio
 
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
+	if r.Result.Code != okCode {
+		return errors.New(r.Result.Message)
+	}
+
 	return nil
 }
 
@@ -981,6 +1041,10 @@ func (relay *RelaySession) RelaySendFaxStop(ctx context.Context, call *CallSessi
 
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
+	if r.Result.Code != okCode {
+		return errors.New(r.Result.Message)
+	}
+
 	return nil
 }
 
@@ -1015,6 +1079,10 @@ func (relay *RelaySession) RelayReceiveFaxStop(ctx context.Context, call *CallSe
 	}
 
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
+
+	if r.Result.Code != okCode {
+		return errors.New(r.Result.Message)
+	}
 
 	return nil
 }
@@ -1089,6 +1157,10 @@ func (relay *RelaySession) RelayTap(ctx context.Context, call *CallSession, cont
 
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
+	if r.Result.Code != okCode {
+		return errors.New(r.Result.Message)
+	}
+
 	return nil
 }
 
@@ -1123,6 +1195,10 @@ func (relay *RelaySession) RelayTapStop(ctx context.Context, call *CallSession, 
 	}
 
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
+
+	if r.Result.Code != okCode {
+		return errors.New(r.Result.Message)
+	}
 
 	return nil
 }
@@ -1173,6 +1249,10 @@ func (relay *RelaySession) RelaySendDigits(ctx context.Context, call *CallSessio
 	}
 
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
+
+	if r.Result.Code != okCode {
+		return errors.New(r.Result.Message)
+	}
 
 	return nil
 }
