@@ -186,7 +186,7 @@ func (callobj *CallObj) PromptAsync(playlist *[]PlayStruct, collect *CollectStru
 
 	res.CallObj = callobj
 
-	done := make(chan struct{})
+	done := make(chan struct{}, 1)
 
 	go func() {
 		go func() {

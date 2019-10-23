@@ -214,6 +214,7 @@ func (callobj *CallObj) TapAudioAsync(direction fmt.Stringer, tapdev *TapDevice)
 	}
 
 	res.CallObj = callobj
+	done := make(chan struct{}, 1)
 
 	go func() {
 		go func() {
@@ -239,7 +240,10 @@ func (callobj *CallObj) TapAudioAsync(direction fmt.Stringer, tapdev *TapDevice)
 
 			res.Unlock()
 		}
+		done <- struct{}{}
 	}()
+
+	<-done
 
 	return res, nil
 }

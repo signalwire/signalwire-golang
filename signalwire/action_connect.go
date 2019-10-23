@@ -72,6 +72,7 @@ func (callobj *CallObj) ConnectAsync(fromNumber, toNumber string) (*ConnectActio
 	}
 
 	res.CallObj = callobj
+	done := make(chan struct{}, 1)
 
 	go func() {
 		go func() {
@@ -89,9 +90,12 @@ func (callobj *CallObj) ConnectAsync(fromNumber, toNumber string) (*ConnectActio
 
 			res.Unlock()
 		}
+		done <- struct{}{}
 	}()
 
-	return res, nil
+	<-done
+
+	return res, res.err
 }
 
 // callbacksRunConnect TODO DESCRIPTION

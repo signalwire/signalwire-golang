@@ -210,12 +210,7 @@ func (blade *BladeSession) BladeInit(ctx context.Context, addr string) error {
 		return errors.New("failed to initialize jsonrpc2 (invalid connection)")
 	}
 
-	var reqID string
-
-	reqID, err = GenUUIDv4()
-	if err != nil {
-		return err
-	}
+	reqID, _ := GenUUIDv4()
 
 	id := jsonrpc2.ID{
 		Str:      reqID,
@@ -284,6 +279,16 @@ func (blade *BladeSession) BladeConnect(ctx context.Context, bladeAuth *BladeAut
 	blade.SessionState = BladeConnecting
 
 	var ReplyConnectDecode ReplyResultConnect
+
+	reqID, _ := GenUUIDv4()
+
+	id := jsonrpc2.ID{
+		Str:      reqID,
+		IsString: true,
+	}
+
+	blade.jOpts = nil
+	blade.jOpts = append(blade.jOpts, jsonrpc2.PickID(id))
 
 	if err := blade.conn.Call(
 		ctx, "blade.connect",
@@ -390,6 +395,16 @@ func (blade *BladeSession) BladeAddSubscription(ctx context.Context, signalwireC
 
 	var ReplySubscriptionDecode ReplyResultSubscription
 
+	reqID, _ := GenUUIDv4()
+
+	id := jsonrpc2.ID{
+		Str:      reqID,
+		IsString: true,
+	}
+
+	blade.jOpts = nil
+	blade.jOpts = append(blade.jOpts, jsonrpc2.PickID(id))
+
 	if err := blade.conn.Call(
 		ctx, "blade.subscription",
 		ParamsSubscriptionStruct{
@@ -418,6 +433,16 @@ func (blade *BladeSession) BladeExecute(ctx context.Context, v interface{}, res 
 	if blade.conn == nil {
 		return nil, errors.New("invalid connection")
 	}
+
+	reqID, _ := GenUUIDv4()
+
+	id := jsonrpc2.ID{
+		Str:      reqID,
+		IsString: true,
+	}
+
+	blade.jOpts = nil
+	blade.jOpts = append(blade.jOpts, jsonrpc2.PickID(id))
 
 	if err := blade.conn.Call(ctx, "blade.execute", v, res, blade.jOpts...); err != nil {
 		blade.LastError = err
