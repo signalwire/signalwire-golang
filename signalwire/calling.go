@@ -94,6 +94,7 @@ type ResultDial struct {
 	Successful bool
 	Call       *CallObj
 	I          ICalling
+	err        error
 }
 
 // ResultAnswer TODO DESCRIPTION
@@ -105,6 +106,7 @@ type ResultAnswer struct {
 type ResultHangup struct {
 	Successful bool
 	Reason     CallDisconnectReason
+	err        error
 }
 
 // ICalling object visible to the end user
@@ -136,6 +138,9 @@ func (calling *Calling) DialPhone(fromNumber, toNumber string) ResultDial {
 
 	if err := calling.Relay.RelayPhoneDial(calling.Ctx, newcall, fromNumber, toNumber, DefaultRingTimeout); err != nil {
 		newcall.SetActive(false)
+
+		res.err = err
+
 		return *res
 	}
 
@@ -167,6 +172,7 @@ func (callobj *CallObj) Hangup() (*ResultHangup, error) {
 
 	if call.CallState != Ending && call.CallState != Ended {
 		if err := callobj.Calling.Relay.RelayCallEnd(callobj.Calling.Ctx, call); err != nil {
+			res.err = err
 			return res, err
 		}
 	}
@@ -309,7 +315,7 @@ func (calling *Calling) Dial(c *CallObj) ResultDial {
 	c.call.SetActive(true)
 
 	if err := calling.Relay.RelayPhoneDial(calling.Ctx, c.call, c.call.From, c.call.To, c.call.Timeout); err != nil {
-		Log.Error("fields From or To not set for call\n")
+		res.err = err
 
 		c.call.SetActive(false)
 
@@ -341,6 +347,11 @@ func (resultHangup *ResultHangup) GetSuccessful() bool {
 	return resultHangup.Successful
 }
 
+// GetError TODO DESCRIPTION
+func (resultHangup *ResultHangup) GetError() bool {
+	return resultHangup.Successful
+}
+
 // GetSuccessful TODO DESCRIPTION
 func (resultAnswer *ResultAnswer) GetSuccessful() bool {
 	return resultAnswer.Successful
@@ -349,6 +360,11 @@ func (resultAnswer *ResultAnswer) GetSuccessful() bool {
 // GetSuccessful TODO DESCRIPTION
 func (resultDial *ResultDial) GetSuccessful() bool {
 	return resultDial.Successful
+}
+
+// GetError TODO DESCRIPTION
+func (resultDial *ResultDial) GetError() error {
+	return resultDial.err
 }
 
 // Active TODO DESCRIPTION
