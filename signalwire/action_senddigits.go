@@ -167,6 +167,7 @@ func (callobj *CallObj) SendDigitsAsync(digits string) (*SendDigitsAction, error
 	}
 
 	res.CallObj = callobj
+	done := make(chan struct{}, 1)
 
 	go func() {
 		go func() {
@@ -192,9 +193,12 @@ func (callobj *CallObj) SendDigitsAsync(digits string) (*SendDigitsAction, error
 
 			res.Unlock()
 		}
+		done <- struct{}{}
 	}()
 
-	return res, nil
+	<-done
+
+	return res, res.err
 }
 
 // GetCompleted TODO DESCRIPTION

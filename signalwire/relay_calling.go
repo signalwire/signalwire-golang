@@ -1088,13 +1088,7 @@ func (relay *RelaySession) RelayReceiveFaxStop(ctx context.Context, call *CallSe
 }
 
 // RelayTapAudio TODO DESCRIPTION
-func (relay *RelaySession) RelayTapAudio(ctx context.Context, call *CallSession, ctrlID, direction string, device *TapDevice) error {
-	if len(call.CallID) == 0 {
-		Log.Error("no CallID\n")
-
-		return fmt.Errorf("no CallID for call [%p]", call)
-	}
-
+func (relay *RelaySession) RelayTapAudio(ctx context.Context, call *CallSession, ctrlID, direction string, device *TapDevice) (TapDevice, error) {
 	tapAudioParams := TapAudioParams{
 		Direction: direction,
 	}
@@ -1104,15 +1098,18 @@ func (relay *RelaySession) RelayTapAudio(ctx context.Context, call *CallSession,
 		Params: tapAudioParams,
 	}
 
+	// return source Tap device
 	return relay.RelayTap(ctx, call, ctrlID, tap, device)
 }
 
 // RelayTap TODO DESCRIPTION
-func (relay *RelaySession) RelayTap(ctx context.Context, call *CallSession, controlID string, tap TapStruct, device *TapDevice) error {
+func (relay *RelaySession) RelayTap(ctx context.Context, call *CallSession, controlID string, tap TapStruct, device *TapDevice) (TapDevice, error) {
+	var srcDevice TapDevice
+
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
-		return fmt.Errorf("no CallID for call [%p]", call)
+		return srcDevice, fmt.Errorf("no CallID for call [%p]", call)
 	}
 
 	v := ParamsBladeExecuteStruct{
@@ -1143,25 +1140,25 @@ func (relay *RelaySession) RelayTap(ctx context.Context, call *CallSession, cont
 		Log.Debug("controlID was not sent to go routine\n")
 	}
 
-	var ReplyBladeExecuteDecode ReplyBladeExecute
+	var ReplyBladeExecuteDecode ReplyBladeExecuteTap
 
 	reply, err := relay.Blade.BladeExecute(ctx, &v, &ReplyBladeExecuteDecode)
 	if err != nil {
-		return err
+		return srcDevice, err
 	}
 
-	r, ok := reply.(*ReplyBladeExecute)
+	r, ok := reply.(*ReplyBladeExecuteTap)
 	if !ok {
-		return errors.New("type assertion failed")
+		return srcDevice, errors.New("type assertion failed")
 	}
 
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
 	if r.Result.Code != okCode {
-		return errors.New(r.Result.Message)
+		return srcDevice, errors.New(r.Result.Message)
 	}
 
-	return nil
+	return r.Result.SourceDevice, nil
 }
 
 // RelayTapStop TODO DESCRIPTION

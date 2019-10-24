@@ -216,6 +216,7 @@ func (callobj *CallObj) RecordAudioAsync(rec *RecordParams) (*RecordAction, erro
 	}
 
 	res.CallObj = callobj
+	done := make(chan struct{}, 1)
 
 	go func() {
 		go func() {
@@ -240,10 +241,11 @@ func (callobj *CallObj) RecordAudioAsync(rec *RecordParams) (*RecordAction, erro
 			res.Completed = true
 
 			res.Unlock()
-
-			return
 		}
+		done <- struct{}{}
 	}()
+
+	<-done
 
 	return res, nil
 }

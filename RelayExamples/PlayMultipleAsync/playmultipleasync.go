@@ -144,9 +144,12 @@ func MyReady(consumer *signalwire.Consumer) {
 
 	signalwire.Log.Debug("App - Play finished. ctrlID: %s res [%p] Completed [%v] Successful [%v]\n", PlayAction.ControlID, PlayAction, PlayAction.GetCompleted(), PlayAction.GetSuccessful())
 
-	for ok := true; ok; ok = !(PlayAction.State == signalwire.PlayFinished) {
-		signalwire.Log.Info("Completed 1: %v\n", PlayAction.GetCompleted())
-		time.Sleep(1 * time.Second)
+	if !PlayAction.GetCompleted() {
+		// 'while' loop for Go
+		for ok := true; ok; ok = !(PlayAction.State == signalwire.PlayFinished || PlayAction.State == signalwire.PlayError) {
+			signalwire.Log.Info("Completed 1: %v\n", PlayAction.GetCompleted())
+			time.Sleep(1 * time.Second)
+		}
 	}
 
 	signalwire.Log.Info("...Done.\n")
@@ -161,9 +164,12 @@ func MyReady(consumer *signalwire.Consumer) {
 
 	signalwire.Log.Debug("App2 - Play finished. ctrlID: %s res [%p] Completed [%v] Successful [%v]\n", PlayAction2.ControlID, PlayAction2, PlayAction2.GetCompleted(), PlayAction2.GetSuccessful())
 
-	for ok := true; ok; ok = !(PlayAction2.State == signalwire.PlayFinished) {
-		signalwire.Log.Info("Completed 2: %v\n", PlayAction2.GetCompleted())
-		time.Sleep(1 * time.Second)
+	if !PlayAction2.GetCompleted() {
+		// 'while' loop for Go
+		for ok := true; ok; ok = !(PlayAction2.State == signalwire.PlayFinished || PlayAction.State == signalwire.PlayError) {
+			signalwire.Log.Info("Completed 2: %v\n", PlayAction2.GetCompleted())
+			time.Sleep(1 * time.Second)
+		}
 	}
 
 	signalwire.Log.Info("...Done.\n")

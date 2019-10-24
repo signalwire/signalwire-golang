@@ -315,6 +315,7 @@ func (callobj *CallObj) PlaySilenceAsync(duration float64) (*PlayAction, error) 
 	}
 
 	res.CallObj = callobj
+	done := make(chan struct{}, 1)
 
 	go func() {
 		go func() {
@@ -339,12 +340,15 @@ func (callobj *CallObj) PlaySilenceAsync(duration float64) (*PlayAction, error) 
 
 			res.Unlock()
 		}
+		done <- struct{}{}
 	}()
+
+	<-done
 
 	return res, res.err
 }
 
-// PlayRingtone TODO DESCRIPTION
+// PlayRingtoneAsync TODO DESCRIPTION
 func (callobj *CallObj) PlayRingtoneAsync(name string, duration float64) (*PlayAction, error) {
 	res := new(PlayAction)
 
@@ -357,6 +361,7 @@ func (callobj *CallObj) PlayRingtoneAsync(name string, duration float64) (*PlayA
 	}
 
 	res.CallObj = callobj
+	done := make(chan struct{}, 1)
 
 	go func() {
 		go func() {
@@ -382,7 +387,10 @@ func (callobj *CallObj) PlayRingtoneAsync(name string, duration float64) (*PlayA
 
 			res.Unlock()
 		}
+		done <- struct{}{}
 	}()
+
+	<-done
 
 	return res, res.err
 }
@@ -400,6 +408,7 @@ func (callobj *CallObj) PlayTTSAsync(text, language, gender string) (*PlayAction
 	}
 
 	res.CallObj = callobj
+	done := make(chan struct{}, 1)
 
 	go func() {
 		go func() {
@@ -425,7 +434,10 @@ func (callobj *CallObj) PlayTTSAsync(text, language, gender string) (*PlayAction
 
 			res.Unlock()
 		}
+		done <- struct{}{}
 	}()
+
+	<-done
 
 	return res, res.err
 }
@@ -443,6 +455,7 @@ func (callobj *CallObj) PlayAudioAsync(url string) (*PlayAction, error) {
 	}
 
 	res.CallObj = callobj
+	done := make(chan struct{}, 1)
 
 	go func() {
 		go func() {
@@ -468,7 +481,10 @@ func (callobj *CallObj) PlayAudioAsync(url string) (*PlayAction, error) {
 
 			res.Unlock()
 		}
+		done <- struct{}{}
 	}()
+
+	<-done
 
 	return res, res.err
 }

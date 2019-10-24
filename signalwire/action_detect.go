@@ -440,6 +440,7 @@ func (callobj *CallObj) DetectMachineAsync(det *DetectMachineParams) (*DetectMac
 	}
 
 	res.CallObj = callobj
+	done := make(chan struct{}, 1)
 
 	go func() {
 		go func() {
@@ -460,9 +461,11 @@ func (callobj *CallObj) DetectMachineAsync(det *DetectMachineParams) (*DetectMac
 			res.err = err
 			res.Completed = true
 			res.Unlock()
-			return
 		}
+		done <- struct{}{}
 	}()
+
+	<-done
 
 	return res, nil
 }
@@ -481,6 +484,7 @@ func (callobj *CallObj) DetectDigitAsync(det *DetectDigitParams) (*DetectDigitAc
 	}
 
 	res.CallObj = callobj
+	done := make(chan struct{}, 1)
 
 	go func() {
 		go func() {
@@ -501,11 +505,13 @@ func (callobj *CallObj) DetectDigitAsync(det *DetectDigitParams) (*DetectDigitAc
 			res.err = err
 			res.Completed = true
 			res.Unlock()
-			return
 		}
+		done <- struct{}{}
 	}()
 
-	return res, nil
+	<-done
+
+	return res, res.err
 }
 
 // DetectFaxAsync TODO DESCRIPTION
@@ -522,6 +528,7 @@ func (callobj *CallObj) DetectFaxAsync(det *DetectFaxParams) (*DetectFaxAction, 
 	}
 
 	res.CallObj = callobj
+	done := make(chan struct{}, 1)
 
 	go func() {
 		go func() {
@@ -542,11 +549,13 @@ func (callobj *CallObj) DetectFaxAsync(det *DetectFaxParams) (*DetectFaxAction, 
 			res.err = err
 			res.Completed = true
 			res.Unlock()
-			return
 		}
+		done <- struct{}{}
 	}()
 
-	return res, nil
+	<-done
+
+	return res, res.err
 }
 
 // DetectAction TODO DESCRIPTION

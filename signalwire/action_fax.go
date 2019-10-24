@@ -271,6 +271,7 @@ func (callobj *CallObj) ReceiveFaxAsync() (*FaxAction, error) {
 	}
 
 	res.CallObj = callobj
+	done := make(chan struct{}, 1)
 
 	go func() {
 		go func() {
@@ -296,9 +297,12 @@ func (callobj *CallObj) ReceiveFaxAsync() (*FaxAction, error) {
 
 			res.Unlock()
 		}
+		done <- struct{}{}
 	}()
 
-	return res, nil
+	<-done
+
+	return res, res.err
 }
 
 // SendFaxAsync TODO DESCRIPTION
@@ -314,6 +318,7 @@ func (callobj *CallObj) SendFaxAsync(doc, id, headerInfo string) (*FaxAction, er
 	}
 
 	res.CallObj = callobj
+	done := make(chan struct{}, 1)
 
 	go func() {
 		go func() {
@@ -339,7 +344,10 @@ func (callobj *CallObj) SendFaxAsync(doc, id, headerInfo string) (*FaxAction, er
 
 			res.Unlock()
 		}
+		done <- struct{}{}
 	}()
+
+	<-done
 
 	return res, nil
 }
