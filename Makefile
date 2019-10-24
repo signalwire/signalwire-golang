@@ -28,6 +28,7 @@ lint:
 	make lint -C RelayExamples/ReceiveFaxBlocking
 	make lint -C RelayExamples/Connect
 	make lint -C RelayExamples/Tap
+	make lint -C RelayExamples/SendDigits
 
 update:
 	make update -C signalwire
@@ -48,3 +49,5 @@ update:
 	make update -C RelayExamples/ReceiveFaxBlocking
 	make update -C RelayExamples/Connect
 	make update -C RelayExamples/Tap
+	make update -C RelayExamples/SendDigits
+

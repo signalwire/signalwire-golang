@@ -222,3 +222,14 @@ func (action *SendDigitsAction) GetResult() SendDigitsResult {
 
 	return ret
 }
+
+// GetSuccessful TODO DESCRIPTION
+func (action *SendDigitsAction) GetSuccessful() bool {
+	action.RLock()
+
+	ret := action.Result.Successful
+
+	action.RUnlock()
+
+	return ret
+}
