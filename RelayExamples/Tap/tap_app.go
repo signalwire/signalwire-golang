@@ -16,6 +16,7 @@ import (
 const (
 	ProjectID = "replaceme"
 	TokenID   = "replaceme" // nolint: gosec
+
 )
 
 // Contexts not needed for only outbound calls
@@ -70,11 +71,18 @@ func MyReady(consumer *signalwire.Consumer) {
 	tapdevice.Params.Addr = "127.0.0.1" // replace this
 	tapdevice.Params.Port = 1234
 
-	if _, err := resultDial.Call.TapAudioAsync(signalwire.TapDirectionListen, &tapdevice); err != nil {
-		signalwire.Log.Error("Error occurred while trying to play audio\n")
+	tapAction, err := resultDial.Call.TapAudioAsync(signalwire.TapDirectionListen, &tapdevice)
+
+	if err != nil {
+		signalwire.Log.Fatal("Error occurred while trying to tap audio: %v\n", err)
 	}
 
 	time.Sleep(10 * time.Second)
+	tapAction.Stop()
+
+	signalwire.Log.Info("Tap: %v\n", tapAction.GetTap())
+	signalwire.Log.Info("SourceDevice: %v\n", tapAction.GetSourceDevice())      // comes from the Signalwire platform
+	signalwire.Log.Info("SourceDevice: %v\n", tapAction.GetDestinationDevice()) // the device passed above
 
 	if _, err := resultDial.Call.Hangup(); err != nil {
 		signalwire.Log.Error("Error occurred while trying to hangup call\n")
@@ -128,7 +136,6 @@ func main() {
 
 	consumer := new(signalwire.Consumer)
 	// setup the Client
-
 	consumer.Setup(PProjectID, PTokenID, Contexts)
 	// register callback
 	consumer.Ready = MyReady

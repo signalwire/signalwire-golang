@@ -46,20 +46,41 @@ func (s TapDirection) String() string {
 	return [...]string{"listen", "speak"}[s]
 }
 
+// TapType TODO DESCRIPTION
+type TapType int
+
+// Tap state constants
+const (
+	TapAudio TapType = iota
+)
+
+func (s TapType) String() string {
+	return [...]string{"audio"}[s]
+}
+
+// Tap TODO DESCRIPTION
+type Tap struct {
+	TapType       TapType
+	TapDirection  TapDirection
+	TapDeviceType TapDeviceType
+}
+
 // TapResult TODO DESCRIPTION
 type TapResult struct {
-	Successful bool
+	Successful        bool
+	SourceDevice      TapDevice
+	DestinationDevice TapDevice
+	Tap               Tap
 }
 
 // TapAction TODO DESCRIPTION
 type TapAction struct {
-	CallObj       *CallObj
-	ControlID     string
-	Completed     bool
-	Result        TapResult
-	State         TapState
-	TapDeviceType TapDeviceType
-	err           error
+	CallObj   *CallObj
+	ControlID string
+	Completed bool
+	Result    TapResult
+	State     TapState
+	err       error
 	sync.RWMutex
 }
 
@@ -69,6 +90,9 @@ type ITapAction interface {
 	Stop()
 	GetCompleted() bool
 	GetResult() TapResult
+	GetTap() Tap
+	GetSourceDevice() TapDevice
+	GetDestinationDevice() TapDevice
 }
 
 func (callobj *CallObj) checkTapFinished(_ context.Context, ctrlID string, res *TapResult) (*TapResult, error) {
@@ -106,7 +130,10 @@ func (callobj *CallObj) TapAudio(direction fmt.Stringer, tapdev *TapDevice) (*Ta
 	}
 
 	ctrlID, _ := GenUUIDv4()
-	err := callobj.Calling.Relay.RelayTapAudio(callobj.Calling.Ctx, callobj.call, ctrlID, direction.String(), tapdev)
+
+	var err error
+
+	res.SourceDevice, err = callobj.Calling.Relay.RelayTapAudio(callobj.Calling.Ctx, callobj.call, ctrlID, direction.String(), tapdev)
 
 	if err != nil {
 		return res, err
@@ -185,7 +212,47 @@ func (callobj *CallObj) callbacksRunTap(_ context.Context, ctrlID string, res *T
 
 			res.Lock()
 
-			/*todo: get info from the event*/
+			switch params.Tap.Type {
+			case "audio":
+				res.Result.Tap.TapType = TapAudio
+
+				switch params.Tap.Params.Direction {
+				case "listen":
+					res.Result.Tap.TapDirection = TapDirectionListen
+				case "speak":
+					res.Result.Tap.TapDirection = TapDirectionSpeak
+				default:
+					res.err = errors.New("invalid tap direction")
+					res.Completed = true
+					res.Unlock()
+
+					return
+				}
+
+			default:
+				res.err = errors.New("invalid tap type")
+				res.Completed = true
+				res.Unlock()
+
+				return
+			}
+
+			switch params.Device.Type {
+			case "rtp":
+				res.Result.Tap.TapDeviceType = TapRTP
+			default:
+				res.err = errors.New("invalid tap device type")
+				res.Completed = true
+				res.Unlock()
+
+				return
+			}
+
+			res.Result.DestinationDevice.Params.Addr = params.Device.Params.Addr
+			res.Result.DestinationDevice.Params.Port = params.Device.Params.Port
+			res.Result.DestinationDevice.Params.Codec = params.Device.Params.Codec
+			res.Result.DestinationDevice.Params.Ptime = params.Device.Params.Ptime
+			res.Result.DestinationDevice.Params.Rate = params.Device.Params.Rate
 
 			res.Unlock()
 
@@ -229,7 +296,7 @@ func (callobj *CallObj) TapAudioAsync(direction fmt.Stringer, tapdev *TapDevice)
 		res.ControlID = newCtrlID
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelayTapAudio(callobj.Calling.Ctx, callobj.call, newCtrlID, direction.String(), tapdev)
+		srcDevice, err := callobj.Calling.Relay.RelayTapAudio(callobj.Calling.Ctx, callobj.call, newCtrlID, direction.String(), tapdev)
 
 		if err != nil {
 			res.Lock()
@@ -239,13 +306,19 @@ func (callobj *CallObj) TapAudioAsync(direction fmt.Stringer, tapdev *TapDevice)
 			res.Completed = true
 
 			res.Unlock()
+		} else {
+			res.Lock()
+
+			res.Result.SourceDevice = srcDevice
+
+			res.Unlock()
 		}
 		done <- struct{}{}
 	}()
 
 	<-done
 
-	return res, nil
+	return res, res.err
 }
 
 // ctrlIDCopy TODO DESCRIPTION
@@ -309,4 +382,19 @@ func (tapaction *TapAction) GetResult() TapResult {
 	tapaction.RUnlock()
 
 	return ret
+}
+
+// GetTap TODO DESCRIPTION
+func (tapaction *TapAction) GetTap() *Tap {
+	return &tapaction.Result.Tap
+}
+
+// GetSourceDevice TODO DESCRIPTION
+func (tapaction *TapAction) GetSourceDevice() *TapDevice {
+	return &tapaction.Result.SourceDevice
+}
+
+// GetDestinationDevice TODO DESCRIPTION
+func (tapaction *TapAction) GetDestinationDevice() *TapDevice {
+	return &tapaction.Result.DestinationDevice
 }

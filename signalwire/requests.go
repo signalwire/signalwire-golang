@@ -206,11 +206,27 @@ type ReplyBladeExecuteResult struct {
 	Message string `json:"message"`
 }
 
+// ReplyBladeExecuteResultTap TODO DESCRIPTION
+type ReplyBladeExecuteResultTap struct {
+	Code         string    `json:"code"`
+	Message      string    `json:"message"`
+	CallID       string    `json:"call_id"`
+	ControlID    string    `json:"control_id"`
+	SourceDevice TapDevice `json:"source_device"`
+}
+
 // ReplyBladeExecute TODO DESCRIPTION
 type ReplyBladeExecute struct {
 	RequesterNodeID string                  `json:"requester_node_id"`
 	ResponderNodeID string                  `json:"responder_node_id"`
 	Result          ReplyBladeExecuteResult `json:"result"`
+}
+
+// ReplyBladeExecuteTap TODO DESCRIPTION
+type ReplyBladeExecuteTap struct {
+	RequesterNodeID string                     `json:"requester_node_id"`
+	ResponderNodeID string                     `json:"responder_node_id"`
+	Result          ReplyBladeExecuteResultTap `json:"result"`
 }
 
 // PeerStruct  TODO DESCRIPTION
@@ -555,6 +571,7 @@ type TapDeviceParams struct {
 	Codec string `json:"codec,omitempty"`
 	Port  uint16 `json:"port"`
 	Ptime uint8  `json:"ptime,omitempty"`
+	Rate  uint   `json:"rate,omitempty"`
 }
 
 // TapDevice TODO DESCRIPTION

@@ -348,7 +348,7 @@ func (callobj *CallObj) PlaySilenceAsync(duration float64) (*PlayAction, error) 
 	return res, res.err
 }
 
-// PlayRingtone TODO DESCRIPTION
+// PlayRingtoneAsync TODO DESCRIPTION
 func (callobj *CallObj) PlayRingtoneAsync(name string, duration float64) (*PlayAction, error) {
 	res := new(PlayAction)
 
