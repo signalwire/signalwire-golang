@@ -336,11 +336,11 @@ func (*EventCalling) callPlayAndCollectStateFromStr(s string) (CollectResultType
 		resType = CollectResultNoInput
 	case "no_match":
 		resType = CollectResultNoMatch
-	case "Digit":
+	case "digit":
 		resType = CollectResultDigit
-	case "Speech":
+	case "speech":
 		resType = CollectResultSpeech
-	case "Start_of_speech":
+	case "start_of_speech":
 		resType = CollectResultStartOfSpeech
 	default:
 		return resType, errors.New("invalid PlayAndCollect result type")
