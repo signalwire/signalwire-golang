@@ -90,7 +90,7 @@ func MyReady(consumer *signalwire.Consumer) {
 	}}
 
 	collectDigits := new(signalwire.CollectDigits)
-	collectDigits.Max = 2
+	collectDigits.Max = 3
 
 	collectSpeech := new(signalwire.CollectSpeech)
 	collectSpeech.EndSilenceTimeout = 1
@@ -130,7 +130,15 @@ func MyReady(consumer *signalwire.Consumer) {
 		}
 	}
 
-	signalwire.Log.Info("Speech text: %s Confidence: %f\n", promptAction.GetText(), promptAction.GetConfidence())
+	myResult := promptAction.GetResultType()
+	switch myResult {
+	case signalwire.CollectResultSpeech:
+		signalwire.Log.Info("Speech text: \"%s\" Confidence: %f\n", promptAction.GetCollectResult(), promptAction.GetConfidence())
+	case signalwire.CollectResultDigit:
+		signalwire.Log.Info("Digits: \"%s\" Terminator: %s\n", promptAction.GetCollectResult(), promptAction.GetTerminator())
+	default:
+		signalwire.Log.Info("Result was: %s\n", myResult.String())
+	}
 
 	if _, err := resultDial.Call.Hangup(); err != nil {
 		signalwire.Log.Error("Error occurred while trying to hangup call. Err: %v\n", err)

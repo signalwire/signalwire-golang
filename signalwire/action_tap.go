@@ -224,17 +224,17 @@ func (callobj *CallObj) callbacksRunTap(_ context.Context, ctrlID string, res *T
 				default:
 					res.err = errors.New("invalid tap direction")
 					res.Completed = true
-					res.Unlock()
+					out = true
 
-					return
+					goto ready
 				}
 
 			default:
 				res.err = errors.New("invalid tap type")
 				res.Completed = true
-				res.Unlock()
+				out = true
 
-				return
+				goto ready
 			}
 
 			switch params.Device.Type {
@@ -243,9 +243,9 @@ func (callobj *CallObj) callbacksRunTap(_ context.Context, ctrlID string, res *T
 			default:
 				res.err = errors.New("invalid tap device type")
 				res.Completed = true
-				res.Unlock()
+				out = true
 
-				return
+				goto ready
 			}
 
 			res.Result.DestinationDevice.Params.Addr = params.Device.Params.Addr
@@ -254,6 +254,7 @@ func (callobj *CallObj) callbacksRunTap(_ context.Context, ctrlID string, res *T
 			res.Result.DestinationDevice.Params.Ptime = params.Device.Params.Ptime
 			res.Result.DestinationDevice.Params.Rate = params.Device.Params.Rate
 
+		ready:
 			res.Unlock()
 
 			callobj.call.CallTapReadyChans[ctrlID] <- struct{}{}

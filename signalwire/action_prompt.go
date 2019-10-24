@@ -165,30 +165,40 @@ func (callobj *CallObj) callbacksRunPlayAndCollect(_ context.Context, ctrlID str
 				confidence, ok1 := speech["confidence"].(float64)
 				if !ok1 {
 					Log.Error("type assertion error")
+
+					out = true
+				} else {
+					res.Result.Confidence = confidence
 				}
 
 				text, ok2 := speech["text"].(string)
 				if !ok2 {
 					Log.Error("type assertion error")
-				}
 
-				res.Result.Confidence = confidence
-				res.Result.Result = text
+					out = true
+				} else {
+					res.Result.Result = text
+				}
 			} else if strings.EqualFold(params.Result.Type, CollectResultDigit.String()) {
 				digit := params.Result.Params
 
 				terminator, ok1 := digit["terminator"].(string)
 				if !ok1 {
 					Log.Error("type assertion error")
+
+					out = true
+				} else {
+					res.Result.Terminator = terminator
 				}
 
 				digits, ok2 := digit["digits"].(string)
 				if !ok2 {
 					Log.Error("type assertion error")
-				}
 
-				res.Result.Terminator = terminator
-				res.Result.Result = digits
+					out = true
+				} else {
+					res.Result.Result = digits
+				}
 			}
 
 			res.Unlock()
@@ -316,8 +326,8 @@ func (action *PromptAction) GetResult() CollectResult {
 	return ret
 }
 
-// GetText TODO DESCRIPTION
-func (action *PromptAction) GetText() string {
+// GetCollectResult TODO DESCRIPTION
+func (action *PromptAction) GetCollectResult() string {
 	action.RLock()
 
 	ret := action.Result.Result
@@ -338,11 +348,22 @@ func (action *PromptAction) GetConfidence() float64 {
 	return ret
 }
 
-// GetConfidence TODO DESCRIPTION
+// GetTerminator TODO DESCRIPTION
 func (action *PromptAction) GetTerminator() string {
 	action.RLock()
 
 	ret := action.Result.Terminator
+
+	action.RUnlock()
+
+	return ret
+}
+
+// GetResultType TODO DESCRIPTION
+func (action *PromptAction) GetResultType() CollectResultType {
+	action.RLock()
+
+	ret := action.Result.ResultType
 
 	action.RUnlock()
 
