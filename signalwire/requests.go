@@ -632,8 +632,8 @@ type ResultCollectSpeechParams struct {
 
 // ResultCollect TODO DESCRIPTION
 type ResultCollect struct {
-	Type   string      `json:"type"`
-	Params interface{} `json:"params,omitempty"`
+	Type   string                 `json:"type"`
+	Params map[string]interface{} `json:"params,omitempty"`
 }
 
 // ParamsEventCallingCallPlayAndCollect TODO DESCRIPTION
@@ -641,7 +641,7 @@ type ParamsEventCallingCallPlayAndCollect struct {
 	CallID    string        `json:"call_id"`
 	NodeID    string        `json:"node_id"`
 	ControlID string        `json:"control_id"`
-	Final     bool          `json:"final"`
+	Final     bool          `json:"final,omitempty"`
 	Result    ResultCollect `json:"result"`
 }
 

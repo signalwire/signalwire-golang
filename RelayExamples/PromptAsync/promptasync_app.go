@@ -66,7 +66,7 @@ func MyReady(consumer *signalwire.Consumer) {
 	}
 
 	playAudioParams := signalwire.PlayAudioParams{
-		URL: "https://www.voiptroubleshooter.com/open_speech/american/OSR_us_000_0010_8k.wav",
+		URL: "https://www.pacdv.com/sounds/voices/can-you-keep-a-secret.wav",
 	}
 
 	playTTSParams := signalwire.PlayTTSParams{
@@ -93,8 +93,10 @@ func MyReady(consumer *signalwire.Consumer) {
 	collectDigits.Max = 2
 
 	collectSpeech := new(signalwire.CollectSpeech)
-	collectSpeech.EndSilenceTimeout = 5
+	collectSpeech.EndSilenceTimeout = 1
 	collectSpeech.SpeechTimeout = 10
+	collectSpeech.Hints = []string{"top", "well"}
+
 	collect := signalwire.CollectStruct{
 		Speech: collectSpeech,
 		Digits: collectDigits,
@@ -114,9 +116,21 @@ func MyReady(consumer *signalwire.Consumer) {
 
 	// do something here
 	go spinner(100 * time.Millisecond)
-	time.Sleep(10 * time.Second)
+	time.Sleep(15 * time.Second)
 
-	promptAction.Stop()
+	if !promptAction.GetCompleted() {
+		promptAction.Stop()
+	}
+
+	for {
+		time.Sleep(1 * time.Second)
+
+		if promptAction.GetCompleted() {
+			break
+		}
+	}
+
+	signalwire.Log.Info("Speech text: %s Confidence: %f\n", promptAction.GetText(), promptAction.GetConfidence())
 
 	if _, err := resultDial.Call.Hangup(); err != nil {
 		signalwire.Log.Error("Error occurred while trying to hangup call. Err: %v\n", err)

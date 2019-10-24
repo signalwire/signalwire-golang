@@ -3,6 +3,7 @@ package signalwire
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 )
 
@@ -28,6 +29,7 @@ type CollectResult struct {
 	Successful bool
 	Terminator string
 	Confidence float64
+	Result     string
 	ResultType CollectResultType
 	Continue   CollectContinue
 }
@@ -104,16 +106,15 @@ func (callobj *CallObj) PromptStop(ctrlID *string) error {
 func (callobj *CallObj) callbacksRunPlayAndCollect(_ context.Context, ctrlID string, res *PromptAction) {
 	var cont bool
 
+	var out bool
+
 	for {
-		var out bool
 		select {
 		case resType := <-callobj.call.CallPlayAndCollectChans[ctrlID]:
 			switch resType {
 			case CollectResultError:
 				fallthrough
 			case CollectResultNoInput:
-				fallthrough
-			case CollectResultNoMatch:
 				res.Lock()
 
 				res.Result.ResultType = resType
@@ -124,6 +125,8 @@ func (callobj *CallObj) callbacksRunPlayAndCollect(_ context.Context, ctrlID str
 
 				out = true
 
+			case CollectResultNoMatch:
+				fallthrough
 			case CollectResultDigit:
 				fallthrough
 			case CollectResultSpeech:
@@ -156,7 +159,37 @@ func (callobj *CallObj) callbacksRunPlayAndCollect(_ context.Context, ctrlID str
 
 			res.Lock()
 
-			// TODO
+			if strings.EqualFold(params.Result.Type, CollectResultSpeech.String()) {
+				speech := params.Result.Params
+
+				confidence, ok1 := speech["confidence"].(float64)
+				if !ok1 {
+					Log.Error("type assertion error")
+				}
+
+				text, ok2 := speech["text"].(string)
+				if !ok2 {
+					Log.Error("type assertion error")
+				}
+
+				res.Result.Confidence = confidence
+				res.Result.Result = text
+			} else if strings.EqualFold(params.Result.Type, CollectResultDigit.String()) {
+				digit := params.Result.Params
+
+				terminator, ok1 := digit["terminator"].(string)
+				if !ok1 {
+					Log.Error("type assertion error")
+				}
+
+				digits, ok2 := digit["digits"].(string)
+				if !ok2 {
+					Log.Error("type assertion error")
+				}
+
+				res.Result.Terminator = terminator
+				res.Result.Result = digits
+			}
 
 			res.Unlock()
 
@@ -277,6 +310,39 @@ func (action *PromptAction) GetResult() CollectResult {
 	action.RLock()
 
 	ret := action.Result
+
+	action.RUnlock()
+
+	return ret
+}
+
+// GetText TODO DESCRIPTION
+func (action *PromptAction) GetText() string {
+	action.RLock()
+
+	ret := action.Result.Result
+
+	action.RUnlock()
+
+	return ret
+}
+
+// GetConfidence TODO DESCRIPTION
+func (action *PromptAction) GetConfidence() float64 {
+	action.RLock()
+
+	ret := action.Result.Confidence
+
+	action.RUnlock()
+
+	return ret
+}
+
+// GetConfidence TODO DESCRIPTION
+func (action *PromptAction) GetTerminator() string {
+	action.RLock()
+
+	ret := action.Result.Terminator
 
 	action.RUnlock()
 
