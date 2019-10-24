@@ -70,6 +70,7 @@ func MyReady(consumer *signalwire.Consumer) {
 	tapdevice.Type = signalwire.TapRTP.String()
 	tapdevice.Params.Addr = "127.0.0.1" // replace this
 	tapdevice.Params.Port = 1234
+	tapdevice.Params.Codec = "PCMU"
 
 	tapAction, err := resultDial.Call.TapAudioAsync(signalwire.TapDirectionListen, &tapdevice)
 
@@ -81,8 +82,8 @@ func MyReady(consumer *signalwire.Consumer) {
 	tapAction.Stop()
 
 	signalwire.Log.Info("Tap: %v\n", tapAction.GetTap())
-	signalwire.Log.Info("SourceDevice: %v\n", tapAction.GetSourceDevice())      // comes from the Signalwire platform
-	signalwire.Log.Info("SourceDevice: %v\n", tapAction.GetDestinationDevice()) // the device passed above
+	signalwire.Log.Info("SourceDevice: %v\n", tapAction.GetSourceDevice())           // comes from the Signalwire platform
+	signalwire.Log.Info("DestinationDevice: %v\n", tapAction.GetDestinationDevice()) // the device passed above
 
 	if _, err := resultDial.Call.Hangup(); err != nil {
 		signalwire.Log.Error("Error occurred while trying to hangup call\n")
