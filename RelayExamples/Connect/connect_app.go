@@ -41,26 +41,27 @@ func spinner(delay time.Duration) {
 	}
 }
 
-func MyOnConnectStateChange(_ *signalwire.ConnectAction) {
+func myOnConnectStateChange(_ *signalwire.ConnectAction) {
 	signalwire.Log.Info("Connect State Change")
 }
 
-func MyOnConnectFailed(_ *signalwire.ConnectAction) {
+func myOnConnectFailed(_ *signalwire.ConnectAction) {
 	signalwire.Log.Info("Connect State: Failed")
 }
 
-func MyOnConnectConnecting(_ *signalwire.ConnectAction) {
+func myOnConnectConnecting(_ *signalwire.ConnectAction) {
 	signalwire.Log.Info("Connect State: Connecting")
 }
 
-func MyOnConnectConnected(_ *signalwire.ConnectAction) {
+func myOnConnectConnected(_ *signalwire.ConnectAction) {
 	signalwire.Log.Info("Connect State: Connected")
 }
 
-func MyOnConnectDisconnected(_ *signalwire.ConnectAction) {
+func myOnConnectDisconnected(_ *signalwire.ConnectAction) {
 	signalwire.Log.Info("Connect State: Disconnected")
 }
 
+// CountIncomingCalls Conter for incoming calls.
 var CountIncomingCalls int
 
 // MyOnIncomingCall - gets executed when we receive an incoming call
@@ -83,11 +84,11 @@ func MyOnIncomingCall(consumer *signalwire.Consumer, call *signalwire.CallObj) {
 		return
 	}
 
-	call.OnConnectStateChange = MyOnConnectStateChange
-	call.OnConnectFailed = MyOnConnectFailed
-	call.OnConnectConnecting = MyOnConnectConnecting
-	call.OnConnectConnected = MyOnConnectConnected
-	call.OnConnectDisconnected = MyOnConnectDisconnected
+	call.OnConnectStateChange = myOnConnectStateChange
+	call.OnConnectFailed = myOnConnectFailed
+	call.OnConnectConnecting = myOnConnectConnecting
+	call.OnConnectConnected = myOnConnectConnected
+	call.OnConnectDisconnected = myOnConnectDisconnected
 
 	go spinner(100 * time.Millisecond)
 
@@ -104,13 +105,29 @@ func MyOnIncomingCall(consumer *signalwire.Consumer, call *signalwire.CallObj) {
 		},
 	}}
 
-	_, err := call.Connect(nil, &devices)
+	ringback := []signalwire.RingbackStruct{
+		signalwire.RingbackStruct{
+			Type: "ringtone",
+			Params: signalwire.RingbackRingtoneParams{
+				Name:     "us",
+				Duration: 5.0,
+			},
+		},
+		signalwire.RingbackStruct{
+			Type: "tts",
+			Params: signalwire.RingbackTTSParams{
+				Text: "Welcome to Signalwire!",
+			},
+		},
+	}
+
+	_, err := call.Connect(&ringback, &devices)
 	if err != nil {
 		signalwire.Log.Error("error running call Connect()\n")
 	}
 
 	time.Sleep(20 * time.Second)
-	signalwire.Log.Info("Hangup call..\n")
+	signalwire.Log.Info("Hangup call...\n")
 
 	hangupResult, err := call.Hangup()
 	if err != nil {
