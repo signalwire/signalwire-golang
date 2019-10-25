@@ -106,14 +106,14 @@ func MyOnIncomingCall(consumer *signalwire.Consumer, call *signalwire.CallObj) {
 	}}
 
 	ringback := []signalwire.RingbackStruct{
-		signalwire.RingbackStruct{
+		{
 			Type: "ringtone",
 			Params: signalwire.RingbackRingtoneParams{
 				Name:     "us",
 				Duration: 5.0,
 			},
 		},
-		signalwire.RingbackStruct{
+		{
 			Type: "tts",
 			Params: signalwire.RingbackTTSParams{
 				Text: "Welcome to Signalwire!",

@@ -42,16 +42,16 @@ func spinner(delay time.Duration) {
 
 // MyOnFaxFinished ran when Faxing Action finishes
 func MyOnFaxFinished(faxAction *signalwire.FaxAction) {
-	signalwire.Log.Info("Faxing finished.\n")
+	signalwire.Log.Info("Faxing finished. Successful: %v\n", faxAction.GetSuccessful)
 }
 
 // MyOnFaxPage ran when a document page is sent/received
-func MyOnFaxPage(faxAction *signalwire.FaxAction) {
+func MyOnFaxPage(_ *signalwire.FaxAction) {
 	signalwire.Log.Info("Fax page event\n")
 }
 
 // MyOnFaxError used for logging
-func MyOnFaxError(faxAction *signalwire.FaxAction) {
+func MyOnFaxError(_ *signalwire.FaxAction) {
 	signalwire.Log.Info("Faxing error.\n")
 }
 
