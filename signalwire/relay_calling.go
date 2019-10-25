@@ -129,7 +129,7 @@ func (relay *RelaySession) RelayPhoneConnect(ctx context.Context, call *CallSess
 		Protocol: relay.Blade.Protocol,
 		Method:   "calling.connect",
 		Params: ParamsCallConnectStruct{
-			Devices: devices,
+			Devices: &devices,
 			NodeID:  call.NodeID,
 			CallID:  call.CallID,
 		},
@@ -176,28 +176,15 @@ func (relay *RelaySession) RelayConnect(ctx context.Context, call *CallSession, 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
 
-	var v interface{}
-	if ringback == nil {
-		v = ParamsBladeExecuteStruct{
-			Protocol: relay.Blade.Protocol,
-			Method:   "calling.connect",
-			Params: ParamsCallConnectStruct{
-				Devices: *devices,
-				NodeID:  call.NodeID,
-				CallID:  call.CallID,
-			},
-		}
-	} else {
-		v = ParamsBladeExecuteStruct{
-			Protocol: relay.Blade.Protocol,
-			Method:   "calling.connect",
-			Params: ParamsCallConnectStruct{
-				Ringback: *ringback,
-				Devices:  *devices,
-				NodeID:   call.NodeID,
-				CallID:   call.CallID,
-			},
-		}
+	v := ParamsBladeExecuteStruct{
+		Protocol: relay.Blade.Protocol,
+		Method:   "calling.connect",
+		Params: ParamsCallConnectStruct{
+			Ringback: ringback,
+			Devices:  devices,
+			NodeID:   call.NodeID,
+			CallID:   call.CallID,
+		},
 	}
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute
