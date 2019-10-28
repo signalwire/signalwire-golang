@@ -6,24 +6,6 @@ import (
 	"fmt"
 )
 
-// RelaySession TODO DESCRIPTION
-type RelaySession struct {
-	Blade *BladeSession
-}
-
-// IRelay TODO DESCRIPTION
-type IRelay interface {
-	RelayPhoneDial(ctx context.Context, call *CallSession, fromNumber string, toNumber string, timeout uint) error
-	RelayPhoneConnect(ctx context.Context, call *CallSession, fromNumber string, toNumber string) error
-	RelayCallEnd(ctx context.Context, call *CallSession) error
-	RelayStop(ctx context.Context) error
-	RelayOnInboundAnswer(ctx context.Context)
-	RelayPlayAudio(ctx context.Context, call *CallSession, ctrlID string, url string) error
-	RelayPlayAudioStop(ctx context.Context, call *CallSession, ctrlID string) error
-	RelayRecordAudio(ctx context.Context, call *CallSession, ctrlID string, rec RecordParams) error
-	RelayRecordAudioStop(ctx context.Context, call *CallSession, ctrlID string) error
-}
-
 // RelayPhoneDial make outbound phone call
 func (relay *RelaySession) RelayPhoneDial(ctx context.Context, call *CallSession, fromNumber string, toNumber string, timeout uint) error {
 	var err error
