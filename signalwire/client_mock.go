@@ -112,3 +112,18 @@ func (mr *MockIClientSessionMockRecorder) WaitInbound(ctx interface{}) *gomock.C
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitInbound", reflect.TypeOf((*MockIClientSession)(nil).WaitInbound), ctx)
 }
+
+// WaitInboundMsg mocks base method
+func (m *MockIClientSession) WaitInboundMsg(ctx context.Context) (*MsgSession, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitInboundMsg", ctx)
+	ret0, _ := ret[0].(*MsgSession)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WaitInboundMsg indicates an expected call of WaitInboundMsg
+func (mr *MockIClientSessionMockRecorder) WaitInboundMsg(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitInboundMsg", reflect.TypeOf((*MockIClientSession)(nil).WaitInboundMsg), ctx)
+}

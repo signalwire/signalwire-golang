@@ -22,7 +22,6 @@ func EventCallingNew() *EventCalling {
 
 // IEventCalling  TODO DESCRIPTION
 type IEventCalling interface {
-	callingNotif(ctx context.Context, b NotifParamsBladeBroadcast) error
 	callConnectStateFromStr(s string) (CallConnectState, error)
 	callStateFromStr(s string) (CallState, error)
 	callPlayStateFromStr(s string) (PlayState, error)
@@ -61,9 +60,31 @@ type IEventCalling interface {
 	onCallingEventSendDigits(ctx context.Context, broadcast NotifParamsBladeBroadcast) error
 }
 
+// EventMessaging  TODO DESCRIPTION
+type EventMessaging struct {
+	blade *BladeSession
+	Cache BCache
+	I     IEventMessaging
+}
+
+// EventMessagingNew TODO DESCRIPTION
+func EventMessagingNew() *EventMessaging {
+	return &EventMessaging{}
+}
+
+// IEventMessaging  TODO DESCRIPTION
+type IEventMessaging interface {
+	onMessagingEventState(ctx context.Context, broadcast NotifParamsBladeBroadcast) error
+	dispatchMsgStateNotif(ctx context.Context, msgParams MsgParams) error
+	msgStateFromStr(s string) (MsgState, error)
+	msgDirectionFromStr(s string) (MsgDirection, error)
+	getMsg(ctx context.Context, msgID string) (*MsgSession, error)
+}
+
 // the 'finished' keyword
 const (
-	Finished = "finished"
+	Finished   = "finished"
+	InboundStr = "inbound"
 )
 
 // callConnectStateFromStr TODO DESCRIPTION
@@ -92,7 +113,7 @@ func (*EventCalling) callDirectionFromStr(s string) (CallDirection, error) {
 	var dir CallDirection
 
 	switch strings.ToLower(s) {
-	case "inbound":
+	case InboundStr:
 		dir = CallInbound
 	case "outbound":
 		dir = CallOutbound
@@ -351,7 +372,49 @@ func (*EventCalling) callPlayAndCollectStateFromStr(s string) (CollectResultType
 	return resType, nil
 }
 
-func (*EventCalling) getBroadcastParams(_ context.Context, in, out interface{}) error {
+func (*EventMessaging) msgDirectionFromStr(s string) (MsgDirection, error) {
+	var dir MsgDirection
+
+	switch strings.ToLower(s) {
+	case InboundStr:
+		dir = MsgInbound
+	case "outbound":
+		dir = MsgOutbound
+	default:
+		return dir, errors.New("invalid Msg Direction")
+	}
+
+	return dir, nil
+}
+
+func (*EventMessaging) msgStateFromStr(s string) (MsgState, error) {
+	var state MsgState
+
+	switch strings.ToLower(s) {
+	case "queued":
+		state = MsgQueued
+	case "initiated":
+		state = MsgInitiated
+	case "sent":
+		state = MsgSent
+	case "delivered":
+		state = MsgDelivered
+	case "undelivered":
+		state = MsgUndelivered
+	case "failed":
+		state = MsgFailed
+	case "received":
+		state = MsgReceived
+	default:
+		return state, errors.New("invalid MsgState")
+	}
+
+	Log.Debug("msgstate [%s] [%s]\n", s, state.String())
+
+	return state, nil
+}
+
+func getBroadcastGeneric(_ context.Context, in, out interface{}) error {
 	var (
 		jsonData []byte
 		err      error
@@ -371,6 +434,14 @@ func (*EventCalling) getBroadcastParams(_ context.Context, in, out interface{}) 
 	}
 
 	return nil
+}
+
+func (*EventCalling) getBroadcastParams(ctx context.Context, in, out interface{}) error {
+	return getBroadcastGeneric(ctx, in, out)
+}
+
+func (*EventMessaging) getBroadcastParams(ctx context.Context, in, out interface{}) error {
+	return getBroadcastGeneric(ctx, in, out)
 }
 
 func (calling *EventCalling) onCallingEventConnect(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
@@ -628,65 +699,37 @@ func (calling *EventCalling) onCallingEventSendDigits(ctx context.Context, broad
 	)
 }
 
-// HandleBladeBroadcast TODO DESCRIPTION
-func (calling *EventCalling) callingNotif(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
-	switch broadcast.Event {
-	case "queuing.relay.events":
-		switch broadcast.Params.EventType {
-		case "calling.call.connect":
-			if err := calling.onCallingEventConnect(ctx, broadcast); err != nil {
-				return err
-			}
-		case "calling.call.state":
-			if err := calling.onCallingEventState(ctx, broadcast); err != nil {
-				return err
-			}
-		case "calling.call.receive":
-			if err := calling.onCallingEventReceive(ctx, broadcast); err != nil {
-				return err
-			}
-		case "calling.call.play":
-			if err := calling.onCallingEventPlay(ctx, broadcast); err != nil {
-				return err
-			}
-		case "calling.call.collect":
-			if err := calling.onCallingEventCollect(ctx, broadcast); err != nil {
-				return err
-			}
-		case "calling.call.record":
-			if err := calling.onCallingEventRecord(ctx, broadcast); err != nil {
-				return err
-			}
-		case "calling.call.tap":
-			if err := calling.onCallingEventTap(ctx, broadcast); err != nil {
-				return err
-			}
-		case "calling.call.detect":
-			if err := calling.onCallingEventDetect(ctx, broadcast); err != nil {
-				return err
-			}
-		case "calling.call.fax":
-			if err := calling.onCallingEventFax(ctx, broadcast); err != nil {
-				return err
-			}
-		case "calling.call.send_digits":
-			if err := calling.onCallingEventSendDigits(ctx, broadcast); err != nil {
-				return err
-			}
-		default:
-			Log.Debug("got event_type %s\n", broadcast.Params.EventType)
-		}
-	case "relay":
-		Log.Debug("got RELAY event\n")
-	default:
-		Log.Debug("got event %s . unsupported\n", broadcast.Event)
+func (messaging *EventMessaging) onMessagingEventState(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+	var params ParamsEventMessagingState
 
-		return fmt.Errorf("unsupported event")
+	if err := messaging.getBroadcastParams(ctx, broadcast.Params.Params, &params); err != nil {
+		return err
 	}
 
-	Log.Debug("broadcast: %v\n", broadcast)
+	state, err := messaging.I.msgStateFromStr(params.MessageState)
+	if err != nil {
+		return err
+	}
 
-	return nil
+	dir, err := messaging.I.msgDirectionFromStr(params.Direction)
+	if err != nil {
+		return err
+	}
+
+	var msgParams MsgParams
+
+	msgParams.MsgID = params.MsgID
+	msgParams.Context = params.Context
+	msgParams.Direction = dir
+	msgParams.To = params.ToNumber
+	msgParams.From = params.FromNumber
+	msgParams.MsgState = state
+	msgParams.Segments = params.Segments
+	msgParams.Body = params.Body
+	msgParams.Tags = params.Tags
+	msgParams.Media = params.Media
+
+	return messaging.I.dispatchMsgStateNotif(ctx, msgParams)
 }
 
 func (calling *EventCalling) getCall(ctx context.Context, tag, callID string) (*CallSession, error) {
@@ -732,6 +775,30 @@ func (calling *EventCalling) getCall(ctx context.Context, tag, callID string) (*
 	return call, err
 }
 
+func (messaging *EventMessaging) getMsg(ctx context.Context, msgID string) (*MsgSession, error) {
+	var (
+		msg *MsgSession
+		err error
+	)
+
+	Log.Debug("msgid [%s] [%p]\n", msgID, messaging)
+
+	msg, err = messaging.Cache.GetMsgCache(msgID)
+	if msg == nil {
+		// new inbound msg
+		msg = new(MsgSession)
+		if err = messaging.Cache.SetMsgCache(msgID, msg); err != nil {
+			Log.Debug("SetMsgCache failed: %v\n", err)
+		}
+
+		msg.MsgInit(ctx)
+
+		Log.Debug("new inbound msg: [%p]\n", msg)
+	}
+
+	return msg, err
+}
+
 func (calling *EventCalling) dispatchStateNotif(ctx context.Context, callParams CallParams) error {
 	Log.Debug("tag [%s] callstate [%s] blade [%p] direction: %s\n", callParams.TagID, callParams.CallState.String(), calling.blade, callParams.Direction)
 	Log.Debug("direction : %v\n", callParams.Direction)
@@ -754,7 +821,7 @@ func (calling *EventCalling) dispatchStateNotif(ctx context.Context, callParams 
 
 	call.Blade = calling.blade
 
-	if (callParams.CallState == Created) && (callParams.Direction == "inbound") {
+	if (callParams.CallState == Created) && (callParams.Direction == InboundStr) {
 		calling.blade.I.handleInboundCall(ctx, callParams.CallID)
 	}
 
@@ -1079,6 +1146,35 @@ func (calling *EventCalling) dispatchPlayAndCollectEventParams(ctx context.Conte
 		Log.Debug("sent params (event)\n")
 	default:
 		Log.Debug("no params (event) sent\n")
+	}
+
+	return nil
+}
+
+func (messaging *EventMessaging) dispatchMsgStateNotif(ctx context.Context, msgParams MsgParams) error {
+	Log.Debug("msgID [%s] msgstate [%s] blade [%p] direction: %s\n", msgParams.MsgID, msgParams.MsgState.String(), messaging.blade, msgParams.Direction)
+	Log.Debug("direction : %v\n", msgParams.Direction)
+
+	msg, _ := messaging.I.getMsg(ctx, msgParams.MsgID)
+	if msg == nil {
+		return fmt.Errorf("error, nil MsgSession")
+	}
+
+	msg.SetParams(msgParams.MsgID, msgParams.To, msgParams.From, msgParams.Context, msgParams.Direction)
+
+	msg.UpdateMsgState(msgParams.MsgState)
+
+	msg.Blade = messaging.blade
+
+	if (msgParams.MsgState == MsgReceived) && (msgParams.Direction == MsgInbound) {
+		messaging.blade.I.handleInboundMessage(ctx, msgParams.MsgID)
+	}
+
+	select {
+	case msg.MsgStateChan <- msgParams.MsgState:
+		Log.Debug("sent msgstate\n")
+	default:
+		Log.Debug("no msgstate sent\n")
 	}
 
 	return nil

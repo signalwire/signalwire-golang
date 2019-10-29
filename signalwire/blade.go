@@ -47,27 +47,29 @@ func (s SessionState) String() string {
 
 // BladeSession cache Session information
 type BladeSession struct {
-	SessionID          string
-	Protocol           string
-	SpaceID            string
-	LastError          error
-	SessionState       SessionState
-	Certified          bool
-	SignalwireChannels []string
-	SignalwireContexts []string
-	bladeAuth          BladeAuth
-	Ctx                context.Context
-	conn               *jsonrpc2.Conn
-	jOpts              []jsonrpc2.CallOption
-	DisconnectChan     chan struct{}
-	Calls              [MaxSimCalls]CallSession
-	//	Cache                BCache
+	SessionID            string
+	Protocol             string
+	SpaceID              string
+	LastError            error
+	SessionState         SessionState
+	Certified            bool
+	SignalwireChannels   []string
+	SignalwireContexts   []string
+	bladeAuth            BladeAuth
+	Ctx                  context.Context
+	conn                 *jsonrpc2.Conn
+	jOpts                []jsonrpc2.CallOption
+	DisconnectChan       chan struct{}
+	Calls                [MaxSimCalls]CallSession
 	BladeHandlerIncoming ReqHandler
 	I                    IBlade
 	Inbound              chan string
 	Netcast              chan string
 	InboundDone          chan struct{}
+	InboundMsg           chan string
+	InboundMsgDone       chan struct{}
 	EventCalling         EventCalling
+	EventMessaging       EventMessaging
 }
 
 // IBlade TODO DESCRIPTION
@@ -89,6 +91,8 @@ type IBlade interface {
 	handleBladeNetcast(ctx context.Context, req *jsonrpc2.Request) error
 	handleBladeDisconnect(ctx context.Context, c *jsonrpc2.Request) error
 	handleInboundCall(ctx context.Context, callID string) bool
+	handleInboundMessage(ctx context.Context, callID string) bool
+	eventNotif(ctx context.Context, broadcast NotifParamsBladeBroadcast) error
 }
 
 // ISessionControl TODO DESCRIPTION
@@ -228,6 +232,9 @@ func (blade *BladeSession) BladeInit(ctx context.Context, addr string) error {
 
 	var I IEventCalling = EventCallingNew()
 
+	/*the circular references are for unit-testing.
+	Work with interfaces so we can generate a mock with mockgen. */
+
 	calling := &EventCalling{I: I}
 	calling.blade = blade
 
@@ -240,6 +247,21 @@ func (blade *BladeSession) BladeInit(ctx context.Context, addr string) error {
 
 	blade.EventCalling = *calling
 	blade.EventCalling.blade = blade
+
+	var J IEventMessaging = EventMessagingNew()
+
+	messaging := &EventMessaging{I: J}
+	messaging.blade = blade
+	messaging.I = messaging
+	blade.EventMessaging = *messaging
+
+	if err = messaging.Cache.InitCache(CacheExpiry*time.Second, CacheCleaning*time.Second); err != nil {
+		return errors.New("failed to initialize cache")
+	}
+
+	blade.EventMessaging = *messaging
+	blade.EventMessaging.blade = blade
+
 	blade.Netcast = make(chan string)
 	blade.DisconnectChan = make(chan struct{})
 
@@ -509,7 +531,7 @@ func (blade *BladeSession) handleBladeBroadcast(ctx context.Context, req *jsonrp
 	Log.Debug("broadcast.Params.EventType: %v\n", broadcast.Params.EventType)
 	Log.Debug("broadcast.Params.Params: %v\n", broadcast.Params.Params)
 
-	if err := blade.EventCalling.callingNotif(ctx, broadcast); err != nil {
+	if err := blade.eventNotif(ctx, broadcast); err != nil {
 		return err
 	}
 
@@ -748,4 +770,138 @@ func (blade *BladeSession) BladeWaitInboundCall(ctx context.Context) (*CallSessi
 	}
 
 	return call, nil
+}
+
+// eventNotif TODO DESCRIPTION
+func (blade *BladeSession) eventNotif(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+	calling := blade.EventCalling
+	messaging := blade.EventMessaging
+
+	switch broadcast.Event {
+	case "queuing.relay.events":
+		switch broadcast.Params.EventType {
+		case "calling.call.connect":
+			if err := calling.onCallingEventConnect(ctx, broadcast); err != nil {
+				return err
+			}
+		case "calling.call.state":
+			if err := calling.onCallingEventState(ctx, broadcast); err != nil {
+				return err
+			}
+		case "calling.call.receive":
+			if err := calling.onCallingEventReceive(ctx, broadcast); err != nil {
+				return err
+			}
+		case "calling.call.play":
+			if err := calling.onCallingEventPlay(ctx, broadcast); err != nil {
+				return err
+			}
+		case "calling.call.collect":
+			if err := calling.onCallingEventCollect(ctx, broadcast); err != nil {
+				return err
+			}
+		case "calling.call.record":
+			if err := calling.onCallingEventRecord(ctx, broadcast); err != nil {
+				return err
+			}
+		case "calling.call.tap":
+			if err := calling.onCallingEventTap(ctx, broadcast); err != nil {
+				return err
+			}
+		case "calling.call.detect":
+			if err := calling.onCallingEventDetect(ctx, broadcast); err != nil {
+				return err
+			}
+		case "calling.call.fax":
+			if err := calling.onCallingEventFax(ctx, broadcast); err != nil {
+				return err
+			}
+		case "calling.call.send_digits":
+			if err := calling.onCallingEventSendDigits(ctx, broadcast); err != nil {
+				return err
+			}
+		default:
+			Log.Debug("got event_type %s\n", broadcast.Params.EventType)
+		}
+	case "queuing.relay.messaging":
+		switch broadcast.Params.EventType {
+		case "messaging.receive":
+			// An inbound message has been received.
+			// always state "received"
+			fallthrough
+		case "messaging.state":
+			if err := messaging.onMessagingEventState(ctx, broadcast); err != nil {
+				return err
+			}
+		default:
+			Log.Debug("got event_type %s\n", broadcast.Params.EventType)
+		}
+	case "relay":
+		Log.Debug("got RELAY event\n")
+	default:
+		Log.Debug("got event %s . unsupported\n", broadcast.Event)
+
+		return fmt.Errorf("unsupported event")
+	}
+
+	Log.Debug("broadcast: %v\n", broadcast)
+
+	return nil
+}
+
+func (blade *BladeSession) handleInboundMessage(_ context.Context, msgID string) bool {
+	Log.Debug("handleInboundMessage callID: %s\n", msgID)
+
+	// new inbound msg
+	select {
+	case blade.InboundMsg <- msgID:
+		Log.Debug("sent msgID to InboundMsg handler go routine\n")
+		return true
+	default:
+		Log.Debug("no new msg signal sent\n")
+	}
+
+	return false
+}
+
+// BladeSetupInboundMsg TODO DESCRIPTION
+func (blade *BladeSession) BladeSetupInboundMsg(_ context.Context) {
+	blade.InboundMsg = make(chan string, 1)
+	blade.InboundMsgDone = make(chan struct{}, 1)
+}
+
+// BladeWaitInboundMsg TODO DESCRIPTION
+func (blade *BladeSession) BladeWaitInboundMsg(ctx context.Context) (*MsgSession, error) {
+	var (
+		msgID string
+		ret   bool
+	)
+
+	for {
+		var out bool
+
+		select {
+		case msgID = <-blade.InboundMsg:
+			out = true
+			ret = true
+		case <-blade.InboundMsgDone:
+			out = true
+		}
+
+		if out {
+			break
+		}
+	}
+
+	if !ret {
+		// shutdown
+		return nil, nil
+	}
+
+	msg, _ := blade.EventMessaging.I.getMsg(ctx, msgID)
+	if msg == nil {
+		return nil, fmt.Errorf("error, nil CallSession")
+	}
+
+	return msg, nil
 }

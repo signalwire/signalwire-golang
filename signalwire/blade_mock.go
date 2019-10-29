@@ -262,6 +262,34 @@ func (mr *MockIBladeMockRecorder) handleInboundCall(ctx, callID interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "handleInboundCall", reflect.TypeOf((*MockIBlade)(nil).handleInboundCall), ctx, callID)
 }
 
+// handleInboundMessage mocks base method
+func (m *MockIBlade) handleInboundMessage(ctx context.Context, callID string) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "handleInboundMessage", ctx, callID)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// handleInboundMessage indicates an expected call of handleInboundMessage
+func (mr *MockIBladeMockRecorder) handleInboundMessage(ctx, callID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "handleInboundMessage", reflect.TypeOf((*MockIBlade)(nil).handleInboundMessage), ctx, callID)
+}
+
+// eventNotif mocks base method
+func (m *MockIBlade) eventNotif(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "eventNotif", ctx, broadcast)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// eventNotif indicates an expected call of eventNotif
+func (mr *MockIBladeMockRecorder) eventNotif(ctx, broadcast interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "eventNotif", reflect.TypeOf((*MockIBlade)(nil).eventNotif), ctx, broadcast)
+}
+
 // MockISessionControl is a mock of ISessionControl interface
 type MockISessionControl struct {
 	ctrl     *gomock.Controller

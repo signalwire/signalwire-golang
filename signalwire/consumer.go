@@ -18,8 +18,8 @@ type Consumer struct {
 	Client               *ClientSession
 	Ready                func(*Consumer)
 	OnIncomingCall       func(*Consumer, *CallObj)
-	OnIncomingMessage    func(*Consumer)
-	OnMessageStateChange func(*Consumer)
+	OnIncomingMessage    func(*Consumer, *MsgObj)
+	OnMessageStateChange func(*Consumer, *MsgObj)
 	OnTask               func(*Consumer)
 	Teardown             func(*Consumer)
 
@@ -69,6 +69,15 @@ func (consumer *Consumer) runOnIncomingCall(_ context.Context, call *CallSession
 	consumer.OnIncomingCall(consumer, c)
 }
 
+func (consumer *Consumer) runOnIncomingMessage(_ context.Context, msg *MsgSession) {
+	var I ICallObj = CallObjNew()
+
+	m := &MsgObj{I: I}
+	m.msg = msg
+	m.Messaging = &consumer.Client.Messaging
+	consumer.OnIncomingMessage(consumer, m)
+}
+
 func (consumer *Consumer) incomingCall(ctx context.Context, wg *sync.WaitGroup) {
 	for {
 		call, ierr := consumer.Client.I.WaitInbound(ctx)
@@ -85,6 +94,22 @@ func (consumer *Consumer) incomingCall(ctx context.Context, wg *sync.WaitGroup) 
 	}
 }
 
+func (consumer *Consumer) incomingMessage(ctx context.Context, wg *sync.WaitGroup) {
+	for {
+		msg, ierr := consumer.Client.I.WaitInboundMsg(ctx)
+		if ierr != nil {
+			Log.Error("Error processing incoming msg: %v\n", ierr)
+		} else if msg == nil && ierr == nil {
+			wg.Done()
+			return
+		}
+
+		if msg != nil {
+			go consumer.runOnIncomingMessage(ctx, msg)
+		}
+	}
+}
+
 // Run TODO DESCRIPTION
 func (consumer *Consumer) Run() error {
 	consumer.Client.SetClient(consumer.Host, consumer.Contexts)
@@ -97,11 +122,21 @@ func (consumer *Consumer) Run() error {
 		wg  sync.WaitGroup
 	)
 
-	if consumer.OnIncomingCall != nil {
-		wg.Add(2)
-	} else {
-		wg.Add(1)
+	var haveIncomingMsg int
+
+	var haveIncomingCalls int
+
+	// will start go routines for incoming calls and incoming messages.
+	// will prepare waitGroup
+	if consumer.OnIncomingMessage != nil {
+		haveIncomingMsg = 1
 	}
+
+	if consumer.OnIncomingCall != nil {
+		haveIncomingCalls = 1
+	}
+
+	wg.Add(haveIncomingMsg + haveIncomingCalls + 1)
 
 	go func() {
 		err = consumer.Client.I.Connect(ctx, cancel, &wg)
@@ -126,6 +161,11 @@ func (consumer *Consumer) Run() error {
 	if consumer.OnIncomingCall != nil {
 		go consumer.incomingCall(ctx, &wg)
 		Log.Debug("OnIncomingCall CB enabled\n")
+	}
+
+	if consumer.OnIncomingMessage != nil {
+		go consumer.incomingMessage(ctx, &wg)
+		Log.Debug("OnIncomingMessage CB enabled\n")
 	}
 
 	wg.Wait()
