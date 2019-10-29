@@ -2,6 +2,7 @@ package signalwire
 
 import (
 	"context"
+	"errors"
 )
 
 // Messaging TODO DESCRIPTION
@@ -78,12 +79,13 @@ func (messaging *Messaging) Send(fromNumber, toNumber, signalwireContext, msgBod
 	}
 
 	newmsg := new(MsgSession)
+	newmsg.MsgInit(messaging.Ctx)
 
 	var err error
 
 	var msgID string
 
-	msgID, err = messaging.Relay.RelaySendMessage(messaging.Ctx, fromNumber, toNumber, signalwireContext, msgBody)
+	msgID, err = messaging.Relay.RelaySendMessage(messaging.Ctx, newmsg, fromNumber, toNumber, signalwireContext, msgBody)
 	if err != nil {
 		Log.Error("RelaySendMessage: %v", err)
 		res.err = err
@@ -125,11 +127,28 @@ func (messaging *Messaging) SendMsg(mObj *MsgObj) SendResult {
 		return *res
 	}
 
+	mObj.msg.MsgInit(messaging.Ctx)
+
 	var err error
 
 	var msgID string
 
-	msgID, err = messaging.Relay.RelaySendMessage(messaging.Ctx, mObj.msg.MsgParams.From, mObj.msg.MsgParams.To, mObj.msg.MsgParams.Context, mObj.msg.MsgParams.Body)
+	done := make(chan struct{})
+
+	go func() {
+		if ret := mObj.msg.WaitMsgStateInternal(messaging.Ctx, MsgDelivered); !ret {
+			res.err = errors.New("did not get Delivered state")
+			Log.Error("%v\n", res.err)
+
+			res.Msg = mObj
+
+			res.Successful = false
+		}
+
+		done <- struct{}{}
+	}()
+
+	msgID, err = messaging.Relay.RelaySendMessage(messaging.Ctx, mObj.msg, mObj.msg.MsgParams.From, mObj.msg.MsgParams.To, mObj.msg.MsgParams.Context, mObj.msg.MsgParams.Body)
 	if err != nil {
 		Log.Error("RelaySendMessage: %v", err)
 		res.err = err
@@ -138,17 +157,10 @@ func (messaging *Messaging) SendMsg(mObj *MsgObj) SendResult {
 	}
 
 	mObj.msg.SetMsgID(msgID)
-
-	if ret := mObj.msg.WaitMsgStateInternal(messaging.Ctx, MsgDelivered); !ret {
-		Log.Debug("did not get Delivered state\n")
-
-		res.Msg = mObj
-
-		return *res
-	}
-
 	res.Msg = mObj
 	res.Successful = true
+
+	<-done
 
 	return *res
 }

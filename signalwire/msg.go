@@ -137,15 +137,18 @@ func (m *MsgSession) GetTo() string {
 func (m *MsgSession) WaitMsgStateInternal(_ context.Context, want MsgState) bool {
 	var ret bool
 
-	for {
-		var out bool
+	var out bool
 
+	for {
 		select {
 		case state := <-m.MsgStateChan:
-			if state == want {
+			switch state {
+			case want:
 				out = true
 				ret = true
-			} else if state == MsgDelivered {
+			case MsgUndelivered:
+				fallthrough
+			case MsgFailed:
 				out = true
 			}
 		case <-time.After(BroadcastEventTimeout * time.Second):

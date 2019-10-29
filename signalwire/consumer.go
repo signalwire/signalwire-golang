@@ -153,6 +153,7 @@ func (consumer *Consumer) Run() error {
 	Log.Debug("Blade Ready...\n")
 
 	consumer.Client.SetupInbound()
+	consumer.Client.SetupInboundMsg()
 
 	if consumer.Ready != nil {
 		consumer.Ready(consumer)

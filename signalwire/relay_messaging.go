@@ -6,7 +6,7 @@ import (
 )
 
 // RelaySendMessage send a text message (sms)
-func (relay *RelaySession) RelaySendMessage(ctx context.Context, fromNumber, toNumber, context, msgBody string) (string, error) {
+func (relay *RelaySession) RelaySendMessage(ctx context.Context, msg *MsgSession, fromNumber, toNumber, context, msgBody string) (string, error) {
 	var err error
 
 	if relay == nil {
@@ -16,9 +16,6 @@ func (relay *RelaySession) RelaySendMessage(ctx context.Context, fromNumber, toN
 	if relay.Blade == nil {
 		return "", errors.New("blade server object not defined")
 	}
-
-	msg := new(MsgSession)
-	msg.MsgInit(ctx)
 
 	v := ParamsBladeExecuteStruct{
 		Protocol: relay.Blade.Protocol,
