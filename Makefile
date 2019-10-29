@@ -29,6 +29,7 @@ lint:
 	make lint -C RelayExamples/Connect
 	make lint -C RelayExamples/Tap
 	make lint -C RelayExamples/SendDigits
+	make lint -C RelayExamples/MessageSend
 
 update:
 	make update -C signalwire
@@ -50,4 +51,5 @@ update:
 	make update -C RelayExamples/Connect
 	make update -C RelayExamples/Tap
 	make update -C RelayExamples/SendDigits
+	make update -C RelayExamples/MessageSend
 

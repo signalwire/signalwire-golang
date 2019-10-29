@@ -134,7 +134,7 @@ func (m *MsgSession) GetTo() string {
 	return to
 }
 
-func (m *MsgSession) WaitMsgStateInternal(_ context.Context, want MsgState) bool {
+func (m *MsgSession) waitMsgStateInternal(_ context.Context, want MsgState) bool {
 	var ret bool
 
 	var out bool
