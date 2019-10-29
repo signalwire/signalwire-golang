@@ -19,6 +19,7 @@ const (
 	DefaultContext = "replaceme"
 )
 
+// Contexts a list with Signalwire Contexts
 var Contexts []string
 
 // PProjectID passed from command-line

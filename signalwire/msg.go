@@ -24,7 +24,7 @@ func (s MsgState) String() string {
 	return [...]string{"Queued", "Initiated", "Sent", "Delivered", "Undelivered", "Failed", "Received"}[s]
 }
 
-// Message Direction (in or out)
+// MsgDirection  Message Direction (in or out)
 type MsgDirection int
 
 // Call state constants
@@ -47,6 +47,7 @@ type MsgSession struct {
 	MsgStateChan chan MsgState
 }
 
+// MsgParams TODO DESCRIPTION
 type MsgParams struct {
 	MsgID     string
 	Context   string
@@ -60,6 +61,7 @@ type MsgParams struct {
 	Tags      []string // optional client data this call is tagged with
 	Media     []string // an array of URLs to send in the message
 	Reason    string   // reason: present on undelivered and failed.
+	Region    string   //  region of the world to originate the call from.
 }
 
 // IMsg Msg Interface
@@ -215,5 +217,26 @@ func (m *MsgSession) SetBody(body string) {
 func (m *MsgSession) SetMsgID(msgID string) {
 	m.Lock()
 	m.MsgParams.MsgID = msgID
+	m.Unlock()
+}
+
+// SetRegion TODO DESCRIPTION
+func (m *MsgSession) SetRegion(region string) {
+	m.Lock()
+	m.MsgParams.Region = region
+	m.Unlock()
+}
+
+// SetTags TODO DESCRIPTION
+func (m *MsgSession) SetTags(tags []string) {
+	m.Lock()
+	m.MsgParams.Tags = tags
+	m.Unlock()
+}
+
+// SetMedia TODO DESCRIPTION
+func (m *MsgSession) SetMedia(media []string) {
+	m.Lock()
+	m.MsgParams.Media = media
 	m.Unlock()
 }

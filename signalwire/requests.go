@@ -694,10 +694,13 @@ type ParamsCallPlayAndCollect struct {
 
 // ParamsMessagingSend TODO DESCRIPTION
 type ParamsMessagingSend struct {
-	ToNumber   string `json:"to_number"`
-	FromNumber string `json:"from_number"`
-	Context    string `json:"context"`
-	Body       string `json:"body"`
+	ToNumber   string   `json:"to_number"`
+	FromNumber string   `json:"from_number"`
+	Context    string   `json:"context"`
+	Body       string   `json:"body"`
+	Tags       []string `json:"tags,omitempty"`
+	Region     string   `json:"region,omitempty"`
+	Media      []string `json:"media,omitempty"`
 }
 
 // ParamsEventMessagingState TODO DESCRIPTION

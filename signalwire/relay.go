@@ -48,6 +48,6 @@ type IRelay interface {
 	RelayPlayAndCollectVolume(ctx context.Context, call *CallSession, ctrlID *string, vol float64) error
 	RelayPlayAndCollectStop(ctx context.Context, call *CallSession, ctrlID *string) error
 	/*messaging*/
-	RelaySendMessage(ctx context.Context, call *CallSession, fromNumber, toNumber, context, msgBody string) error
+	RelaySendMessage(ctx context.Context, call *CallSession, fromNumber, toNumber, signalwireContext, msgBody string) error
 	/*tasking*/
 }
