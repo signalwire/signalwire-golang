@@ -2,7 +2,8 @@ package signalwire
 
 import (
 	"context"
-	"errors"
+	"sync"
+	"time"
 )
 
 // Messaging TODO DESCRIPTION
@@ -17,13 +18,13 @@ type MsgObj struct {
 	msg                  *MsgSession
 	I                    IMsgObj
 	Messaging            *Messaging
-	OnMessageStateChange func(*MsgObj)
-	OnMessageQueued      func(*MsgObj)
-	OnInitiated          func(*MsgObj)
-	OnMessageSent        func(*MsgObj)
-	OnMessageDelivered   func(*MsgObj)
-	OnMessageUndelivered func(*MsgObj)
-	OnMessageFailed      func(*MsgObj)
+	OnMessageStateChange func(*SendResult)
+	OnMessageQueued      func(*SendResult)
+	OnMessageInitiated   func(*SendResult)
+	OnMessageSent        func(*SendResult)
+	OnMessageDelivered   func(*SendResult)
+	OnMessageUndelivered func(*SendResult)
+	OnMessageFailed      func(*SendResult)
 }
 
 type IMsgObj interface {
@@ -31,17 +32,20 @@ type IMsgObj interface {
 
 // IMessaging object visible to the end user
 type IMessaging interface {
-	Send(context, fromNumber, toNumber, text string) SendResult
+	Send(context, fromNumber, toNumber, text string) *SendResult
 	NewMessage() *MsgObj
-	SendMsg(m *MsgObj) SendResult
+	SendMsg(m *MsgObj) *SendResult
 }
 
 // SendResult TODO DESCRIPTION
 type SendResult struct {
+	I     IMessaging
+	Msg   *MsgObj
+	state MsgState
+	err   error
+	sync.RWMutex
 	Successful bool
-	Msg        *MsgObj
-	I          IMessaging
-	err        error
+	Completed  bool
 }
 
 // MsgObjNew TODO DESCRIPTION
@@ -66,16 +70,124 @@ func (messaging *Messaging) NewMessage(context, from, to, text string) *MsgObj {
 	return m
 }
 
+func (msgobj *MsgObj) callbacksRunSend(_ context.Context, res *SendResult) {
+	var out bool
+
+	timer := time.NewTimer(BroadcastEventTimeout * time.Second)
+
+	for {
+		select {
+		case state := <-msgobj.msg.MsgStateChan:
+			res.RLock()
+
+			prevstate := res.state
+
+			res.RUnlock()
+
+			switch state {
+			case MsgDelivered:
+				res.Lock()
+
+				res.state = state
+				res.Successful = true
+				res.Completed = true
+
+				res.Unlock()
+				timer.Reset(BroadcastEventTimeout * time.Second)
+
+				out = true
+
+				if msgobj.OnMessageDelivered != nil {
+					go msgobj.OnMessageDelivered(res)
+				}
+
+			case MsgSent:
+				res.Lock()
+
+				res.state = state
+
+				res.Unlock()
+				timer.Reset(BroadcastEventTimeout * time.Second)
+
+				if msgobj.OnMessageSent != nil {
+					go msgobj.OnMessageSent(res)
+				}
+			case MsgUndelivered:
+				res.Lock()
+
+				res.Completed = true
+				res.state = state
+
+				res.Unlock()
+				timer.Reset(BroadcastEventTimeout * time.Second)
+
+				out = true
+
+				if msgobj.OnMessageUndelivered != nil {
+					go msgobj.OnMessageUndelivered(res)
+				}
+			case MsgFailed:
+				res.Lock()
+
+				res.state = state
+
+				res.Unlock()
+				timer.Reset(BroadcastEventTimeout * time.Second)
+
+				out = true
+
+				if msgobj.OnMessageFailed != nil {
+					go msgobj.OnMessageFailed(res)
+				}
+			case MsgQueued:
+				res.Lock()
+
+				res.state = state
+
+				res.Unlock()
+				timer.Reset(BroadcastEventTimeout * time.Second)
+
+				if msgobj.OnMessageQueued != nil {
+					go msgobj.OnMessageQueued(res)
+				}
+			case MsgInitiated:
+				res.Lock()
+
+				res.state = state
+
+				res.Unlock()
+				timer.Reset(BroadcastEventTimeout * time.Second)
+
+				if msgobj.OnMessageInitiated != nil {
+					go msgobj.OnMessageInitiated(res)
+				}
+			default:
+				Log.Debug("Unknown state.")
+			}
+
+			if prevstate != state && msgobj.OnMessageStateChange != nil {
+				go msgobj.OnMessageStateChange(res)
+			}
+		case <-timer.C:
+			out = true
+		}
+
+		if out {
+			break
+		}
+	}
+}
+
 // Send TODO DESCRIPTION
-func (messaging *Messaging) Send(fromNumber, toNumber, signalwireContext, msgBody string) SendResult {
+func (messaging *Messaging) Send(fromNumber, toNumber, signalwireContext, msgBody string) *SendResult {
 	res := new(SendResult)
 
 	if messaging.Relay == nil {
-		return *res
+		return res
 	}
 
 	if messaging.Ctx == nil {
-		return *res
+		return res
 	}
 
 	newmsg := new(MsgSession)
@@ -90,7 +202,7 @@ func (messaging *Messaging) Send(fromNumber, toNumber, signalwireContext, msgBod
 		Log.Error("RelaySendMessage: %v", err)
 		res.err = err
 
-		return *res
+		return res
 	}
 
 	newmsg.SetParams(msgID, fromNumber, toNumber, signalwireContext, MsgOutbound)
@@ -101,30 +213,24 @@ func (messaging *Messaging) Send(fromNumber, toNumber, signalwireContext, msgBod
 	m.msg = newmsg
 	m.Messaging = messaging
 
-	if ret := newmsg.WaitMsgStateInternal(messaging.Ctx, MsgDelivered); !ret {
-		Log.Debug("did not get Delivered state\n")
-
-		res.Msg = m
-
-		return *res
-	}
-
 	res.Msg = m
-	res.Successful = true
 
-	return *res
+	/*no callbacks*/
+	res.Msg.callbacksRunSend(messaging.Ctx, res)
+
+	return res
 }
 
 // SendMsg TODO DESCRIPTION
-func (messaging *Messaging) SendMsg(mObj *MsgObj) SendResult {
+func (messaging *Messaging) SendMsg(mObj *MsgObj) *SendResult {
 	res := new(SendResult)
 
 	if messaging.Relay == nil {
-		return *res
+		return res
 	}
 
 	if messaging.Ctx == nil {
-		return *res
+		return res
 	}
 
 	mObj.msg.MsgInit(messaging.Ctx)
@@ -136,14 +242,7 @@ func (messaging *Messaging) SendMsg(mObj *MsgObj) SendResult {
 	done := make(chan struct{})
 
 	go func() {
-		if ret := mObj.msg.WaitMsgStateInternal(messaging.Ctx, MsgDelivered); !ret {
-			res.err = errors.New("did not get Delivered state")
-			Log.Error("%v\n", res.err)
-
-			res.Msg = mObj
-
-			res.Successful = false
-		}
+		mObj.callbacksRunSend(messaging.Ctx, res)
 
 		done <- struct{}{}
 	}()
@@ -153,7 +252,7 @@ func (messaging *Messaging) SendMsg(mObj *MsgObj) SendResult {
 		Log.Error("RelaySendMessage: %v", err)
 		res.err = err
 
-		return *res
+		return res
 	}
 
 	mObj.msg.SetMsgID(msgID)
@@ -162,7 +261,7 @@ func (messaging *Messaging) SendMsg(mObj *MsgObj) SendResult {
 
 	<-done
 
-	return *res
+	return res
 }
 
 // GetSuccessful TODO DESCRIPTION

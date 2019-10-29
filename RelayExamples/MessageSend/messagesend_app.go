@@ -96,6 +96,13 @@ func main() {
 		to := "+15XXXXXXXXX"
 
 		message := consumer.Client.Messaging.NewMessage(context, from, to, text)
+		message.OnMessageQueued = func(_ *signalwire.SendResult) {
+			signalwire.Log.Info("Message Queued.\n")
+		}
+
+		message.OnMessageDelivered = func(_ *signalwire.SendResult) {
+			signalwire.Log.Info("Message Delivered.\n")
+		}
 
 		resultSend1 := consumer.Client.Messaging.SendMsg(message)
 		if !resultSend1.GetSuccessful() {
