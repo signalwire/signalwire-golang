@@ -84,3 +84,61 @@ func (cache *BCache) DeleteCallCache(callID string) error {
 
 	return nil
 }
+
+// SetMsgCache TODO DESCRIPTION
+func (cache *BCache) SetMsgCache(msgID string, sess *MsgSession) error {
+	if cache == nil {
+		Log.Error("empty cache object")
+		return errors.New("empty cache object")
+	}
+
+	if cache.p == nil {
+		Log.Error("cache not initialized")
+		return errors.New("cache not initialized")
+	}
+
+	if sess == nil {
+		Log.Error("empty session object")
+		return errors.New("empty session object")
+	}
+
+	cache.p.Set(msgID, sess, CacheExpiry*time.Second)
+
+	return nil
+}
+
+// GetMsgCache TODO DESCRIPTION
+func (cache *BCache) GetMsgCache(msgID string) (*MsgSession, error) {
+	if cache == nil {
+		return nil, errors.New("empty cache object")
+	}
+
+	if cache.p == nil {
+		return nil, errors.New("cache not initialized")
+	}
+
+	if v, found := cache.p.Get(msgID); found {
+		if _, ok := v.(*MsgSession); !ok {
+			return nil, errors.New("wrong cache data type")
+		}
+
+		return v.(*MsgSession), nil
+	}
+
+	return nil, nil
+}
+
+// DeleteMsgCache TODO DESCRIPTION
+func (cache *BCache) DeleteMsgCache(msgID string) error {
+	if cache == nil {
+		return errors.New("empty cache object")
+	}
+
+	if cache.p == nil {
+		return errors.New("cache not initialized")
+	}
+
+	cache.p.Delete(msgID)
+
+	return nil
+}

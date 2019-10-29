@@ -215,6 +215,13 @@ type ReplyBladeExecuteResultTap struct {
 	SourceDevice TapDevice `json:"source_device"`
 }
 
+// ReplyBladeExecuteResultSendMsg TODO DESCRIPTION
+type ReplyBladeExecuteResultSendMsg struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+	MsgID   string `json:"message_id"`
+}
+
 // ReplyBladeExecute TODO DESCRIPTION
 type ReplyBladeExecute struct {
 	RequesterNodeID string                  `json:"requester_node_id"`
@@ -227,6 +234,13 @@ type ReplyBladeExecuteTap struct {
 	RequesterNodeID string                     `json:"requester_node_id"`
 	ResponderNodeID string                     `json:"responder_node_id"`
 	Result          ReplyBladeExecuteResultTap `json:"result"`
+}
+
+// ReplyBladeExecuteSendMsg TODO DESCRIPTION
+type ReplyBladeExecuteSendMsg struct {
+	RequesterNodeID string                         `json:"requester_node_id"`
+	ResponderNodeID string                         `json:"responder_node_id"`
+	Result          ReplyBladeExecuteResultSendMsg `json:"result"`
 }
 
 // PeerStruct  TODO DESCRIPTION
@@ -676,4 +690,26 @@ type ParamsCallPlayAndCollect struct {
 	Volume    float64       `json:"volume,omitempty"`
 	Play      []PlayStruct  `json:"play"`
 	Collect   CollectStruct `json:"collect"`
+}
+
+// ParamsMessagingSend TODO DESCRIPTION
+type ParamsMessagingSend struct {
+	ToNumber   string `json:"to_number"`
+	FromNumber string `json:"from_number"`
+	Context    string `json:"context"`
+	Body       string `json:"body"`
+}
+
+// ParamsEventMessagingState TODO DESCRIPTION
+type ParamsEventMessagingState struct {
+	ToNumber     string   `json:"to_number"`
+	FromNumber   string   `json:"from_number"`
+	Direction    string   `json:"direction"`
+	Context      string   `json:"context"`
+	Body         string   `json:"body"`
+	Tags         []string `json:"tags"`
+	Media        []string `json:"media"`
+	Segments     uint     `json:"segments"`
+	MessageState string   `json:"message_state"`
+	MsgID        string   `json:"message_id"`
 }

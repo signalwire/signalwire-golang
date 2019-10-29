@@ -11,6 +11,7 @@ type RelaySession struct {
 
 // IRelay TODO DESCRIPTION
 type IRelay interface {
+	/*calling*/
 	RelayPhoneDial(ctx context.Context, call *CallSession, fromNumber string, toNumber string, timeout uint) error
 	RelayPhoneConnect(ctx context.Context, call *CallSession, fromNumber string, toNumber string) error
 	RelayCallEnd(ctx context.Context, call *CallSession) error
@@ -46,4 +47,7 @@ type IRelay interface {
 	RelayPlayAndCollect(ctx context.Context, call *CallSession, controlID string, playlist *[]PlayStruct, collect *CollectStruct) error
 	RelayPlayAndCollectVolume(ctx context.Context, call *CallSession, ctrlID *string, vol float64) error
 	RelayPlayAndCollectStop(ctx context.Context, call *CallSession, ctrlID *string) error
+	/*messaging*/
+	RelaySendMessage(ctx context.Context, call *CallSession, fromNumber, toNumber, context, msgBody string) error
+	/*tasking*/
 }

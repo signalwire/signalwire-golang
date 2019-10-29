@@ -6,13 +6,6 @@ import (
 	"sync"
 )
 
-/*
-type SwireAPI func()
-type CallingAPI func()
-type MessagingAPI func()
-type TaskingAPI func()
-*/
-
 // ClientSession TODO DESCRIPTION
 type ClientSession struct {
 	Project     string
@@ -21,6 +14,7 @@ type ClientSession struct {
 	Agent       string
 	Relay       RelaySession
 	Calling     Calling
+	Messaging   Messaging
 	Ctx         context.Context
 	Cancel      context.CancelFunc
 	Operational chan struct{}
@@ -44,8 +38,7 @@ type IClientSession interface {
 	Disconnect() error
 	SetupInbound()
 	WaitInbound(ctx context.Context) (*CallSession, error)
-	//	OnReady()
-	//	OnDisconnected()
+	WaitInboundMsg(ctx context.Context) (*MsgSession, error)
 }
 
 // SetClient TODO DESCRIPTION
@@ -76,9 +69,16 @@ func (client *ClientSession) Connect(ctx context.Context, cancel context.CancelF
 	client.Cancel = cancel
 	client.Calling.Ctx = client.Ctx
 	client.Calling.Cancel = client.Cancel
+
+	client.Messaging.Ctx = client.Ctx
+	client.Messaging.Cancel = client.Cancel
+
 	blade := client.Relay.Blade
 	client.Calling.Relay = new(RelaySession)
 	client.Calling.Relay.Blade = blade
+
+	client.Messaging.Relay = client.Calling.Relay
+	client.Messaging.Relay.Blade = client.Calling.Relay.Blade
 
 	if err := blade.BladeInit(ctx, client.Host); err != nil {
 		Log.Debug("cannot init Blade: %v\n", err)
@@ -192,6 +192,20 @@ func (client *ClientSession) SetupInbound() {
 func (client *ClientSession) WaitInbound(_ context.Context) (*CallSession, error) {
 	blade := client.Relay.Blade
 	call, err := blade.BladeWaitInboundCall(client.Ctx)
+
+	return call, err
+}
+
+// SetupInboundMsg TODO DESCRIPTION
+func (client *ClientSession) SetupInboundMsg() {
+	blade := client.Relay.Blade
+	blade.BladeSetupInboundMsg(client.Ctx)
+}
+
+// WaitInboundMsg TODO DESCRIPTION
+func (client *ClientSession) WaitInboundMsg(_ context.Context) (*MsgSession, error) {
+	blade := client.Relay.Blade
+	call, err := blade.BladeWaitInboundMsg(client.Ctx)
 
 	return call, err
 }

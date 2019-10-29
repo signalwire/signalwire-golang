@@ -125,7 +125,7 @@ type ICall interface {
 	UpdateCallState(s CallState)
 	UpdateCallConnectState(s CallConnectState)
 	UpdateConnectPeer(p PeerDeviceStruct)
-	WaitCallState(ctx context.Context, want CallState) bool
+	WaitCallStateInternal(ctx context.Context, want CallState) bool
 	WaitCallConnectState(ctx context.Context, want CallConnectState) bool
 	WaitPlayState(ctx context.Context, ctrlID string, want PlayState) bool
 	WaitRecordState(ctx context.Context, ctrlID string, want RecordState) bool
