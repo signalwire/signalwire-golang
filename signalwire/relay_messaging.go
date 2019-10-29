@@ -6,7 +6,7 @@ import (
 )
 
 // RelaySendMessage send a text message (sms)
-func (relay *RelaySession) RelaySendMessage(ctx context.Context, msg *MsgSession, fromNumber, toNumber, context, msgBody string) (string, error) {
+func (relay *RelaySession) RelaySendMessage(ctx context.Context, msg *MsgSession, fromNumber, toNumber, signalwireContext, msgBody string) (string, error) {
 	var err error
 
 	if relay == nil {
@@ -23,8 +23,11 @@ func (relay *RelaySession) RelaySendMessage(ctx context.Context, msg *MsgSession
 		Params: ParamsMessagingSend{
 			ToNumber:   toNumber,
 			FromNumber: fromNumber,
-			Context:    context,
+			Context:    signalwireContext,
 			Body:       msgBody,
+			Tags:       msg.MsgParams.Tags,
+			Media:      msg.MsgParams.Media,
+			Region:     msg.MsgParams.Region,
 		},
 	}
 

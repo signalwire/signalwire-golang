@@ -27,12 +27,16 @@ type MsgObj struct {
 	OnMessageFailed      func(*SendResult)
 }
 
+// IMsgObj TODO DESCRIPTION
 type IMsgObj interface {
+	SetMedia(media []string)
+	SetTags(tags []string)
+	SetRegion(params string)
 }
 
 // IMessaging object visible to the end user
 type IMessaging interface {
-	Send(context, fromNumber, toNumber, text string) *SendResult
+	Send(signalwireContext, fromNumber, toNumber, text string) *SendResult
 	NewMessage() *MsgObj
 	SendMsg(m *MsgObj) *SendResult
 }
@@ -54,7 +58,7 @@ func MsgObjNew() *MsgObj {
 }
 
 // NewMessage  TODO DESCRIPTION
-func (messaging *Messaging) NewMessage(context, from, to, text string) *MsgObj {
+func (messaging *Messaging) NewMessage(signalwireContext, from, to, text string) *MsgObj {
 	newmsg := new(MsgSession)
 
 	var I IMsgObj = MsgObjNew()
@@ -64,7 +68,7 @@ func (messaging *Messaging) NewMessage(context, from, to, text string) *MsgObj {
 	m.Messaging = messaging
 	m.msg.SetFrom(from)
 	m.msg.SetTo(to)
-	m.msg.SetContext(context)
+	m.msg.SetContext(signalwireContext)
 	m.msg.SetBody(text)
 
 	return m
@@ -272,4 +276,19 @@ func (resultSend *SendResult) GetSuccessful() bool {
 // GetReason TODO DESCRIPTION
 func (resultSend *SendResult) GetReason() string {
 	return resultSend.Msg.msg.GetFailureReason()
+}
+
+// SetMedia TODO DESCRIPTION
+func (msgobj *MsgObj) SetMedia(media []string) {
+	msgobj.msg.SetMedia(media)
+}
+
+// SetTags TODO DESCRIPTION
+func (msgobj *MsgObj) SetTags(tags []string) {
+	msgobj.msg.SetTags(tags)
+}
+
+// SetRegion TODO DESCRIPTION
+func (msgobj *MsgObj) SetRegion(region string) {
+	msgobj.msg.SetRegion(region)
 }

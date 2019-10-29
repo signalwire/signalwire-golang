@@ -70,7 +70,7 @@ func (consumer *Consumer) runOnIncomingCall(_ context.Context, call *CallSession
 }
 
 func (consumer *Consumer) runOnIncomingMessage(_ context.Context, msg *MsgSession) {
-	var I ICallObj = CallObjNew()
+	var I IMsgObj = MsgObjNew()
 
 	m := &MsgObj{I: I}
 	m.msg = msg
