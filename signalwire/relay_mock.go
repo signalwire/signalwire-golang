@@ -90,9 +90,12 @@ func (mr *MockIRelayMockRecorder) RelayStop(ctx interface{}) *gomock.Call {
 }
 
 // RelayOnInboundAnswer mocks base method
-func (m *MockIRelay) RelayOnInboundAnswer(ctx context.Context) {
+func (m *MockIRelay) RelayOnInboundAnswer(ctx context.Context) (*CallSession, error) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "RelayOnInboundAnswer", ctx)
+	ret := m.ctrl.Call(m, "RelayOnInboundAnswer", ctx)
+	ret0, _ := ret[0].(*CallSession)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // RelayOnInboundAnswer indicates an expected call of RelayOnInboundAnswer
@@ -115,22 +118,8 @@ func (mr *MockIRelayMockRecorder) RelayPlayAudio(ctx, call, ctrlID, url interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RelayPlayAudio", reflect.TypeOf((*MockIRelay)(nil).RelayPlayAudio), ctx, call, ctrlID, url)
 }
 
-// RelayPlayAudioStop mocks base method
-func (m *MockIRelay) RelayPlayAudioStop(ctx context.Context, call *CallSession, ctrlID string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RelayPlayAudioStop", ctx, call, ctrlID)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// RelayPlayAudioStop indicates an expected call of RelayPlayAudioStop
-func (mr *MockIRelayMockRecorder) RelayPlayAudioStop(ctx, call, ctrlID interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RelayPlayAudioStop", reflect.TypeOf((*MockIRelay)(nil).RelayPlayAudioStop), ctx, call, ctrlID)
-}
-
 // RelayRecordAudio mocks base method
-func (m *MockIRelay) RelayRecordAudio(ctx context.Context, call *CallSession, ctrlID string, rec RecordParams) error {
+func (m *MockIRelay) RelayRecordAudio(ctx context.Context, call *CallSession, ctrlID string, rec *RecordParams) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RelayRecordAudio", ctx, call, ctrlID, rec)
 	ret0, _ := ret[0].(error)
@@ -144,7 +133,7 @@ func (mr *MockIRelayMockRecorder) RelayRecordAudio(ctx, call, ctrlID, rec interf
 }
 
 // RelayRecordAudioStop mocks base method
-func (m *MockIRelay) RelayRecordAudioStop(ctx context.Context, call *CallSession, ctrlID string) error {
+func (m *MockIRelay) RelayRecordAudioStop(ctx context.Context, call *CallSession, ctrlID *string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RelayRecordAudioStop", ctx, call, ctrlID)
 	ret0, _ := ret[0].(error)
@@ -521,4 +510,33 @@ func (m *MockIRelay) RelayPlayAndCollectStop(ctx context.Context, call *CallSess
 func (mr *MockIRelayMockRecorder) RelayPlayAndCollectStop(ctx, call, ctrlID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RelayPlayAndCollectStop", reflect.TypeOf((*MockIRelay)(nil).RelayPlayAndCollectStop), ctx, call, ctrlID)
+}
+
+// RelaySendMessage mocks base method
+func (m *MockIRelay) RelaySendMessage(ctx context.Context, msg *MsgSession, fromNumber, toNumber, signalwireContext, msgBody string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RelaySendMessage", ctx, msg, fromNumber, toNumber, signalwireContext, msgBody)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RelaySendMessage indicates an expected call of RelaySendMessage
+func (mr *MockIRelayMockRecorder) RelaySendMessage(ctx, msg, fromNumber, toNumber, signalwireContext, msgBody interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RelaySendMessage", reflect.TypeOf((*MockIRelay)(nil).RelaySendMessage), ctx, msg, fromNumber, toNumber, signalwireContext, msgBody)
+}
+
+// RelayTaskDeliver mocks base method
+func (m *MockIRelay) RelayTaskDeliver(arg0 context.Context, arg1, arg2, arg3, arg4 string, arg5 []byte) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RelayTaskDeliver", arg0, arg1, arg2, arg3, arg4, arg5)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RelayTaskDeliver indicates an expected call of RelayTaskDeliver
+func (mr *MockIRelayMockRecorder) RelayTaskDeliver(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RelayTaskDeliver", reflect.TypeOf((*MockIRelay)(nil).RelayTaskDeliver), arg0, arg1, arg2, arg3, arg4, arg5)
 }

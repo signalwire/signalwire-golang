@@ -34,17 +34,17 @@ func NewClientSession() *ClientSession {
 
 // IClientSession TODO DESCRIPTION
 type IClientSession interface {
-	SetAuth(project, token string)
-	SetClient(host string, contexts []string)
-	Connect(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup) error
-	Disconnect() error
-	SetupInbound()
-	WaitInbound(ctx context.Context) (*CallSession, error)
-	WaitInboundMsg(ctx context.Context) (*MsgSession, error)
+	setAuth(project, token string)
+	setClient(host string, contexts []string)
+	connect(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup) error
+	disconnect() error
+	setupInbound()
+	waitInbound(ctx context.Context) (*CallSession, error)
+	waitInboundMsg(ctx context.Context) (*MsgSession, error)
 }
 
 // SetClient TODO DESCRIPTION
-func (client *ClientSession) SetClient(host string, contexts []string) {
+func (client *ClientSession) setClient(host string, contexts []string) {
 	client.Host = host
 
 	var I IBlade = BladeNew()
@@ -57,7 +57,7 @@ func (client *ClientSession) SetClient(host string, contexts []string) {
 }
 
 // SetAuth TODO DESCRIPTION
-func (client *ClientSession) SetAuth(project, token string) {
+func (client *ClientSession) setAuth(project, token string) {
 	bladeAuth := new(BladeAuth)
 	bladeAuth.ProjectID = project
 	bladeAuth.TokenID = token
@@ -66,7 +66,7 @@ func (client *ClientSession) SetAuth(project, token string) {
 }
 
 // Connect TODO DESCRIPTION
-func (client *ClientSession) Connect(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup) error {
+func (client *ClientSession) connect(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup) error {
 	client.Ctx = ctx
 	client.Cancel = cancel
 	client.Calling.Ctx = client.Ctx
@@ -79,7 +79,13 @@ func (client *ClientSession) Connect(ctx context.Context, cancel context.CancelF
 	client.Tasking.Cancel = client.Cancel
 
 	blade := client.Relay.Blade
-	client.Calling.Relay = new(RelaySession)
+
+	var I IRelay = RelayNew()
+
+	relay := &RelaySession{I: I}
+	relay.I = relay
+
+	client.Calling.Relay = relay
 	client.Calling.Relay.Blade = blade
 
 	client.Messaging.Relay = client.Calling.Relay
@@ -168,7 +174,7 @@ func (client *ClientSession) Connect(ctx context.Context, cancel context.CancelF
 }
 
 // Disconnect TODO DESCRIPTION
-func (client *ClientSession) Disconnect() error {
+func (client *ClientSession) disconnect() error {
 	blade := client.Relay.Blade
 
 	if err := blade.BladeDisconnect(client.Ctx); err != nil {
@@ -198,13 +204,13 @@ func (client *ClientSession) Disconnect() error {
 }
 
 // SetupInbound TODO DESCRIPTION
-func (client *ClientSession) SetupInbound() {
+func (client *ClientSession) setupInbound() {
 	blade := client.Relay.Blade
 	blade.BladeSetupInbound(client.Ctx)
 }
 
 // WaitInbound TODO DESCRIPTION
-func (client *ClientSession) WaitInbound(_ context.Context) (*CallSession, error) {
+func (client *ClientSession) waitInbound(_ context.Context) (*CallSession, error) {
 	blade := client.Relay.Blade
 	call, err := blade.BladeWaitInboundCall(client.Ctx)
 
@@ -212,13 +218,13 @@ func (client *ClientSession) WaitInbound(_ context.Context) (*CallSession, error
 }
 
 // SetupInboundMsg TODO DESCRIPTION
-func (client *ClientSession) SetupInboundMsg() {
+func (client *ClientSession) setupInboundMsg() {
 	blade := client.Relay.Blade
 	blade.BladeSetupInboundMsg(client.Ctx)
 }
 
 // WaitInboundMsg TODO DESCRIPTION
-func (client *ClientSession) WaitInboundMsg(_ context.Context) (*MsgSession, error) {
+func (client *ClientSession) waitInboundMsg(_ context.Context) (*MsgSession, error) {
 	blade := client.Relay.Blade
 	call, err := blade.BladeWaitInboundMsg(client.Ctx)
 

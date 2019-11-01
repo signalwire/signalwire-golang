@@ -115,6 +115,7 @@ func (callobj *CallObj) callbacksRunRecord(_ context.Context, ctrlID string, res
 
 				res.Result.Successful = true
 				res.Completed = true
+				res.State = state
 
 				res.Unlock()
 
@@ -232,7 +233,7 @@ func (callobj *CallObj) RecordAudioAsync(rec *RecordParams) (*RecordAction, erro
 		res.ControlID = newCtrlID
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelayRecordAudio(callobj.Calling.Ctx, callobj.call, newCtrlID, rec)
+		err := callobj.Calling.Relay.I.RelayRecordAudio(callobj.Calling.Ctx, callobj.call, newCtrlID, rec)
 		if err != nil {
 			res.Lock()
 

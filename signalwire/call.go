@@ -129,7 +129,7 @@ type ICall interface {
 	WaitCallConnectState(ctx context.Context, want CallConnectState) bool
 	WaitPlayState(ctx context.Context, ctrlID string, want PlayState) bool
 	WaitRecordState(ctx context.Context, ctrlID string, want RecordState) bool
-	GetPeer(ctx context.Context)
+	GetPeer(ctx context.Context) (*CallSession, error)
 }
 
 // CallTagToCallID map of tag to Call-ID
@@ -666,4 +666,9 @@ func (c *CallSession) UpdateAction(ctrlID, state string) {
 	c.Actions.m[ctrlID] = state
 
 	c.Actions.Unlock()
+}
+
+// CallNew TODO DESCRIPTION
+func CallNew() *CallSession {
+	return &CallSession{}
 }

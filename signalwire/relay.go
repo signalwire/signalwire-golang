@@ -7,6 +7,7 @@ import (
 // RelaySession TODO DESCRIPTION
 type RelaySession struct {
 	Blade *BladeSession
+	I     IRelay
 }
 
 // IRelay TODO DESCRIPTION
@@ -16,11 +17,10 @@ type IRelay interface {
 	RelayPhoneConnect(ctx context.Context, call *CallSession, fromNumber string, toNumber string) error
 	RelayCallEnd(ctx context.Context, call *CallSession) error
 	RelayStop(ctx context.Context) error
-	RelayOnInboundAnswer(ctx context.Context)
+	RelayOnInboundAnswer(ctx context.Context) (*CallSession, error)
 	RelayPlayAudio(ctx context.Context, call *CallSession, ctrlID string, url string) error
-	RelayPlayAudioStop(ctx context.Context, call *CallSession, ctrlID string) error
-	RelayRecordAudio(ctx context.Context, call *CallSession, ctrlID string, rec RecordParams) error
-	RelayRecordAudioStop(ctx context.Context, call *CallSession, ctrlID string) error
+	RelayRecordAudio(ctx context.Context, call *CallSession, ctrlID string, rec *RecordParams) error
+	RelayRecordAudioStop(ctx context.Context, call *CallSession, ctrlID *string) error
 	RelayConnect(ctx context.Context, call *CallSession, ringback *[]RingbackStruct, devices *[][]DeviceStruct) error
 	RelayCallAnswer(ctx context.Context, call *CallSession) error
 	RelayPlayTTS(ctx context.Context, call *CallSession, ctrlID string, text, language, gender string) error
@@ -48,8 +48,12 @@ type IRelay interface {
 	RelayPlayAndCollectVolume(ctx context.Context, call *CallSession, ctrlID *string, vol float64) error
 	RelayPlayAndCollectStop(ctx context.Context, call *CallSession, ctrlID *string) error
 	/*messaging*/
-	RelaySendMessage(ctx context.Context, call *CallSession, fromNumber, toNumber, signalwireContext, msgBody string) error
+	RelaySendMessage(ctx context.Context, msg *MsgSession, fromNumber, toNumber, signalwireContext, msgBody string) (string, error)
 	/*tasking*/
-	RelayTaskDeliver(ctx context.Context, endpoint, project, token,
-		signalwireContext string, taskMsg interface{}) error
+	RelayTaskDeliver(context.Context, string, string, string, string, []byte) error
+}
+
+// RelayNew TODO DESCRIPTION
+func RelayNew() *RelaySession {
+	return &RelaySession{}
 }

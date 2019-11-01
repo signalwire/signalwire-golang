@@ -80,7 +80,7 @@ func (consumer *Consumer) runOnIncomingMessage(_ context.Context, msg *MsgSessio
 
 func (consumer *Consumer) incomingCall(ctx context.Context, wg *sync.WaitGroup) {
 	for {
-		call, ierr := consumer.Client.I.WaitInbound(ctx)
+		call, ierr := consumer.Client.I.waitInbound(ctx)
 		if ierr != nil {
 			Log.Error("Error processing incoming call: %v\n", ierr)
 		} else if call == nil && ierr == nil {
@@ -96,7 +96,7 @@ func (consumer *Consumer) incomingCall(ctx context.Context, wg *sync.WaitGroup) 
 
 func (consumer *Consumer) incomingMessage(ctx context.Context, wg *sync.WaitGroup) {
 	for {
-		msg, ierr := consumer.Client.I.WaitInboundMsg(ctx)
+		msg, ierr := consumer.Client.I.waitInboundMsg(ctx)
 		if ierr != nil {
 			Log.Error("Error processing incoming msg: %v\n", ierr)
 		} else if msg == nil && ierr == nil {
@@ -112,8 +112,8 @@ func (consumer *Consumer) incomingMessage(ctx context.Context, wg *sync.WaitGrou
 
 // Run TODO DESCRIPTION
 func (consumer *Consumer) Run() error {
-	consumer.Client.SetClient(consumer.Host, consumer.Contexts)
-	consumer.Client.SetAuth(consumer.Project, consumer.Token)
+	consumer.Client.setClient(consumer.Host, consumer.Contexts)
+	consumer.Client.setAuth(consumer.Project, consumer.Token)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -139,7 +139,7 @@ func (consumer *Consumer) Run() error {
 	wg.Add(haveIncomingMsg + haveIncomingCalls + 1)
 
 	go func() {
-		err = consumer.Client.I.Connect(ctx, cancel, &wg)
+		err = consumer.Client.I.connect(ctx, cancel, &wg)
 	}()
 
 	<-consumer.Client.Operational
@@ -152,8 +152,8 @@ func (consumer *Consumer) Run() error {
 
 	Log.Debug("Blade Ready...\n")
 
-	consumer.Client.SetupInbound()
-	consumer.Client.SetupInboundMsg()
+	consumer.Client.setupInbound()
+	consumer.Client.setupInboundMsg()
 
 	if consumer.Ready != nil {
 		consumer.Ready(consumer)
@@ -182,5 +182,5 @@ func (consumer *Consumer) Stop() error {
 		consumer.Teardown(consumer)
 	}
 
-	return consumer.Client.I.Disconnect()
+	return consumer.Client.I.disconnect()
 }
