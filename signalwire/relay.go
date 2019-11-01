@@ -50,4 +50,6 @@ type IRelay interface {
 	/*messaging*/
 	RelaySendMessage(ctx context.Context, call *CallSession, fromNumber, toNumber, signalwireContext, msgBody string) error
 	/*tasking*/
+	RelayTaskDeliver(ctx context.Context, endpoint, project, token,
+		signalwireContext string, taskMsg interface{}) error
 }

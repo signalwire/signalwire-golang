@@ -1,5 +1,9 @@
 package signalwire
 
+import (
+	"encoding/json"
+)
+
 // DevicePhoneParams TODO DESCRIPTION
 type DevicePhoneParams struct {
 	ToNumber   string `json:"to_number"`
@@ -158,9 +162,9 @@ type ReplyAuthStruct struct {
 // ReplyResultConnect TODO DESCRIPTION
 type ReplyResultConnect struct {
 	SessionRestored      bool            `json:"session_restored"`
-	SessionID            string          `json:"session_id"`
+	SessionID            string          `json:"sessionid"`
 	NodeID               string          `json:"node_id"`
-	MasterNodeID         string          `json:"master_node_id"`
+	MasterNodeID         string          `json:"master_nodeid"`
 	Authorization        ReplyAuthStruct `json:"authorization"`
 	Routes               []string        `json:"routes"`
 	Protocols            []string        `json:"protocols"`
@@ -386,12 +390,14 @@ type ParamsEventCallingFax struct {
 
 // ParamsQueueingRelayEvents TODO DESCRIPTION
 type ParamsQueueingRelayEvents struct {
-	EventType    string      `json:"event_type"`
-	EventChannel string      `json:"event_channel"`
-	Timestamp    float64     `json:"timestamp"`
-	Project      string      `json:"project_id"`
-	Space        string      `json:"space_id"`
-	Params       interface{} `json:"params"`
+	EventType    string          `json:"event_type,omitempty"`
+	EventChannel string          `json:"event_channel,omitempty"`
+	Timestamp    float64         `json:"timestamp,omitempty"`
+	Project      string          `json:"project_id,omitempty"`
+	Space        string          `json:"space_id,omitempty"`
+	Context      string          `json:"context,omitempty"`
+	Message      json.RawMessage `json:"message,omitempty"`
+	Params       interface{}     `json:"params"`
 }
 
 // NotifParamsBladeBroadcast TODO DESCRIPTION
@@ -715,4 +721,14 @@ type ParamsEventMessagingState struct {
 	Segments     uint     `json:"segments"`
 	MessageState string   `json:"message_state"`
 	MsgID        string   `json:"message_id"`
+}
+
+// ParamsEventTaskingTask TODO DESCRIPTION
+type ParamsEventTaskingTask struct {
+	SpaceID      string      `json:"space_id"`
+	ProjectID    string      `json:"project_id"`
+	Context      string      `json:"context"`
+	Message      interface{} `json:"message"`
+	Timestamp    float64     `json:"timestamp"`
+	EventChannel string      `json:"event_channel"`
 }
