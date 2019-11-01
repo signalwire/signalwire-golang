@@ -29,10 +29,10 @@ func TestConsumer(t *testing.T) {
 			c := &ClientSession{I: Imock}
 			consumer.Client = c
 
-			Imock.EXPECT().Connect(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Do(func(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup) {
+			Imock.EXPECT().connect(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Do(func(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup) {
 				runWG.Done()
 			})
-			Imock.EXPECT().Disconnect().Return(nil).Times(1)
+			Imock.EXPECT().disconnect().Return(nil).Times(1)
 
 			timer := time.NewTimer(1 * time.Second)
 			var err error

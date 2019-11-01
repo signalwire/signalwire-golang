@@ -34,96 +34,96 @@ func (m *MockIClientSession) EXPECT() *MockIClientSessionMockRecorder {
 	return m.recorder
 }
 
-// SetAuth mocks base method
-func (m *MockIClientSession) SetAuth(project, token string) {
+// setAuth mocks base method
+func (m *MockIClientSession) setAuth(project, token string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetAuth", project, token)
+	m.ctrl.Call(m, "setAuth", project, token)
 }
 
-// SetAuth indicates an expected call of SetAuth
-func (mr *MockIClientSessionMockRecorder) SetAuth(project, token interface{}) *gomock.Call {
+// setAuth indicates an expected call of setAuth
+func (mr *MockIClientSessionMockRecorder) setAuth(project, token interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAuth", reflect.TypeOf((*MockIClientSession)(nil).SetAuth), project, token)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "setAuth", reflect.TypeOf((*MockIClientSession)(nil).setAuth), project, token)
 }
 
-// SetClient mocks base method
-func (m *MockIClientSession) SetClient(host string, contexts []string) {
+// setClient mocks base method
+func (m *MockIClientSession) setClient(host string, contexts []string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetClient", host, contexts)
+	m.ctrl.Call(m, "setClient", host, contexts)
 }
 
-// SetClient indicates an expected call of SetClient
-func (mr *MockIClientSessionMockRecorder) SetClient(host, contexts interface{}) *gomock.Call {
+// setClient indicates an expected call of setClient
+func (mr *MockIClientSessionMockRecorder) setClient(host, contexts interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetClient", reflect.TypeOf((*MockIClientSession)(nil).SetClient), host, contexts)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "setClient", reflect.TypeOf((*MockIClientSession)(nil).setClient), host, contexts)
 }
 
-// Connect mocks base method
-func (m *MockIClientSession) Connect(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup) error {
+// connect mocks base method
+func (m *MockIClientSession) connect(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Connect", ctx, cancel, runWG)
+	ret := m.ctrl.Call(m, "connect", ctx, cancel, runWG)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Connect indicates an expected call of Connect
-func (mr *MockIClientSessionMockRecorder) Connect(ctx, cancel, runWG interface{}) *gomock.Call {
+// connect indicates an expected call of connect
+func (mr *MockIClientSessionMockRecorder) connect(ctx, cancel, runWG interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Connect", reflect.TypeOf((*MockIClientSession)(nil).Connect), ctx, cancel, runWG)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "connect", reflect.TypeOf((*MockIClientSession)(nil).connect), ctx, cancel, runWG)
 }
 
-// Disconnect mocks base method
-func (m *MockIClientSession) Disconnect() error {
+// disconnect mocks base method
+func (m *MockIClientSession) disconnect() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Disconnect")
+	ret := m.ctrl.Call(m, "disconnect")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Disconnect indicates an expected call of Disconnect
-func (mr *MockIClientSessionMockRecorder) Disconnect() *gomock.Call {
+// disconnect indicates an expected call of disconnect
+func (mr *MockIClientSessionMockRecorder) disconnect() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Disconnect", reflect.TypeOf((*MockIClientSession)(nil).Disconnect))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "disconnect", reflect.TypeOf((*MockIClientSession)(nil).disconnect))
 }
 
-// SetupInbound mocks base method
-func (m *MockIClientSession) SetupInbound() {
+// setupInbound mocks base method
+func (m *MockIClientSession) setupInbound() {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetupInbound")
+	m.ctrl.Call(m, "setupInbound")
 }
 
-// SetupInbound indicates an expected call of SetupInbound
-func (mr *MockIClientSessionMockRecorder) SetupInbound() *gomock.Call {
+// setupInbound indicates an expected call of setupInbound
+func (mr *MockIClientSessionMockRecorder) setupInbound() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetupInbound", reflect.TypeOf((*MockIClientSession)(nil).SetupInbound))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "setupInbound", reflect.TypeOf((*MockIClientSession)(nil).setupInbound))
 }
 
-// WaitInbound mocks base method
-func (m *MockIClientSession) WaitInbound(ctx context.Context) (*CallSession, error) {
+// waitInbound mocks base method
+func (m *MockIClientSession) waitInbound(ctx context.Context) (*CallSession, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitInbound", ctx)
+	ret := m.ctrl.Call(m, "waitInbound", ctx)
 	ret0, _ := ret[0].(*CallSession)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// WaitInbound indicates an expected call of WaitInbound
-func (mr *MockIClientSessionMockRecorder) WaitInbound(ctx interface{}) *gomock.Call {
+// waitInbound indicates an expected call of waitInbound
+func (mr *MockIClientSessionMockRecorder) waitInbound(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitInbound", reflect.TypeOf((*MockIClientSession)(nil).WaitInbound), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "waitInbound", reflect.TypeOf((*MockIClientSession)(nil).waitInbound), ctx)
 }
 
-// WaitInboundMsg mocks base method
-func (m *MockIClientSession) WaitInboundMsg(ctx context.Context) (*MsgSession, error) {
+// waitInboundMsg mocks base method
+func (m *MockIClientSession) waitInboundMsg(ctx context.Context) (*MsgSession, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitInboundMsg", ctx)
+	ret := m.ctrl.Call(m, "waitInboundMsg", ctx)
 	ret0, _ := ret[0].(*MsgSession)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// WaitInboundMsg indicates an expected call of WaitInboundMsg
-func (mr *MockIClientSessionMockRecorder) WaitInboundMsg(ctx interface{}) *gomock.Call {
+// waitInboundMsg indicates an expected call of waitInboundMsg
+func (mr *MockIClientSessionMockRecorder) waitInboundMsg(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitInboundMsg", reflect.TypeOf((*MockIClientSession)(nil).WaitInboundMsg), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "waitInboundMsg", reflect.TypeOf((*MockIClientSession)(nil).waitInboundMsg), ctx)
 }

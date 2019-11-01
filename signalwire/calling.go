@@ -133,10 +133,14 @@ func (calling *Calling) DialPhone(fromNumber, toNumber string) ResultDial {
 		return *res
 	}
 
-	newcall := new(CallSession)
+	var I ICall = CallNew()
+
+	newcall := &CallSession{I: I}
+	newcall.I = newcall
+
 	newcall.SetActive(true)
 
-	if err := calling.Relay.RelayPhoneDial(calling.Ctx, newcall, fromNumber, toNumber, DefaultRingTimeout); err != nil {
+	if err := calling.Relay.I.RelayPhoneDial(calling.Ctx, newcall, fromNumber, toNumber, DefaultRingTimeout); err != nil {
 		newcall.SetActive(false)
 
 		res.err = err
@@ -144,13 +148,14 @@ func (calling *Calling) DialPhone(fromNumber, toNumber string) ResultDial {
 		return *res
 	}
 
-	var I ICallObj = CallObjNew()
+	var J ICallObj = CallObjNew()
 
-	c := &CallObj{I: I}
+	c := &CallObj{I: J}
+	c.I = J
 	c.call = newcall
 	c.Calling = calling
 
-	if ret := newcall.WaitCallStateInternal(calling.Ctx, Answered); !ret {
+	if ret := newcall.I.WaitCallStateInternal(calling.Ctx, Answered); !ret {
 		Log.Debug("did not get Answered state\n")
 
 		c.call.SetActive(false)
@@ -283,11 +288,14 @@ func (callobj *CallObj) WaitForEnded() bool {
 
 // NewCall  TODO DESCRIPTION
 func (calling *Calling) NewCall(from, to string) *CallObj {
-	newcall := new(CallSession)
+	var I ICall = CallNew()
 
-	var I ICallObj = CallObjNew()
+	newcall := &CallSession{I: I}
+	newcall.I = newcall
 
-	c := &CallObj{I: I}
+	var J ICallObj = CallObjNew()
+
+	c := &CallObj{I: J}
 	c.call = newcall
 	c.Calling = calling
 	c.call.SetFrom(from)
@@ -314,7 +322,7 @@ func (calling *Calling) Dial(c *CallObj) ResultDial {
 
 	c.call.SetActive(true)
 
-	if err := calling.Relay.RelayPhoneDial(calling.Ctx, c.call, c.call.From, c.call.To, c.call.Timeout); err != nil {
+	if err := calling.Relay.I.RelayPhoneDial(calling.Ctx, c.call, c.call.From, c.call.To, c.call.Timeout); err != nil {
 		res.err = err
 
 		c.call.SetActive(false)
@@ -322,7 +330,7 @@ func (calling *Calling) Dial(c *CallObj) ResultDial {
 		return *res
 	}
 
-	if ret := c.call.WaitCallStateInternal(calling.Ctx, Answered); !ret {
+	if ret := c.call.I.WaitCallStateInternal(calling.Ctx, Answered); !ret {
 		Log.Debug("did not get Answered state\n")
 
 		c.call.SetActive(false)
