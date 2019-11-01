@@ -20,7 +20,7 @@ type Consumer struct {
 	OnIncomingCall       func(*Consumer, *CallObj)
 	OnIncomingMessage    func(*Consumer, *MsgObj)
 	OnMessageStateChange func(*Consumer, *MsgObj)
-	OnTask               func(*Consumer)
+	OnTask               func(*Consumer, ParamsEventTaskingTask)
 	Teardown             func(*Consumer)
 
 	Log LoggerWrapper
@@ -55,7 +55,7 @@ func (consumer *Consumer) Setup(project, token string, contexts []string) {
 
 	var I IClientSession = ClientNew()
 
-	c := &ClientSession{I: I}
+	c := &ClientSession{I: I, Consumer: consumer}
 	c.I = c
 	consumer.Client = c
 }

@@ -142,3 +142,46 @@ func (cache *BCache) DeleteMsgCache(msgID string) error {
 
 	return nil
 }
+
+// SetTasking TODO DESCRIPTION
+func (cache *BCache) SetTasking(id string, t *Tasking) error {
+	if cache == nil {
+		Log.Error("empty cache object")
+		return errors.New("empty cache object")
+	}
+
+	if cache.p == nil {
+		Log.Error("cache not initialized")
+		return errors.New("cache not initialized")
+	}
+
+	if t == nil {
+		Log.Error("empty Tasking object")
+		return errors.New("empty Tasking object")
+	}
+
+	cache.p.Set(id, t, CacheExpiry*time.Second)
+
+	return nil
+}
+
+// GetTasking TODO DESCRIPTION
+func (cache *BCache) GetTasking(id string) (*Tasking, error) {
+	if cache == nil {
+		return nil, errors.New("empty cache object")
+	}
+
+	if cache.p == nil {
+		return nil, errors.New("cache not initialized")
+	}
+
+	if v, found := cache.p.Get(id); found {
+		if _, ok := v.(*Tasking); !ok {
+			return nil, errors.New("wrong cache data type")
+		}
+
+		return v.(*Tasking), nil
+	}
+
+	return nil, nil
+}

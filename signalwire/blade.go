@@ -70,6 +70,7 @@ type BladeSession struct {
 	InboundMsgDone       chan struct{}
 	EventCalling         EventCalling
 	EventMessaging       EventMessaging
+	EventTasking         EventTasking
 }
 
 // IBlade TODO DESCRIPTION
@@ -261,6 +262,21 @@ func (blade *BladeSession) BladeInit(ctx context.Context, addr string) error {
 
 	blade.EventMessaging = *messaging
 	blade.EventMessaging.blade = blade
+
+	var K IEventTasking = EventTaskingNew()
+
+	tasking := &EventTasking{I: K}
+	tasking.blade = blade
+	tasking.I = tasking
+	blade.EventTasking = *tasking
+
+	if err = tasking.Cache.InitCache(CacheExpiry*time.Second, CacheCleaning*time.Second); err != nil {
+		return errors.New("failed to initialize cache")
+	}
+
+	blade.EventTasking = *tasking
+
+	blade.EventTasking.blade = blade
 
 	blade.Netcast = make(chan string)
 	blade.DisconnectChan = make(chan struct{})
@@ -535,8 +551,6 @@ func (blade *BladeSession) handleBladeBroadcast(ctx context.Context, req *jsonrp
 		return err
 	}
 
-	Log.Debug("broadcast: %v\n", broadcast)
-
 	return nil
 }
 
@@ -776,6 +790,7 @@ func (blade *BladeSession) BladeWaitInboundCall(ctx context.Context) (*CallSessi
 func (blade *BladeSession) eventNotif(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
 	calling := blade.EventCalling
 	messaging := blade.EventMessaging
+	tasking := blade.EventTasking
 
 	switch broadcast.Event {
 	case "queuing.relay.events":
@@ -836,6 +851,10 @@ func (blade *BladeSession) eventNotif(ctx context.Context, broadcast NotifParams
 		default:
 			Log.Debug("got event_type %s\n", broadcast.Params.EventType)
 		}
+	case "queuing.relay.tasks":
+		if err := tasking.onTaskingEvent(ctx, broadcast); err != nil {
+			return err
+		}
 	case "relay":
 		Log.Debug("got RELAY event\n")
 	default:
@@ -843,8 +862,6 @@ func (blade *BladeSession) eventNotif(ctx context.Context, broadcast NotifParams
 
 		return fmt.Errorf("unsupported event")
 	}
-
-	Log.Debug("broadcast: %v\n", broadcast)
 
 	return nil
 }

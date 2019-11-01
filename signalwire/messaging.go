@@ -97,7 +97,6 @@ func (msgobj *MsgObj) callbacksRunSend(_ context.Context, res *SendResult) {
 				res.Completed = true
 
 				res.Unlock()
-				timer.Reset(BroadcastEventTimeout * time.Second)
 
 				out = true
 
@@ -123,7 +122,6 @@ func (msgobj *MsgObj) callbacksRunSend(_ context.Context, res *SendResult) {
 				res.state = state
 
 				res.Unlock()
-				timer.Reset(BroadcastEventTimeout * time.Second)
 
 				out = true
 
@@ -136,7 +134,6 @@ func (msgobj *MsgObj) callbacksRunSend(_ context.Context, res *SendResult) {
 				res.state = state
 
 				res.Unlock()
-				timer.Reset(BroadcastEventTimeout * time.Second)
 
 				out = true
 

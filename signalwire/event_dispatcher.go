@@ -81,6 +81,23 @@ type IEventMessaging interface {
 	getMsg(ctx context.Context, msgID string) (*MsgSession, error)
 }
 
+// EventTasking  TODO DESCRIPTION
+type EventTasking struct {
+	blade *BladeSession
+	Cache BCache
+	I     IEventTasking
+}
+
+// EventTaskingNew TODO DESCRIPTION
+func EventTaskingNew() *EventTasking {
+	return &EventTasking{}
+}
+
+// IEventTasking  TODO DESCRIPTION
+type IEventTasking interface {
+	onTaskingEvent(ctx context.Context, broadcast NotifParamsBladeBroadcast) error
+}
+
 // the 'finished' keyword
 const (
 	Finished   = "finished"
@@ -444,6 +461,10 @@ func (*EventMessaging) getBroadcastParams(ctx context.Context, in, out interface
 	return getBroadcastGeneric(ctx, in, out)
 }
 
+func (*EventTasking) getBroadcastParams(ctx context.Context, in, out interface{}) error {
+	return getBroadcastGeneric(ctx, in, out)
+}
+
 func (calling *EventCalling) onCallingEventConnect(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
 	var params ParamsEventCallingCallConnect
 
@@ -797,6 +818,27 @@ func (messaging *EventMessaging) getMsg(ctx context.Context, msgID string) (*Msg
 	}
 
 	return msg, err
+}
+
+func (tasking *EventTasking) onTaskingEvent(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+	var params ParamsEventTaskingTask
+
+	if err := tasking.getBroadcastParams(ctx, broadcast.Params, &params); err != nil {
+		return err
+	}
+
+	consumerTasking, err := tasking.Cache.GetTasking("tasking")
+	if err != nil {
+		return err
+	}
+	select {
+	case consumerTasking.TaskChan <- params:
+		Log.Debug("sent task event to Consumer\n")
+	default:
+		Log.Debug("no task event sent\n")
+	}
+
+	return nil
 }
 
 func (calling *EventCalling) dispatchStateNotif(ctx context.Context, callParams CallParams) error {

@@ -11,6 +11,8 @@ const (
 	BladeRevision     = 0
 	MaxSimCalls       = 100
 	MaxPlay           = 10
+	TaskingEndpoint   = "https://relay.signalwire.com/api/relay/rest/tasks"
+	UserAgent         = "GoSDK"
 	/* internal */
 	BroadcastEventTimeout   = 10 /*seconds*/
 	DefaultRingTimeout      = 30 /*seconds*/

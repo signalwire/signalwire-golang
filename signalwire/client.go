@@ -15,10 +15,12 @@ type ClientSession struct {
 	Relay       RelaySession
 	Calling     Calling
 	Messaging   Messaging
+	Tasking     Tasking
 	Ctx         context.Context
 	Cancel      context.CancelFunc
 	Operational chan struct{}
 	I           IClientSession
+	Consumer    *Consumer
 
 	Log LoggerWrapper
 }
@@ -73,12 +75,20 @@ func (client *ClientSession) Connect(ctx context.Context, cancel context.CancelF
 	client.Messaging.Ctx = client.Ctx
 	client.Messaging.Cancel = client.Cancel
 
+	client.Tasking.Ctx = client.Ctx
+	client.Tasking.Cancel = client.Cancel
+
 	blade := client.Relay.Blade
 	client.Calling.Relay = new(RelaySession)
 	client.Calling.Relay.Blade = blade
 
 	client.Messaging.Relay = client.Calling.Relay
 	client.Messaging.Relay.Blade = client.Calling.Relay.Blade
+
+	client.Tasking.Relay = client.Calling.Relay
+	client.Tasking.Relay.Blade = client.Calling.Relay.Blade
+
+	client.Tasking.Consumer = client.Consumer
 
 	if err := blade.BladeInit(ctx, client.Host); err != nil {
 		Log.Debug("cannot init Blade: %v\n", err)
@@ -141,11 +151,16 @@ func (client *ClientSession) Connect(ctx context.Context, cancel context.CancelF
 		return err
 	}
 
+	client.Tasking.TaskChan = make(chan ParamsEventTaskingTask, 1)
+	if err := blade.EventTasking.Cache.SetTasking("tasking", &client.Tasking); err != nil {
+		return err
+	}
 	client.Operational <- struct{}{}
 
 	blade.BladeWaitDisconnect(ctx)
 	Log.Debug("got Disconnect\n")
 
+	close(client.Tasking.TaskChan)
 	cancel()
 	runWG.Done()
 
