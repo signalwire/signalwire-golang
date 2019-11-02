@@ -14,6 +14,7 @@ clean:
 
 test:
 	$(GO_BIN) test -failfast
+	$(GO_BIN) test -race
 
 lint:
 	golangci-lint run
