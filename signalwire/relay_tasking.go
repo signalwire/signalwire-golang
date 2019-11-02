@@ -12,7 +12,7 @@ import (
 )
 
 // RelayTaskDeliver TODO DESCRIPTION
-func (*RelaySession) RelayTaskDeliver(_ context.Context, endpoint, project, token,
+func (*RelaySession) RelayTaskDeliver(ctx context.Context, endpoint, project, token,
 	signalwireContext string, taskMsg []byte) error {
 	buf := fmt.Sprintf("{\"context\": \"%s\", \"message\": %v}", signalwireContext, string(taskMsg))
 	b := []byte(buf)
@@ -32,7 +32,7 @@ func (*RelaySession) RelayTaskDeliver(_ context.Context, endpoint, project, toke
 	}
 
 	// set timeout
-	ctx, cancel := context.WithTimeout(context.Background(), duration)
+	ctx, cancel := context.WithTimeout(ctx, duration)
 	defer cancel()
 
 	resp, err := ctxhttp.Do(ctx, nil, req)
