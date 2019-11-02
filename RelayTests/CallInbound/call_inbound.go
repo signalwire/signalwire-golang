@@ -17,10 +17,10 @@ import (
 	"github.com/signalwire/signalwire-golang/signalwire"
 )
 
-// App consts
-const (
-	ProjectID = "replaceme"
-	TokenID   = "replaceme" // nolint: gosec
+// App environment settings
+var (
+	ProjectID = os.Getenv("ProjectID")
+	TokenID   = os.Getenv("TokenID")
 )
 
 // ProfilesStruct TODO DESCRIPTION
