@@ -8,6 +8,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Added Messaging API.
 - Added Actions SendDigits, Tap, Prompt, Connect, with example apps.
 - Use Environment variables in tests and examples.
+- Use context driven timeout for HTTP client connection.
 
 ## [1.0.0-beta.1] - 2019-10-16
 ### Added

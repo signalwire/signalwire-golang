@@ -3,10 +3,12 @@ package signalwire
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
+
+	"golang.org/x/net/context/ctxhttp"
 )
 
 // RelayTaskDeliver TODO DESCRIPTION
@@ -24,9 +26,16 @@ func (*RelaySession) RelayTaskDeliver(_ context.Context, endpoint, project, toke
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", UserAgent)
 
-	client := &http.Client{}
+	duration, err := time.ParseDuration(fmt.Sprintf("%ds", HTTPClientTimeout))
+	if err != nil {
+		return err
+	}
 
-	resp, err := client.Do(req)
+	// set timeout
+	ctx, cancel := context.WithTimeout(context.Background(), duration)
+	defer cancel()
+
+	resp, err := ctxhttp.Do(ctx, nil, req)
 	if err != nil {
 		return err
 	}
@@ -38,8 +47,7 @@ func (*RelaySession) RelayTaskDeliver(_ context.Context, endpoint, project, toke
 	}
 
 	if resp.StatusCode > 300 || resp.StatusCode < 200 {
-		err := fmt.Sprintf("%s", body)
-		return errors.New(err)
+		return fmt.Errorf("%s", body)
 	}
 
 	return nil
