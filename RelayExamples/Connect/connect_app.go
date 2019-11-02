@@ -12,15 +12,15 @@ import (
 	"github.com/signalwire/signalwire-golang/signalwire"
 )
 
-// App consts
-const (
-	ProjectID      = "replaceme"
-	TokenID        = "replaceme" // nolint: gosec
-	DefaultContext = "replaceme"
+// App environment settings
+var (
+	ProjectID      = os.Getenv("ProjectID")
+	TokenID        = os.Getenv("TokenID")
+	DefaultContext = os.Getenv("DefaultContext")
 )
 
 // Contexts needed for inbound calls
-var Contexts = []string{}
+var Contexts = []string{DefaultContext}
 
 // PProjectID passed from command-line
 var PProjectID string
