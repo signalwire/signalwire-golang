@@ -547,11 +547,7 @@ func (blade *BladeSession) handleBladeBroadcast(ctx context.Context, req *jsonrp
 	Log.Debug("broadcast.Params.EventType: %v\n", broadcast.Params.EventType)
 	Log.Debug("broadcast.Params.Params: %v\n", broadcast.Params.Params)
 
-	if err := blade.eventNotif(ctx, broadcast); err != nil {
-		return err
-	}
-
-	return nil
+	return blade.eventNotif(ctx, broadcast)
 }
 
 // HandleBladeNetcast TODO DESCRIPTION
