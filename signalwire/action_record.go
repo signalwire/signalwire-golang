@@ -2,6 +2,7 @@ package signalwire
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sync"
 )
@@ -41,6 +42,7 @@ type RecordResult struct {
 	URL        string
 	Duration   uint
 	Size       uint
+	Event      json.RawMessage
 }
 
 // RecordAction TODO DESCRIPTION
@@ -191,6 +193,12 @@ func (callobj *CallObj) callbacksRunRecord(_ context.Context, ctrlID string, res
 				res.Result.Size = params.Size
 			}
 
+			res.Unlock()
+
+			callobj.call.CallRecordReadyChans[ctrlID] <- struct{}{}
+		case rawEvent := <-callobj.call.CallRecordRawEventChans[ctrlID]:
+			res.Lock()
+			res.Result.Event = *rawEvent
 			res.Unlock()
 
 			callobj.call.CallRecordReadyChans[ctrlID] <- struct{}{}

@@ -2,6 +2,7 @@ package signalwire
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 )
@@ -399,6 +400,7 @@ func (relay *RelaySession) RelayPlay(ctx context.Context, call *CallSession, con
 	call.CallPlayChans[controlID] = make(chan PlayState, EventQueue)
 	call.CallPlayEventChans[controlID] = make(chan ParamsEventCallingCallPlay, EventQueue)
 	call.CallPlayReadyChans[controlID] = make(chan struct{})
+	call.CallPlayRawEventChans[controlID] = make(chan *json.RawMessage, EventQueue)
 
 	call.Unlock()
 
@@ -626,6 +628,7 @@ func (relay *RelaySession) RelayRecordAudio(ctx context.Context, call *CallSessi
 	call.CallRecordChans[controlID] = make(chan RecordState, EventQueue)
 	call.CallRecordEventChans[controlID] = make(chan ParamsEventCallingCallRecord, EventQueue)
 	call.CallRecordReadyChans[controlID] = make(chan struct{})
+	call.CallRecordRawEventChans[controlID] = make(chan *json.RawMessage, EventQueue)
 
 	call.Unlock()
 
@@ -808,6 +811,13 @@ func (relay *RelaySession) RelayDetect(ctx context.Context, call *CallSession, c
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
+
+	call.Lock()
+
+	call.CallDetectReadyChans[controlID] = make(chan struct{})
+	call.CallDetectRawEventChans[controlID] = make(chan *json.RawMessage, EventQueue)
+
+	call.Unlock()
 
 	v := ParamsBladeExecuteStruct{
 		Protocol: relay.Blade.Protocol,
@@ -1098,6 +1108,7 @@ func (relay *RelaySession) RelayTap(ctx context.Context, call *CallSession, cont
 	call.CallTapChans[controlID] = make(chan TapState, EventQueue)
 	call.CallTapEventChans[controlID] = make(chan ParamsEventCallingCallTap, EventQueue)
 	call.CallTapReadyChans[controlID] = make(chan struct{})
+	call.CallTapRawEventChans[controlID] = make(chan *json.RawMessage, EventQueue)
 
 	call.Unlock()
 
@@ -1191,6 +1202,8 @@ func (relay *RelaySession) RelaySendDigits(ctx context.Context, call *CallSessio
 	call.Lock()
 
 	call.CallSendDigitsChans[controlID] = make(chan SendDigitsState, EventQueue)
+	call.CallSendDigitsReadyChans[controlID] = make(chan struct{})
+	call.CallSendDigitsRawEventChans[controlID] = make(chan *json.RawMessage, EventQueue)
 
 	call.Unlock()
 
@@ -1248,6 +1261,7 @@ func (relay *RelaySession) RelayPlayAndCollect(ctx context.Context, call *CallSe
 	call.CallPlayAndCollectChans[controlID] = make(chan CollectResultType, EventQueue)
 	call.CallPlayAndCollectEventChans[controlID] = make(chan ParamsEventCallingCallPlayAndCollect, EventQueue)
 	call.CallPlayAndCollectReadyChans[controlID] = make(chan struct{})
+	call.CallPlayAndCollectRawEventChans[controlID] = make(chan *json.RawMessage, EventQueue)
 
 	call.Unlock()
 

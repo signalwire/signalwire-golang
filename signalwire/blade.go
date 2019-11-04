@@ -93,7 +93,7 @@ type IBlade interface {
 	handleBladeDisconnect(ctx context.Context, c *jsonrpc2.Request) error
 	handleInboundCall(ctx context.Context, callID string) bool
 	handleInboundMessage(ctx context.Context, callID string) bool
-	eventNotif(ctx context.Context, broadcast NotifParamsBladeBroadcast) error
+	eventNotif(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error
 }
 
 // ISessionControl TODO DESCRIPTION
@@ -547,7 +547,7 @@ func (blade *BladeSession) handleBladeBroadcast(ctx context.Context, req *jsonrp
 	Log.Debug("broadcast.Params.EventType: %v\n", broadcast.Params.EventType)
 	Log.Debug("broadcast.Params.Params: %v\n", broadcast.Params.Params)
 
-	return blade.eventNotif(ctx, broadcast)
+	return blade.eventNotif(ctx, broadcast, req.Params)
 }
 
 // HandleBladeNetcast TODO DESCRIPTION
@@ -783,7 +783,7 @@ func (blade *BladeSession) BladeWaitInboundCall(ctx context.Context) (*CallSessi
 }
 
 // eventNotif TODO DESCRIPTION
-func (blade *BladeSession) eventNotif(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+func (blade *BladeSession) eventNotif(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
 	calling := blade.EventCalling
 	messaging := blade.EventMessaging
 	tasking := blade.EventTasking
@@ -792,7 +792,7 @@ func (blade *BladeSession) eventNotif(ctx context.Context, broadcast NotifParams
 	case "queuing.relay.events":
 		switch broadcast.Params.EventType {
 		case "calling.call.connect":
-			if err := calling.onCallingEventConnect(ctx, broadcast); err != nil {
+			if err := calling.onCallingEventConnect(ctx, broadcast, rawEvent); err != nil {
 				return err
 			}
 		case "calling.call.state":
@@ -804,31 +804,31 @@ func (blade *BladeSession) eventNotif(ctx context.Context, broadcast NotifParams
 				return err
 			}
 		case "calling.call.play":
-			if err := calling.onCallingEventPlay(ctx, broadcast); err != nil {
+			if err := calling.onCallingEventPlay(ctx, broadcast, rawEvent); err != nil {
 				return err
 			}
 		case "calling.call.collect":
-			if err := calling.onCallingEventCollect(ctx, broadcast); err != nil {
+			if err := calling.onCallingEventCollect(ctx, broadcast, rawEvent); err != nil {
 				return err
 			}
 		case "calling.call.record":
-			if err := calling.onCallingEventRecord(ctx, broadcast); err != nil {
+			if err := calling.onCallingEventRecord(ctx, broadcast, rawEvent); err != nil {
 				return err
 			}
 		case "calling.call.tap":
-			if err := calling.onCallingEventTap(ctx, broadcast); err != nil {
+			if err := calling.onCallingEventTap(ctx, broadcast, rawEvent); err != nil {
 				return err
 			}
 		case "calling.call.detect":
-			if err := calling.onCallingEventDetect(ctx, broadcast); err != nil {
+			if err := calling.onCallingEventDetect(ctx, broadcast, rawEvent); err != nil {
 				return err
 			}
 		case "calling.call.fax":
-			if err := calling.onCallingEventFax(ctx, broadcast); err != nil {
+			if err := calling.onCallingEventFax(ctx, broadcast, rawEvent); err != nil {
 				return err
 			}
 		case "calling.call.send_digits":
-			if err := calling.onCallingEventSendDigits(ctx, broadcast); err != nil {
+			if err := calling.onCallingEventSendDigits(ctx, broadcast, rawEvent); err != nil {
 				return err
 			}
 		default:

@@ -2,6 +2,7 @@ package signalwire
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"sync"
@@ -32,6 +33,7 @@ type CollectResult struct {
 	Result     string
 	ResultType CollectResultType
 	Continue   CollectContinue
+	Event      json.RawMessage
 }
 
 // PromptResult TODO DESCRIPTION
@@ -205,6 +207,12 @@ func (callobj *CallObj) callbacksRunPlayAndCollect(_ context.Context, ctrlID str
 
 			callobj.call.CallPlayAndCollectReadyChans[ctrlID] <- struct{}{}
 
+		case rawEvent := <-callobj.call.CallPlayAndCollectRawEventChans[ctrlID]:
+			res.Lock()
+			res.Result.Event = *rawEvent
+			res.Unlock()
+
+			callobj.call.CallPlayAndCollectReadyChans[ctrlID] <- struct{}{}
 		case <-callobj.call.Hangup:
 			out = true
 		}

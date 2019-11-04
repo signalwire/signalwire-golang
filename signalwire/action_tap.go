@@ -2,6 +2,7 @@ package signalwire
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -71,6 +72,7 @@ type TapResult struct {
 	SourceDevice      TapDevice
 	DestinationDevice TapDevice
 	Tap               Tap
+	Event             json.RawMessage
 }
 
 // TapAction TODO DESCRIPTION
@@ -259,6 +261,12 @@ func (callobj *CallObj) callbacksRunTap(_ context.Context, ctrlID string, res *T
 
 			callobj.call.CallTapReadyChans[ctrlID] <- struct{}{}
 
+		case rawEvent := <-callobj.call.CallTapRawEventChans[ctrlID]:
+			res.Lock()
+			res.Result.Event = *rawEvent
+			res.Unlock()
+
+			callobj.call.CallTapReadyChans[ctrlID] <- struct{}{}
 		case <-callobj.call.Hangup:
 			out = true
 		}
