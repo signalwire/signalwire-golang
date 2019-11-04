@@ -17,6 +17,8 @@ var (
 	ProjectID      = os.Getenv("ProjectID")
 	TokenID        = os.Getenv("TokenID")
 	DefaultContext = os.Getenv("DefaultContext")
+	FromNumber     = os.Getenv("FromNumber")
+	ToNumber       = os.Getenv("ToNumber")
 )
 
 // Contexts not needed for only outbound calls
@@ -80,15 +82,11 @@ func MyOnDetectError(_ interface{}) {
 func MyReady(consumer *signalwire.Consumer) {
 	signalwire.Log.Info("calling out...\n")
 
-	fromNumber := "+132XXXXXXXX"
-
-	var toNumber = "+132XXXXXXXX"
-
 	if len(CallThisNumber) > 0 {
-		toNumber = CallThisNumber
+		ToNumber = CallThisNumber
 	}
 
-	resultDial := consumer.Client.Calling.DialPhone(fromNumber, toNumber)
+	resultDial := consumer.Client.Calling.DialPhone(FromNumber, ToNumber)
 	if !resultDial.Successful {
 		if err := consumer.Stop(); err != nil {
 			signalwire.Log.Error("Error occurred while trying to stop Consumer")
