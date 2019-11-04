@@ -19,6 +19,7 @@ var (
 	DefaultContext = os.Getenv("DefaultContext")
 	FromNumber     = os.Getenv("FromNumber")
 	ToNumber       = os.Getenv("ToNumber")
+	Host           = os.Getenv("Host") // Then unset (no env) or set to empty string, default value is used
 )
 
 // Contexts not needed for only outbound calls
@@ -225,6 +226,8 @@ func main() {
 	}()
 
 	consumer := signalwire.NewConsumer()
+	// set custom host
+	signalwire.GlobalOverwriteHost = Host
 	// setup the Client
 	consumer.Setup(PProjectID, PTokenID, Contexts)
 	// register callback
