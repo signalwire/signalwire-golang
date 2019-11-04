@@ -2,6 +2,7 @@ package signalwire
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 	"time"
 )
@@ -54,33 +55,36 @@ func (s CallDirection) String() string {
 
 // CallSession internal representation of a call
 type CallSession struct {
-	Active               bool
-	To                   string
-	From                 string
-	TagID                string
-	Timeout              uint // ring timeout
-	CallID               string
-	NodeID               string
-	ProjectID            string
-	SpaceID              string
-	Direction            CallDirection
-	Context              string
-	CallState            CallState
-	PrevCallState        CallState
-	CallDisconnectReason CallDisconnectReason
-	CallConnectState     CallConnectState
-	CallStateChan        chan CallState
-	CallConnectStateChan chan CallConnectState
+	Active                  bool
+	To                      string
+	From                    string
+	TagID                   string
+	Timeout                 uint // ring timeout
+	CallID                  string
+	NodeID                  string
+	ProjectID               string
+	SpaceID                 string
+	Direction               CallDirection
+	Context                 string
+	CallState               CallState
+	PrevCallState           CallState
+	CallDisconnectReason    CallDisconnectReason
+	CallConnectState        CallConnectState
+	CallStateChan           chan CallState
+	CallConnectStateChan    chan CallConnectState
+	CallConnectRawEventChan chan *json.RawMessage
 
-	CallPlayChans      map[string](chan PlayState)
-	CallPlayControlIDs chan string
-	CallPlayEventChans map[string](chan ParamsEventCallingCallPlay)
-	CallPlayReadyChans map[string](chan struct{})
+	CallPlayChans         map[string](chan PlayState)
+	CallPlayControlIDs    chan string
+	CallPlayEventChans    map[string](chan ParamsEventCallingCallPlay)
+	CallPlayReadyChans    map[string](chan struct{})
+	CallPlayRawEventChans map[string](chan *json.RawMessage)
 
-	CallRecordChans      map[string](chan RecordState)
-	CallRecordControlIDs chan string
-	CallRecordEventChans map[string](chan ParamsEventCallingCallRecord)
-	CallRecordReadyChans map[string](chan struct{})
+	CallRecordChans         map[string](chan RecordState)
+	CallRecordControlIDs    chan string
+	CallRecordEventChans    map[string](chan ParamsEventCallingCallRecord)
+	CallRecordReadyChans    map[string](chan struct{})
+	CallRecordRawEventChans map[string](chan *json.RawMessage)
 
 	CallDetectMachineChans     map[string](chan DetectMachineEvent)
 	CallDetectDigitChans       map[string](chan DetectDigitEvent)
@@ -90,25 +94,31 @@ type CallSession struct {
 	CallDetectFaxControlID     chan string
 	CallDetectEventChans       map[string](chan ParamsEventCallingCallDetect)
 	CallDetectReadyChans       map[string](chan struct{})
+	CallDetectRawEventChans    map[string](chan *json.RawMessage)
 
-	CallFaxChan      chan FaxEventType
-	CallFaxControlID chan string
-	CallFaxEventChan chan FaxEventStruct
-	CallFaxReadyChan chan struct{}
+	CallFaxChan         chan FaxEventType
+	CallFaxControlID    chan string
+	CallFaxEventChan    chan FaxEventStruct
+	CallFaxReadyChan    chan struct{}
+	CallFaxRawEventChan chan *json.RawMessage
 
-	CallTapChans      map[string](chan TapState)
-	CallTapControlIDs chan string
-	CallTapEventChans map[string](chan ParamsEventCallingCallTap)
-	CallTapReadyChans map[string](chan struct{})
+	CallTapChans         map[string](chan TapState)
+	CallTapControlIDs    chan string
+	CallTapEventChans    map[string](chan ParamsEventCallingCallTap)
+	CallTapReadyChans    map[string](chan struct{})
+	CallTapRawEventChans map[string](chan *json.RawMessage)
 
-	CallSendDigitsChans      map[string](chan SendDigitsState)
-	CallSendDigitsControlIDs chan string
-	CallSenDigitsEventChans  map[string](chan ParamsEventCallingCallSendDigits)
+	CallSendDigitsChans         map[string](chan SendDigitsState)
+	CallSendDigitsControlIDs    chan string
+	CallSenDigitsEventChans     map[string](chan ParamsEventCallingCallSendDigits)
+	CallSendDigitsReadyChans    map[string](chan struct{})
+	CallSendDigitsRawEventChans map[string](chan *json.RawMessage)
 
-	CallPlayAndCollectChans      map[string](chan CollectResultType)
-	CallPlayAndCollectControlID  chan string
-	CallPlayAndCollectEventChans map[string](chan ParamsEventCallingCallPlayAndCollect)
-	CallPlayAndCollectReadyChans map[string](chan struct{})
+	CallPlayAndCollectChans         map[string](chan CollectResultType)
+	CallPlayAndCollectControlID     chan string
+	CallPlayAndCollectEventChans    map[string](chan ParamsEventCallingCallPlayAndCollect)
+	CallPlayAndCollectReadyChans    map[string](chan struct{})
+	CallPlayAndCollectRawEventChans map[string](chan *json.RawMessage)
 
 	Hangup   chan struct{}
 	CallPeer PeerDeviceStruct
@@ -151,16 +161,19 @@ func NewCallTagToCallID() *CallTagToCallID {
 func (c *CallSession) CallInit(_ context.Context) {
 	c.CallStateChan = make(chan CallState, EventQueue)
 	c.CallConnectStateChan = make(chan CallConnectState, EventQueue)
+	c.CallConnectRawEventChan = make(chan *json.RawMessage)
 
 	c.CallPlayChans = make(map[string](chan PlayState))
 	c.CallPlayControlIDs = make(chan string, SimActionsOfTheSameKind)
 	c.CallPlayEventChans = make(map[string](chan ParamsEventCallingCallPlay))
 	c.CallPlayReadyChans = make(map[string](chan struct{}))
+	c.CallPlayRawEventChans = make(map[string](chan *json.RawMessage))
 
 	c.CallRecordChans = make(map[string](chan RecordState))
 	c.CallRecordControlIDs = make(chan string, SimActionsOfTheSameKind)
 	c.CallRecordEventChans = make(map[string](chan ParamsEventCallingCallRecord))
 	c.CallRecordReadyChans = make(map[string](chan struct{}))
+	c.CallRecordRawEventChans = make(map[string](chan *json.RawMessage))
 
 	c.CallDetectMachineControlID = make(chan string, 1)
 	c.CallDetectDigitControlID = make(chan string, 1)
@@ -169,24 +182,31 @@ func (c *CallSession) CallInit(_ context.Context) {
 	c.CallDetectMachineChans = make(map[string](chan DetectMachineEvent))
 	c.CallDetectDigitChans = make(map[string](chan DetectDigitEvent))
 	c.CallDetectFaxChans = make(map[string](chan DetectFaxEvent))
+	c.CallDetectReadyChans = make(map[string](chan struct{}))
+	c.CallDetectRawEventChans = make(map[string](chan *json.RawMessage))
 
 	c.CallFaxChan = make(chan FaxEventType, EventQueue)
 	c.CallFaxControlID = make(chan string, 1)
 	c.CallFaxReadyChan = make(chan struct{})
 	c.CallFaxEventChan = make(chan FaxEventStruct)
+	c.CallFaxRawEventChan = make(chan *json.RawMessage)
 
 	c.CallTapChans = make(map[string](chan TapState))
 	c.CallTapControlIDs = make(chan string, 1)
 	c.CallTapEventChans = make(map[string](chan ParamsEventCallingCallTap))
 	c.CallTapReadyChans = make(map[string](chan struct{}))
+	c.CallTapRawEventChans = make(map[string](chan *json.RawMessage))
 
 	c.CallSendDigitsChans = make(map[string](chan SendDigitsState))
 	c.CallSendDigitsControlIDs = make(chan string, 1)
+	c.CallSendDigitsReadyChans = make(map[string](chan struct{}))
+	c.CallSendDigitsRawEventChans = make(map[string](chan *json.RawMessage))
 
 	c.CallPlayAndCollectChans = make(map[string](chan CollectResultType))
 	c.CallPlayAndCollectControlID = make(chan string, 1)
 	c.CallPlayAndCollectEventChans = make(map[string](chan ParamsEventCallingCallPlayAndCollect))
 	c.CallPlayAndCollectReadyChans = make(map[string](chan struct{}))
+	c.CallPlayAndCollectRawEventChans = make(map[string](chan *json.RawMessage))
 
 	c.Hangup = make(chan struct{})
 	c.Actions.m = make(map[string]string)

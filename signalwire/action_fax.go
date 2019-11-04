@@ -2,6 +2,7 @@ package signalwire
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sync"
 )
@@ -41,6 +42,7 @@ type FaxResult struct {
 	Direction      FaxDirection
 	Pages          uint16
 	Successful     bool
+	Event          json.RawMessage
 }
 
 // FaxAction TODO DESCRIPTION
@@ -246,6 +248,12 @@ func (callobj *CallObj) callbacksRunFax(_ context.Context, ctrlID string, res *F
 
 				res.Unlock()
 			}
+
+			callobj.call.CallFaxReadyChan <- struct{}{}
+		case rawEvent := <-callobj.call.CallFaxRawEventChan:
+			res.Lock()
+			res.Result.Event = *rawEvent
+			res.Unlock()
 
 			callobj.call.CallFaxReadyChan <- struct{}{}
 		case <-callobj.call.Hangup:

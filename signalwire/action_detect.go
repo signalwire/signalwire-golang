@@ -2,6 +2,7 @@ package signalwire
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sync"
 )
@@ -45,6 +46,7 @@ func (s DetectResultType) String() string {
 type DetectResult struct {
 	Successful bool
 	Type       DetectResultType
+	Event      json.RawMessage
 }
 
 // DetectMachineAction TODO DESCRIPTION
@@ -280,6 +282,10 @@ func (callobj *CallObj) callbacksRunDetectMachine(_ context.Context, ctrlID stri
 			if prevevent != detectevent && callobj.OnDetectUpdate != nil {
 				callobj.OnDetectUpdate(res)
 			}
+		case rawEvent := <-callobj.call.CallDetectRawEventChans[ctrlID]:
+			res.Lock()
+			res.Result.Event = *rawEvent
+			res.Unlock()
 		case <-callobj.call.Hangup:
 			out = true
 		}
@@ -340,6 +346,10 @@ func (callobj *CallObj) callbacksRunDetectFax(_ context.Context, ctrlID string, 
 			if prevevent != detectevent && callobj.OnDetectUpdate != nil {
 				callobj.OnDetectUpdate(res)
 			}
+		case rawEvent := <-callobj.call.CallDetectRawEventChans[ctrlID]:
+			res.Lock()
+			res.Result.Event = *rawEvent
+			res.Unlock()
 		case <-callobj.call.Hangup:
 			out = true
 		}
@@ -417,6 +427,10 @@ func (callobj *CallObj) callbacksRunDetectDigit(_ context.Context, ctrlID string
 			if prevevent != detectevent && callobj.OnDetectUpdate != nil {
 				callobj.OnDetectUpdate(res)
 			}
+		case rawEvent := <-callobj.call.CallDetectRawEventChans[ctrlID]:
+			res.Lock()
+			res.Result.Event = *rawEvent
+			res.Unlock()
 		case <-callobj.call.Hangup:
 			out = true
 		}

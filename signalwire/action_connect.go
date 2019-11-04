@@ -2,6 +2,7 @@ package signalwire
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sync"
 )
@@ -24,6 +25,7 @@ func (s CallConnectState) String() string {
 // ConnectResult TODO DESCRIPTION
 type ConnectResult struct {
 	Successful bool
+	Event      json.RawMessage
 }
 
 // ConnectAction TODO DESCRIPTION
@@ -167,6 +169,10 @@ func (callobj *CallObj) callbacksRunConnect(_ context.Context, res *ConnectActio
 			if prevstate != connectstate && callobj.OnConnectStateChange != nil {
 				callobj.OnConnectStateChange(res)
 			}
+		case rawEvent := <-callobj.call.CallConnectRawEventChan:
+			res.Lock()
+			res.Result.Event = *rawEvent
+			res.Unlock()
 		case <-callobj.call.Hangup:
 			out = true
 		}

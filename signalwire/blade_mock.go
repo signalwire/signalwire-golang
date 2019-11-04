@@ -6,6 +6,7 @@ package signalwire
 
 import (
 	context "context"
+	json "encoding/json"
 	gomock "github.com/golang/mock/gomock"
 	websocket "github.com/gorilla/websocket"
 	jsonrpc2 "github.com/sourcegraph/jsonrpc2"
@@ -277,17 +278,17 @@ func (mr *MockIBladeMockRecorder) handleInboundMessage(ctx, callID interface{}) 
 }
 
 // eventNotif mocks base method
-func (m *MockIBlade) eventNotif(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+func (m *MockIBlade) eventNotif(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "eventNotif", ctx, broadcast)
+	ret := m.ctrl.Call(m, "eventNotif", ctx, broadcast, rawEvent)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // eventNotif indicates an expected call of eventNotif
-func (mr *MockIBladeMockRecorder) eventNotif(ctx, broadcast interface{}) *gomock.Call {
+func (mr *MockIBladeMockRecorder) eventNotif(ctx, broadcast, rawEvent interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "eventNotif", reflect.TypeOf((*MockIBlade)(nil).eventNotif), ctx, broadcast)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "eventNotif", reflect.TypeOf((*MockIBlade)(nil).eventNotif), ctx, broadcast, rawEvent)
 }
 
 // MockISessionControl is a mock of ISessionControl interface

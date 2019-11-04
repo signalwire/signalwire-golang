@@ -2,6 +2,7 @@ package signalwire
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sync"
 )
@@ -24,21 +25,25 @@ func (s PlayState) String() string {
 // PlayResult TODO DESCRIPTION
 type PlayResult struct {
 	Successful bool
+	Event      json.RawMessage
 }
 
 // PlayVolumeResult TODO DESCRIPTION
 type PlayVolumeResult struct {
 	Successful bool
+	Event      json.RawMessage
 }
 
 // PlayPauseResult TODO DESCRIPTION
 type PlayPauseResult struct {
 	Successful bool
+	Event      json.RawMessage
 }
 
 // PlayResumeResult TODO DESCRIPTION
 type PlayResumeResult struct {
 	Successful bool
+	Event      json.RawMessage
 }
 
 // PlayAction TODO DESCRIPTION
@@ -292,6 +297,11 @@ func (callobj *CallObj) callbacksRunPlay(_ context.Context, ctrlID string, res *
 			if prevstate != playstate && callobj.OnPlayStateChange != nil {
 				callobj.OnPlayStateChange(res)
 			}
+		case rawEvent := <-callobj.call.CallPlayRawEventChans[ctrlID]:
+			res.Lock()
+			res.Result.Event = *rawEvent
+			res.Unlock()
+
 		case <-callobj.call.Hangup:
 			out = true
 		}
@@ -579,6 +589,17 @@ func (playaction *PlayAction) GetSuccessful() bool {
 	playaction.RLock()
 
 	ret := playaction.Result.Successful
+
+	playaction.RUnlock()
+
+	return ret
+}
+
+// GetEvent TODO DESCRIPTION
+func (playaction *PlayAction) GetEvent() *json.RawMessage {
+	playaction.RLock()
+
+	ret := &playaction.Result.Event
 
 	playaction.RUnlock()
 

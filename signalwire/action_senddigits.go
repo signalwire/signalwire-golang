@@ -2,6 +2,7 @@ package signalwire
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"sync"
@@ -22,6 +23,7 @@ func (s SendDigitsState) String() string {
 // SendDigitsResult TODO DESCRIPTION
 type SendDigitsResult struct {
 	Successful bool
+	Event      json.RawMessage
 }
 
 // SendDigitsAction TODO DESCRIPTION
@@ -139,7 +141,12 @@ func (callobj *CallObj) callbacksRunSendDigits(_ context.Context, ctrlID string,
 			if prevstate != state && callobj.OnSendDigitsStateChange != nil {
 				callobj.OnSendDigitsStateChange(res)
 			}
+		case rawEvent := <-callobj.call.CallSendDigitsRawEventChans[ctrlID]:
+			res.Lock()
+			res.Result.Event = *rawEvent
+			res.Unlock()
 
+			callobj.call.CallSendDigitsReadyChans[ctrlID] <- struct{}{}
 		case <-callobj.call.Hangup:
 			out = true
 		}
