@@ -12,10 +12,11 @@ import (
 	"github.com/signalwire/signalwire-golang/signalwire"
 )
 
-// App consts
-const (
-	ProjectID = "replaceme"
-	TokenID   = "replaceme" // nolint: gosec
+// App environment settings
+var (
+	ProjectID      = os.Getenv("ProjectID")
+	TokenID        = os.Getenv("TokenID")
+	DefaultContext = os.Getenv("DefaultContext")
 )
 
 // PProjectID passed from command-line
@@ -101,7 +102,7 @@ func main() {
 				// connect/disconnect stress
 				counter++
 
-				signalwireContexts := []string{"replaceme"}
+				signalwireContexts := []string{DefaultContext}
 
 				client := signalwire.Client(PProjectID, PTokenID, "" /*host, empty for default*/, signalwireContexts)
 				// register callback
