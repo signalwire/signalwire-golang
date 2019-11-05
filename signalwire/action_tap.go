@@ -393,6 +393,17 @@ func (tapaction *TapAction) GetResult() TapResult {
 	return ret
 }
 
+// GetState TODO DESCRIPTION
+func (tapaction *TapAction) GetState() TapState {
+	tapaction.RLock()
+
+	ret := tapaction.State
+
+	tapaction.RUnlock()
+
+	return ret
+}
+
 // GetTap TODO DESCRIPTION
 func (tapaction *TapAction) GetTap() *Tap {
 	return &tapaction.Result.Tap
@@ -406,4 +417,15 @@ func (tapaction *TapAction) GetSourceDevice() *TapDevice {
 // GetDestinationDevice TODO DESCRIPTION
 func (tapaction *TapAction) GetDestinationDevice() *TapDevice {
 	return &tapaction.Result.DestinationDevice
+}
+
+// GetEvent TODO DESCRIPTION
+func (tapaction *TapAction) GetEvent() *json.RawMessage {
+	tapaction.RLock()
+
+	ret := &tapaction.Result.Event
+
+	tapaction.RUnlock()
+
+	return ret
 }

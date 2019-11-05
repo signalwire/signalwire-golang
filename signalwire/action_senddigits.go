@@ -240,3 +240,14 @@ func (action *SendDigitsAction) GetSuccessful() bool {
 
 	return ret
 }
+
+// GetEvent TODO DESCRIPTION
+func (action *SendDigitsAction) GetEvent() *json.RawMessage {
+	action.RLock()
+
+	ret := &action.Result.Event
+
+	action.RUnlock()
+
+	return ret
+}

@@ -798,3 +798,36 @@ func (detectaction *DetectFaxAction) GetDetectorEvent() DetectFaxEvent {
 
 	return ret
 }
+
+// GetEvent TODO DESCRIPTION
+func (detectaction *DetectMachineAction) GetEvent() *json.RawMessage {
+	detectaction.RLock()
+
+	ret := &detectaction.Result.Event
+
+	detectaction.RUnlock()
+
+	return ret
+}
+
+// GetEvent TODO DESCRIPTION
+func (detectaction *DetectFaxAction) GetEvent() *json.RawMessage {
+	detectaction.RLock()
+
+	ret := &detectaction.Result.Event
+
+	detectaction.RUnlock()
+
+	return ret
+}
+
+// GetEvent TODO DESCRIPTION
+func (detectaction *DetectDigitAction) GetEvent() *json.RawMessage {
+	detectaction.RLock()
+
+	ret := &detectaction.Result.Event
+
+	detectaction.RUnlock()
+
+	return ret
+}

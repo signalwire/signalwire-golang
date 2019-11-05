@@ -220,6 +220,15 @@ func (m *MsgSession) SetMsgID(msgID string) {
 	m.Unlock()
 }
 
+// GetMsgID TODO DESCRIPTION
+func (m *MsgSession) GetMsgID() string {
+	m.RLock()
+	id := m.MsgParams.MsgID
+	m.RUnlock()
+
+	return id
+}
+
 // SetRegion TODO DESCRIPTION
 func (m *MsgSession) SetRegion(region string) {
 	m.Lock()
