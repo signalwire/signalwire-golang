@@ -37,8 +37,8 @@ func NewClientSession() *ClientSession {
 type IClientSession interface {
 	setAuth(project, token string)
 	setClient(host string, contexts []string)
-	connect(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup) error
-	disconnect() error
+	connectInternal(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup) error
+	disconnectInternal() error
 	setupInbound()
 	waitInbound(ctx context.Context) (*CallSession, error)
 	waitInboundMsg(ctx context.Context) (*MsgSession, error)
@@ -66,8 +66,8 @@ func (client *ClientSession) setAuth(project, token string) {
 	client.Relay.Blade.bladeAuth = *bladeAuth
 }
 
-// connect TODO DESCRIPTION
-func (client *ClientSession) connect(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup) error {
+// connectInternal TODO DESCRIPTION
+func (client *ClientSession) connectInternal(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup) error {
 	client.Ctx = ctx
 	client.Cancel = cancel
 	client.Calling.Ctx = client.Ctx
@@ -152,10 +152,12 @@ func (client *ClientSession) connect(ctx context.Context, cancel context.CancelF
 		return err
 	}
 
-	if err := blade.BladeSignalwireReceive(ctx, blade.SignalwireContexts); err != nil {
-		Log.Debug("cannot subscribe to inbound context on Blade Network: %v\n", err)
+	if len(blade.SignalwireContexts) > 0 {
+		if err := blade.BladeSignalwireReceive(ctx, blade.SignalwireContexts); err != nil {
+			Log.Debug("cannot subscribe to inbound context on Blade Network: %v\n", err)
 
-		return err
+			return err
+		}
 	}
 
 	client.Tasking.TaskChan = make(chan ParamsEventTaskingTask, 1)
@@ -175,7 +177,7 @@ func (client *ClientSession) connect(ctx context.Context, cancel context.CancelF
 }
 
 // disconnect TODO DESCRIPTION
-func (client *ClientSession) disconnect() error {
+func (client *ClientSession) disconnectInternal() error {
 	blade := client.Relay.Blade
 
 	if err := blade.BladeDisconnect(client.Ctx); err != nil {
@@ -281,6 +283,7 @@ func Client(project, token, host string, signalwireContexts []string) *ClientSes
 	return client
 }
 
+// Connect TODO DESCRIPTION
 func (client *ClientSession) Connect() error {
 	var (
 		err error
@@ -290,7 +293,7 @@ func (client *ClientSession) Connect() error {
 	wg.Add(1)
 
 	go func() {
-		err = client.connect(client.Ctx, client.Cancel, &wg)
+		err = client.connectInternal(client.Ctx, client.Cancel, &wg)
 	}()
 
 	<-client.Operational
@@ -310,6 +313,7 @@ func (client *ClientSession) Connect() error {
 	return err
 }
 
+// Disconnect TODO DESCRIPTION
 func (client *ClientSession) Disconnect() error {
-	return client.disconnect()
+	return client.disconnectInternal()
 }

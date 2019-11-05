@@ -105,6 +105,7 @@ type ParamsConnectStruct struct {
 	Version        BladeVersionStruct `json:"version"`
 	SessionID      string             `json:"session_id"`
 	Authentication AuthStruct         `json:"authentication"`
+	Agent          string             `json:"agent"`
 }
 
 // AuthStruct TODO DESCRIPTION

@@ -341,6 +341,7 @@ func (blade *BladeSession) BladeConnect(ctx context.Context, bladeAuth *BladeAut
 				Project: bladeAuth.ProjectID,
 				Token:   bladeAuth.TokenID,
 			},
+			Agent: fmt.Sprintf("%s/%s", UserAgent, SDKVersion),
 		},
 		&ReplyConnectDecode, blade.jOpts...,
 	); err != nil {

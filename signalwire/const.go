@@ -5,14 +5,14 @@ const (
 	WSTimeOut         = 5
 	JSONRPCVer        = "2.0"
 	WssHost           = "relay.signalwire.com"
-	SDKVersion        = "1.0"
+	SDKVersion        = "1.0.0-beta.2"
 	BladeVersionMajor = 2
 	BladeVersionMinor = 3
 	BladeRevision     = 0
 	MaxSimCalls       = 100
 	MaxPlay           = 10
 	TaskingEndpoint   = "https://relay.signalwire.com/api/relay/rest/tasks"
-	UserAgent         = "GoSDK"
+	UserAgent         = "Go SDK"
 	/* internal */
 	BroadcastEventTimeout   = 10 /* seconds */
 	DefaultRingTimeout      = 30 /* seconds */

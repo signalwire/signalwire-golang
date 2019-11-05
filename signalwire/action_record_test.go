@@ -91,13 +91,13 @@ func TestActionRecord(t *testing.T) {
 				assert.Equal(t, RecordFinished, recordAction.GetState())
 			}
 
-			Imock.EXPECT().connect(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Do(func(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup) {
+			Imock.EXPECT().connectInternal(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Do(func(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup) {
 				runWG.Done()
 			})
 			IRelayMock.EXPECT().RelayPhoneDial(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			IRelayMock.EXPECT().RelayRecordAudio(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
-			Imock.EXPECT().disconnect().Return(nil).Times(1)
+			Imock.EXPECT().disconnectInternal().Return(nil).Times(1)
 
 			var err error
 			go func() {

@@ -275,7 +275,7 @@ func (resultSend *SendResult) GetReason() string {
 	return resultSend.Msg.msg.GetFailureReason()
 }
 
-// GetMsgId TODO DESCRIPTION
+// GetMsgID TODO DESCRIPTION
 func (resultSend *SendResult) GetMsgID() string {
 	return resultSend.Msg.msg.GetMsgID()
 }
