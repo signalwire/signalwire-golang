@@ -22,9 +22,9 @@ If you'd like to contribute, feel free to visit our [Slack channel](https://sign
 The Go SDK is a Go Lang package [signalwire-golang](https://github.com/signalwire/signalwire-golang). To setup the dev environment follow these steps:
 
 1. Install Go Lang (https://golang.org/doc/install)
-2. "go get github.com/signalwire/signalwire-golang"
+2. "go get github.com/signalwire/signalwire-golang/signalwire"
 3. Create a new branch from `master` for your changes.
-4. Make changes and test them via example apps!
+4. Make changes and test them via example apps! You can start developing starting from the examples in RelayExamples/
 
 
 ## License
