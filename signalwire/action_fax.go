@@ -361,119 +361,130 @@ func (callobj *CallObj) SendFaxAsync(doc, id, headerInfo string) (*FaxAction, er
 }
 
 // ctrlIDCopy TODO DESCRIPTION
-func (sendfaxaction *FaxAction) ctrlIDCopy() (string, error) {
-	sendfaxaction.RLock()
+func (action *FaxAction) ctrlIDCopy() (string, error) {
+	action.RLock()
 
-	if len(sendfaxaction.ControlID) == 0 {
-		sendfaxaction.RUnlock()
+	if len(action.ControlID) == 0 {
+		action.RUnlock()
 		return "", errors.New("no controlID")
 	}
 
-	c := sendfaxaction.ControlID
+	c := action.ControlID
 
-	sendfaxaction.RUnlock()
+	action.RUnlock()
 
 	return c, nil
 }
 
 // sendfaxAsyncStop TODO DESCRIPTION
-func (sendfaxaction *FaxAction) faxAsyncStop() error {
-	if sendfaxaction.CallObj.Calling == nil {
+func (action *FaxAction) faxAsyncStop() error {
+	if action.CallObj.Calling == nil {
 		return errors.New("nil Calling object")
 	}
 
-	if sendfaxaction.CallObj.Calling.Relay == nil {
+	if action.CallObj.Calling.Relay == nil {
 		return errors.New("nil Relay object")
 	}
 
-	c, err := sendfaxaction.ctrlIDCopy()
+	c, err := action.ctrlIDCopy()
 	if err != nil {
 		return err
 	}
 
-	call := sendfaxaction.CallObj.call
+	call := action.CallObj.call
 
-	return sendfaxaction.CallObj.Calling.Relay.RelaySendFaxStop(sendfaxaction.CallObj.Calling.Ctx, call, &c)
+	return action.CallObj.Calling.Relay.RelaySendFaxStop(action.CallObj.Calling.Ctx, call, &c)
 }
 
 // Stop TODO DESCRIPTION
-func (sendfaxaction *FaxAction) Stop() {
-	sendfaxaction.err = sendfaxaction.faxAsyncStop()
+func (action *FaxAction) Stop() {
+	action.err = action.faxAsyncStop()
 }
 
 // GetCompleted TODO DESCRIPTION
-func (sendfaxaction *FaxAction) GetCompleted() bool {
-	sendfaxaction.RLock()
+func (action *FaxAction) GetCompleted() bool {
+	action.RLock()
 
-	ret := sendfaxaction.Completed
+	ret := action.Completed
 
-	sendfaxaction.RUnlock()
+	action.RUnlock()
 
 	return ret
 }
 
 // GetResult TODO DESCRIPTION
-func (sendfaxaction *FaxAction) GetResult() FaxResult {
-	sendfaxaction.RLock()
+func (action *FaxAction) GetResult() FaxResult {
+	action.RLock()
 
-	ret := sendfaxaction.Result
+	ret := action.Result
 
-	sendfaxaction.RUnlock()
+	action.RUnlock()
 
 	return ret
 }
 
 // GetSuccessful TODO DESCRIPTION
-func (sendfaxaction *FaxAction) GetSuccessful() bool {
-	sendfaxaction.RLock()
+func (action *FaxAction) GetSuccessful() bool {
+	action.RLock()
 
-	ret := sendfaxaction.Result.Successful
+	ret := action.Result.Successful
 
-	sendfaxaction.RUnlock()
+	action.RUnlock()
 
 	return ret
 }
 
 // GetDocument TODO DESCRIPTION
-func (sendfaxaction *FaxAction) GetDocument() string {
-	sendfaxaction.RLock()
+func (action *FaxAction) GetDocument() string {
+	action.RLock()
 
-	ret := sendfaxaction.Result.Document
+	ret := action.Result.Document
 
-	sendfaxaction.RUnlock()
+	action.RUnlock()
 
 	return ret
 }
 
 // GetPages TODO DESCRIPTION
-func (sendfaxaction *FaxAction) GetPages() uint16 {
-	sendfaxaction.RLock()
+func (action *FaxAction) GetPages() uint16 {
+	action.RLock()
 
-	ret := sendfaxaction.Result.Pages
+	ret := action.Result.Pages
 
-	sendfaxaction.RUnlock()
+	action.RUnlock()
 
 	return ret
 }
 
 // GetIdentity TODO DESCRIPTION
-func (sendfaxaction *FaxAction) GetIdentity() string {
-	sendfaxaction.RLock()
+func (action *FaxAction) GetIdentity() string {
+	action.RLock()
 
-	ret := sendfaxaction.Result.Identity
+	ret := action.Result.Identity
 
-	sendfaxaction.RUnlock()
+	action.RUnlock()
 
 	return ret
 }
 
 // GetRemoteIdentity  TODO DESCRIPTION
-func (sendfaxaction *FaxAction) GetRemoteIdentity() string {
-	sendfaxaction.RLock()
+func (action *FaxAction) GetRemoteIdentity() string {
+	action.RLock()
 
-	ret := sendfaxaction.Result.RemoteIdentity
+	ret := action.Result.RemoteIdentity
 
-	sendfaxaction.RUnlock()
+	action.RUnlock()
+
+	return ret
+}
+
+// GetEvent TODO DESCRIPTION
+func (action *FaxAction) GetEvent() *json.RawMessage {
+	action.RLock()
+
+	ret := &action.Result.Event
+
+	action.RUnlock()
 
 	return ret
 }

@@ -368,3 +368,14 @@ func (recordaction *RecordAction) GetState() RecordState {
 
 	return ret
 }
+
+// GetEvent TODO DESCRIPTION
+func (recordaction *RecordAction) GetEvent() *json.RawMessage {
+	recordaction.RLock()
+
+	ret := &recordaction.Result.Event
+
+	recordaction.RUnlock()
+
+	return ret
+}

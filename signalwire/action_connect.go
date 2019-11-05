@@ -182,3 +182,14 @@ func (callobj *CallObj) callbacksRunConnect(_ context.Context, res *ConnectActio
 		}
 	}
 }
+
+// GetEvent TODO DESCRIPTION
+func GetEvent(action *ConnectAction) *json.RawMessage {
+	action.RLock()
+
+	ret := &action.Result.Event
+
+	action.RUnlock()
+
+	return ret
+}

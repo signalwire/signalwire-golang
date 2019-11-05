@@ -64,6 +64,8 @@ type IPromptAction interface {
 	Stop()
 	GetCompleted() bool
 	GetResult() PlayResult
+	Volume(vol float64) (*PlayVolumeResult, error)
+	GetEvent() *json.RawMessage
 }
 
 // Prompt TODO DESCRIPTION
@@ -378,8 +380,8 @@ func (action *PromptAction) GetResultType() CollectResultType {
 	return ret
 }
 
-// PromptVolume TODO DESCRIPTION
-func (action *PromptAction) PromptVolume(vol float64) (*PlayVolumeResult, error) {
+// Volume TODO DESCRIPTION
+func (action *PromptAction) Volume(vol float64) (*PlayVolumeResult, error) {
 	res := new(PlayVolumeResult)
 
 	if action.CallObj.Calling == nil {
@@ -406,4 +408,15 @@ func (action *PromptAction) PromptVolume(vol float64) (*PlayVolumeResult, error)
 	res.Successful = true
 
 	return res, nil
+}
+
+// GetEvent TODO DESCRIPTION
+func (action *PromptAction) GetEvent() *json.RawMessage {
+	action.RLock()
+
+	ret := &action.Result.Event
+
+	action.RUnlock()
+
+	return ret
 }
