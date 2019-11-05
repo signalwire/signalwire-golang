@@ -139,7 +139,7 @@ func (consumer *Consumer) Run() error {
 	wg.Add(haveIncomingMsg + haveIncomingCalls + 1)
 
 	go func() {
-		err = consumer.Client.I.connect(ctx, cancel, &wg)
+		err = consumer.Client.I.connectInternal(ctx, cancel, &wg)
 	}()
 
 	<-consumer.Client.Operational
@@ -182,5 +182,5 @@ func (consumer *Consumer) Stop() error {
 		consumer.Teardown(consumer)
 	}
 
-	return consumer.Client.I.disconnect()
+	return consumer.Client.I.disconnectInternal()
 }
