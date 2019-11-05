@@ -42,6 +42,7 @@ func spinner(delay time.Duration) {
 	}
 }
 
+// PassToTask example of type of Message for Task
 type PassToTask struct {
 	Foo uint   `json:"foo"`
 	Bar string `json:"bar"`

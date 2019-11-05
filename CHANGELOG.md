@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [1.0.0-beta.2] - 2019-11-5
 - expose Client 
 - Use Environment variables in tests and examples.
 - Use context driven timeout for HTTP client connection.

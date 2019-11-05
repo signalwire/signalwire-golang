@@ -90,9 +90,9 @@ func main() {
 
 	var counter int
 
-	var max int = 100
+	var max = 100
 
-	var maxroutines int = 10
+	var maxroutines = 10
 
 	var i int
 
