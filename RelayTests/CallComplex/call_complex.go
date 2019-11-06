@@ -218,7 +218,7 @@ func main() {
 		// wait for "Answered"
 		signalwire.Log.Info("wait for 'Answered' on originated call tag [%s]...\n", call.TagID)
 
-		if ret := call.WaitCallStateInternal(ctx, signalwire.Answered); !ret {
+		if ret := call.WaitCallStateInternal(ctx, signalwire.Answered, 3); !ret {
 			signalwire.Log.Fatal("did not get Answered state\n")
 		}
 
@@ -246,7 +246,7 @@ func main() {
 			signalwire.Log.Fatal("call.end error: %v\n", err)
 		}
 
-		if ret := call.WaitCallStateInternal(ctx, signalwire.Ended); !ret {
+		if ret := call.WaitCallStateInternal(ctx, signalwire.Ended, 3); !ret {
 			signalwire.Log.Fatal("did not get Ended state\n")
 		}
 
@@ -264,7 +264,7 @@ func main() {
 				signalwire.Log.Fatal("call.end error: %v\n", err)
 			}
 
-			if ret := peercall.WaitCallStateInternal(ctx, signalwire.Ended); !ret {
+			if ret := peercall.WaitCallStateInternal(ctx, signalwire.Ended, 3); !ret {
 				signalwire.Log.Fatal("did not get Ended state\n")
 			}
 		}
