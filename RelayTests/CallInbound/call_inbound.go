@@ -202,7 +202,7 @@ func main() {
 
 	// 'answer' state event may have already come before we get the 200 for call.answer
 	if call.CallState != signalwire.Answered {
-		if ret := call.WaitCallStateInternal(ctx, signalwire.Answered); !ret {
+		if ret := call.WaitCallStateInternal(ctx, signalwire.Answered, 3); !ret {
 			signalwire.Log.Warn("did not get Answered state\n")
 		}
 	}
@@ -214,11 +214,11 @@ func main() {
 	// wait for the other side to hangup, otherwise we hangup
 	signalwire.Log.Info("wait for Ending...\n")
 
-	if ret := call.WaitCallStateInternal(ctx, signalwire.Ending); !ret {
+	if ret := call.WaitCallStateInternal(ctx, signalwire.Ending, 3); !ret {
 		signalwire.Log.Warn("did not get Ending state\n")
 	}
 
-	if ret := call.WaitCallStateInternal(ctx, signalwire.Ended); !ret {
+	if ret := call.WaitCallStateInternal(ctx, signalwire.Ended, 3); !ret {
 		signalwire.Log.Warn("did not get Ended state\n")
 	}
 

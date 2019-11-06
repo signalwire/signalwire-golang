@@ -87,6 +87,7 @@ type CallSession struct {
 	CallDisconnectReason    CallDisconnectReason
 	CallConnectState        CallConnectState
 	CallStateChan           chan CallState
+	cbStateChan             chan CallState
 	CallConnectStateChan    chan CallConnectState
 	CallConnectRawEventChan chan *json.RawMessage
 
@@ -151,7 +152,7 @@ type ICall interface {
 	UpdateCallState(s CallState)
 	UpdateCallConnectState(s CallConnectState)
 	UpdateConnectPeer(p PeerDeviceStruct)
-	WaitCallStateInternal(ctx context.Context, want CallState) bool
+	WaitCallStateInternal(ctx context.Context, want CallState, timeoutSec uint) bool
 	WaitCallConnectState(ctx context.Context, want CallConnectState) bool
 	WaitPlayState(ctx context.Context, ctrlID string, want PlayState) bool
 	WaitRecordState(ctx context.Context, ctrlID string, want RecordState) bool
@@ -178,6 +179,7 @@ func (c *CallSession) CallInit(_ context.Context) {
 	c.CallStateChan = make(chan CallState, EventQueue)
 	c.CallConnectStateChan = make(chan CallConnectState, EventQueue)
 	c.CallConnectRawEventChan = make(chan *json.RawMessage)
+	c.cbStateChan = make(chan CallState, EventQueue)
 
 	c.CallPlayChans = make(map[string](chan PlayState))
 	c.CallPlayControlIDs = make(chan string, SimActionsOfTheSameKind)
@@ -229,19 +231,18 @@ func (c *CallSession) CallInit(_ context.Context) {
 }
 
 // CallCleanup close the channels, etc
+// app writer should set CallObj and/or c to nil to clean it up
 func (c *CallSession) CallCleanup(_ context.Context) {
 	close(c.CallStateChan)
 	close(c.CallConnectStateChan)
 	close(c.Hangup)
 
 	c.Actions.m = nil
-
-	c = nil /*let the garbage collector clean it up */
 }
 
 // WaitCallStateInternal wait for a certain call state and return true when it arrives.
 // return false if timeout.
-func (c *CallSession) WaitCallStateInternal(_ context.Context, want CallState) bool {
+func (c *CallSession) WaitCallStateInternal(ctx context.Context, want CallState, timeoutSec uint) bool {
 	var ret bool
 
 	for {
@@ -254,10 +255,12 @@ func (c *CallSession) WaitCallStateInternal(_ context.Context, want CallState) b
 				ret = true
 			} else if callstate == Ended {
 				out = true
-				// signal all Action go routines to finish
-				c.Hangup <- struct{}{}
 			}
-		case <-time.After(BroadcastEventTimeout * time.Second):
+		case <-time.After(time.Duration(timeoutSec) * time.Second):
+			out = true
+		case <-c.Hangup:
+			out = true
+		case <-ctx.Done():
 			out = true
 		}
 
