@@ -53,6 +53,21 @@ func (s CallDirection) String() string {
 	return [...]string{"Inbound", "Outbound"}[s]
 }
 
+// CallTypeState keeps the type of a call
+type CallType int
+
+// Call state constants
+const (
+	CallTypePhone CallType = iota
+	CallTypeSIP
+	CallWebrtc
+	CallAgora
+)
+
+func (s CallType) String() string {
+	return [...]string{"phone", "sip", "webrtc", "agora"}[s]
+}
+
 // CallSession internal representation of a call
 type CallSession struct {
 	Active                  bool
@@ -68,6 +83,7 @@ type CallSession struct {
 	Context                 string
 	CallState               CallState
 	PrevCallState           CallState
+	CallType                CallType
 	CallDisconnectReason    CallDisconnectReason
 	CallConnectState        CallConnectState
 	CallStateChan           chan CallState
@@ -511,6 +527,22 @@ func (c *CallSession) GetTimeout() uint {
 	c.RUnlock()
 
 	return t
+}
+
+// GetType TODO DESCRIPTION
+func (c *CallSession) GetType() string {
+	c.RLock()
+	t := c.CallType.String()
+	c.RUnlock()
+
+	return t
+}
+
+// SetType TODO DESCRIPTION
+func (c *CallSession) SetType(t CallType) {
+	c.Lock()
+	c.CallType = t
+	c.Unlock()
 }
 
 // SetDisconnectReason TODO DESCRIPTION

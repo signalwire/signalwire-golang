@@ -439,3 +439,8 @@ func (callobj *CallObj) Failed() bool {
 func (callobj *CallObj) Ended() bool {
 	return callobj.call.GetState() == Ended
 }
+
+// GetType TODO DESCRIPTION
+func (callobj *CallObj) GetType() string {
+	return callobj.call.GetType()
+}

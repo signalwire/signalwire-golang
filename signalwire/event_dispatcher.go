@@ -797,6 +797,8 @@ func (calling *EventCalling) getCall(ctx context.Context, tag, callID string) (*
 		}
 
 		call.CallInit(ctx)
+		// default to "phone" for now
+		call.SetType(CallTypePhone)
 
 		Log.Debug("new inbound call: [%p]\n", call)
 	}
