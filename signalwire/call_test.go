@@ -33,7 +33,7 @@ func TestCall(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				ret = call.WaitCallStateInternal(ctx, Ending) // buffered channel now
+				ret = call.WaitCallStateInternal(ctx, Ending, 1) // buffered channel now
 			}()
 			// non-blocking
 			select {

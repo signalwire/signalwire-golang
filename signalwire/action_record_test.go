@@ -48,6 +48,7 @@ func TestActionRecord(t *testing.T) {
 
 				newcall := consumer.Client.Calling.NewCall(fromNumber, toNumber)
 				newcall.call.CallInit(ctx) // this is called in RelayPhoneDial which is mocked
+				newcall.SetTimeout(3)
 				go func() {
 					// fake Answer state in buffered channel
 					newcall.call.CallStateChan <- Answered

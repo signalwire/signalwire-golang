@@ -885,6 +885,10 @@ func (calling *EventCalling) dispatchStateNotif(ctx context.Context, callParams 
 			return err
 		}
 
+		if err := calling.Cache.DeleteCallCache(call.CallID); err != nil {
+			return errors.New("cannot remove the call from cache")
+		}
+
 		call.SetDisconnectReason(disconnectReason)
 	}
 	select {
@@ -892,6 +896,13 @@ func (calling *EventCalling) dispatchStateNotif(ctx context.Context, callParams 
 		Log.Debug("sent callstate\n")
 	default:
 		Log.Debug("no callstate sent\n")
+	}
+
+	select {
+	case call.cbStateChan <- callParams.CallState:
+		Log.Debug("sent callstate / CB signal\n")
+	default:
+		Log.Debug("no callstate / CB signal sent\n")
 	}
 
 	return nil
