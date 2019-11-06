@@ -430,7 +430,17 @@ func (callobj *CallObj) Busy() bool {
 	return callobj.call.CallDisconnectReason == CallBusy
 }
 
+// Failed TODO DESCRIPTION
+func (callobj *CallObj) Failed() bool {
+	return callobj.call.CallDisconnectReason == CallGenericError
+}
+
 // Ended TODO DESCRIPTION
 func (callobj *CallObj) Ended() bool {
 	return callobj.call.GetState() == Ended
+}
+
+// GetType TODO DESCRIPTION
+func (callobj *CallObj) GetType() string {
+	return callobj.call.GetType()
 }

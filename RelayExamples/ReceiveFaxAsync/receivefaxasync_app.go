@@ -17,6 +17,7 @@ var (
 	ProjectID      = os.Getenv("ProjectID")
 	TokenID        = os.Getenv("TokenID")
 	DefaultContext = os.Getenv("DefaultContext")
+	Host           = os.Getenv("Host") // optional, host to connect to, defaults to Signalwire platform
 )
 
 // Contexts not needed for only outbound calls
@@ -28,9 +29,6 @@ var PProjectID string
 // PTokenID passed from command-line
 var PTokenID string
 
-// CallThisNumber get the callee phone number from command line
-var CallThisNumber string
-
 /*gopl.io spinner*/
 func spinner(delay time.Duration) {
 	for {
@@ -40,6 +38,8 @@ func spinner(delay time.Duration) {
 		}
 	}
 }
+
+var done chan struct{}
 
 // MyOnIncomingCall - gets executed when we receive an incoming call
 func MyOnIncomingCall(consumer *signalwire.Consumer, call *signalwire.CallObj) {
@@ -52,15 +52,24 @@ func MyOnIncomingCall(consumer *signalwire.Consumer, call *signalwire.CallObj) {
 		return
 	}
 
+	done = make(chan struct{})
+
+	call.OnFaxFinished = func(faxAction *signalwire.FaxAction) {
+		faxResult := faxAction.GetResult()
+		signalwire.Log.Info("Download Document from %s\n Pages #%d\n", faxResult.Document, faxResult.Pages)
+		done <- struct{}{}
+	}
+
 	// do something here
 	go spinner(100 * time.Millisecond)
 
-	faxResult, err := call.ReceiveFax()
+	_, err := call.ReceiveFaxAsync()
 	if err != nil {
 		signalwire.Log.Error("Error occurred while trying to receive fax\n")
 	}
 
-	signalwire.Log.Info("Download Document from %s\n Pages #%d\n", faxResult.Document, faxResult.Pages)
+	// you can do something else here, we just wait until the fax is received
+	<-done
 
 	if _, err := call.Hangup(); err != nil {
 		signalwire.Log.Error("Error occurred while trying to hangup call. Err: %v\n", err)
@@ -77,7 +86,6 @@ func main() {
 	var verbose bool
 
 	flag.BoolVar(&printVersion, "v", false, " Show version ")
-	flag.StringVar(&CallThisNumber, "n", "", " Number to call ")
 	flag.StringVar(&PProjectID, "p", ProjectID, " ProjectID ")
 	flag.StringVar(&PTokenID, "t", TokenID, " TokenID ")
 	flag.BoolVar(&verbose, "d", false, " Enable debug mode ")
@@ -114,6 +122,8 @@ func main() {
 	}()
 
 	consumer := new(signalwire.Consumer)
+
+	signalwire.GlobalOverwriteHost = Host
 	// setup the Client
 	consumer.Setup(PProjectID, PTokenID, Contexts)
 	// register callback

@@ -35,6 +35,7 @@ func (relay *RelaySession) RelayPhoneDial(ctx context.Context, call *CallSession
 	}
 
 	call.CallInit(ctx)
+	call.SetType(CallTypePhone)
 
 	v := ParamsBladeExecuteStruct{
 		Protocol: relay.Blade.Protocol,
