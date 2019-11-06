@@ -1,5 +1,5 @@
 GO_BIN ?= go
-OUT_BIN = ReceiveFax
+OUT_BIN = ReceiveFaxAsync
 
 export PATH := $(PATH):/usr/local/go/bin
 

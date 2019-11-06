@@ -1,4 +1,4 @@
-module github.com/signalwire/signalwire-golang/RelayExamples/ReceiveFax
+module github.com/signalwire/signalwire-golang/RelayExamples/ReceiveFaxAsync
 
 go 1.12
 

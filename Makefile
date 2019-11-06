@@ -22,7 +22,7 @@ lint:
 	make lint -C RelayExamples/RecordMultipleAsync
 	make lint -C RelayExamples/PlayMultipleAsync
 	make lint -C RelayExamples/Detect
-	make lint -C RelayExamples/ReceiveFax
+	make lint -C RelayExamples/ReceiveFaxAsync
 	make lint -C RelayExamples/SendFax
 	make lint -C RelayExamples/RecordBlocking
 	make lint -C RelayExamples/ReceiveFaxBlocking
@@ -46,7 +46,7 @@ update:
 	make update -C RelayExamples/RecordMultipleAsync
 	make update -C RelayExamples/PlayMultipleAsync
 	make update -C RelayExamples/Detect
-	make update -C RelayExamples/ReceiveFax
+	make update -C RelayExamples/ReceiveFaxAsync
 	make update -C RelayExamples/SendFax
 	make update -C RelayExamples/RecordBlocking
 	make update -C RelayExamples/ReceiveFaxBlocking
