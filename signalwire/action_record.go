@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"sync"
+	"time"
 )
 
 // RecordState keeps the state of a play action
@@ -54,6 +55,7 @@ type RecordAction struct {
 	State     RecordState
 	URL       string
 	err       error
+	done      chan bool
 	sync.RWMutex
 }
 
@@ -82,7 +84,7 @@ func (callobj *CallObj) RecordAudio(rec *RecordParams) (*RecordResult, error) {
 		return &a.Result, err
 	}
 
-	callobj.callbacksRunRecord(callobj.Calling.Ctx, ctrlID, a)
+	callobj.callbacksRunRecord(callobj.Calling.Ctx, ctrlID, a, true)
 
 	return &a.Result, nil
 }
@@ -100,10 +102,15 @@ func (callobj *CallObj) RecordAudioStop(ctrlID *string) error {
 	return callobj.Calling.Relay.RelayRecordAudioStop(callobj.Calling.Ctx, callobj.call, ctrlID)
 }
 
-func (callobj *CallObj) callbacksRunRecord(_ context.Context, ctrlID string, res *RecordAction) {
+func (callobj *CallObj) callbacksRunRecord(ctx context.Context, ctrlID string, res *RecordAction, norunCB bool) {
+	var out bool
+
+	timer := time.NewTimer(BroadcastEventTimeout * time.Second)
+
 	for {
-		var out bool
 		select {
+		case <-timer.C:
+			out = true
 		case state := <-callobj.call.CallRecordChans[ctrlID]:
 			res.RLock()
 
@@ -127,10 +134,11 @@ func (callobj *CallObj) callbacksRunRecord(_ context.Context, ctrlID string, res
 
 				out = true
 
-				if callobj.OnRecordFinished != nil {
+				if callobj.OnRecordFinished != nil && !norunCB {
 					callobj.OnRecordFinished(res)
 				}
 			case RecordRecording:
+				timer.Reset(MaxCallDuration * time.Second)
 				res.Lock()
 
 				res.State = state
@@ -139,7 +147,7 @@ func (callobj *CallObj) callbacksRunRecord(_ context.Context, ctrlID string, res
 
 				Log.Debug("Recording. ctrlID: %s\n", ctrlID)
 
-				if callobj.OnRecordRecording != nil {
+				if callobj.OnRecordRecording != nil && !norunCB {
 					callobj.OnRecordRecording(res)
 				}
 			case RecordNoInput:
@@ -153,10 +161,11 @@ func (callobj *CallObj) callbacksRunRecord(_ context.Context, ctrlID string, res
 
 				out = true
 
-				if callobj.OnRecordNoInput != nil {
+				if callobj.OnRecordNoInput != nil && !norunCB {
 					callobj.OnRecordNoInput(res)
 				}
 			case RecordPaused:
+				timer.Reset(MaxCallDuration * time.Second)
 				res.Lock()
 
 				res.State = state
@@ -172,7 +181,7 @@ func (callobj *CallObj) callbacksRunRecord(_ context.Context, ctrlID string, res
 				}
 			}
 
-			if prevstate != state && callobj.OnRecordStateChange != nil {
+			if prevstate != state && callobj.OnRecordStateChange != nil && !norunCB {
 				callobj.OnRecordStateChange(res)
 			}
 		case params := <-callobj.call.CallRecordEventChans[ctrlID]:
@@ -204,9 +213,15 @@ func (callobj *CallObj) callbacksRunRecord(_ context.Context, ctrlID string, res
 			callobj.call.CallRecordReadyChans[ctrlID] <- struct{}{}
 		case <-callobj.call.Hangup:
 			out = true
+		case <-ctx.Done():
+			out = true
 		}
 
 		if out {
+			if !norunCB {
+				res.done <- res.Result.Successful
+			}
+
 			break
 		}
 	}
@@ -229,11 +244,12 @@ func (callobj *CallObj) RecordAudioAsync(rec *RecordParams) (*RecordAction, erro
 
 	go func() {
 		go func() {
+			res.done = make(chan bool, 2)
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallRecordControlIDs
 
 			// states && callbacks
-			callobj.callbacksRunRecord(callobj.Calling.Ctx, ctrlID, res)
+			callobj.callbacksRunRecord(callobj.Calling.Ctx, ctrlID, res, false)
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
@@ -288,8 +304,15 @@ func (recordaction *RecordAction) recordAudioAsyncStop() error {
 }
 
 // Stop TODO DESCRIPTION
-func (recordaction *RecordAction) Stop() {
+func (recordaction *RecordAction) Stop() StopResult {
+	res := new(StopResult)
 	recordaction.err = recordaction.recordAudioAsyncStop()
+
+	if recordaction.err == nil {
+		res.Successful = <-recordaction.done
+	}
+
+	return *res
 }
 
 // GetCompleted TODO DESCRIPTION

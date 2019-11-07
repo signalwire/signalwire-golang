@@ -56,7 +56,7 @@ func (callobj *CallObj) Connect(ringback *[]RingbackStruct, devices *[][]DeviceS
 		return res, err
 	}
 
-	callobj.callbacksRunConnect(callobj.Calling.Ctx, a)
+	callobj.callbacksRunConnect(callobj.Calling.Ctx, a, true)
 
 	return res, nil
 }
@@ -78,7 +78,7 @@ func (callobj *CallObj) ConnectAsync(fromNumber, toNumber string) (*ConnectActio
 
 	go func() {
 		go func() {
-			callobj.callbacksRunConnect(callobj.Calling.Ctx, res)
+			callobj.callbacksRunConnect(callobj.Calling.Ctx, res, false)
 		}()
 
 		err := callobj.Calling.Relay.RelayPhoneConnect(callobj.Calling.Ctx, callobj.call, fromNumber, toNumber)
@@ -101,10 +101,10 @@ func (callobj *CallObj) ConnectAsync(fromNumber, toNumber string) (*ConnectActio
 }
 
 // callbacksRunConnect TODO DESCRIPTION
-func (callobj *CallObj) callbacksRunConnect(_ context.Context, res *ConnectAction) {
-	for {
-		var out bool
+func (callobj *CallObj) callbacksRunConnect(ctx context.Context, res *ConnectAction, norunCB bool) {
+	var out bool
 
+	for {
 		select {
 		case connectstate := <-callobj.call.CallConnectStateChan:
 			res.RLock()
@@ -125,7 +125,7 @@ func (callobj *CallObj) callbacksRunConnect(_ context.Context, res *ConnectActio
 
 				out = true
 
-				if callobj.OnConnectDisconnected != nil {
+				if callobj.OnConnectDisconnected != nil && !norunCB {
 					callobj.OnConnectDisconnected(res)
 				}
 
@@ -136,7 +136,7 @@ func (callobj *CallObj) callbacksRunConnect(_ context.Context, res *ConnectActio
 
 				res.Unlock()
 
-				if callobj.OnConnectConnecting != nil {
+				if callobj.OnConnectConnecting != nil && !norunCB {
 					callobj.OnConnectConnecting(res)
 				}
 			case CallConnectFailed:
@@ -149,7 +149,7 @@ func (callobj *CallObj) callbacksRunConnect(_ context.Context, res *ConnectActio
 
 				out = true
 
-				if callobj.OnConnectFailed != nil {
+				if callobj.OnConnectFailed != nil && !norunCB {
 					callobj.OnConnectFailed(res)
 				}
 			case CallConnectConnected:
@@ -159,14 +159,14 @@ func (callobj *CallObj) callbacksRunConnect(_ context.Context, res *ConnectActio
 
 				res.Unlock()
 
-				if callobj.OnConnectConnected != nil {
+				if callobj.OnConnectConnected != nil && !norunCB {
 					callobj.OnConnectConnected(res)
 				}
 			default:
 				out = true
 			}
 
-			if prevstate != connectstate && callobj.OnConnectStateChange != nil {
+			if prevstate != connectstate && callobj.OnConnectStateChange != nil && !norunCB {
 				callobj.OnConnectStateChange(res)
 			}
 		case rawEvent := <-callobj.call.CallConnectRawEventChan:
@@ -174,6 +174,8 @@ func (callobj *CallObj) callbacksRunConnect(_ context.Context, res *ConnectActio
 			res.Result.Event = *rawEvent
 			res.Unlock()
 		case <-callobj.call.Hangup:
+			out = true
+		case <-ctx.Done():
 			out = true
 		}
 
