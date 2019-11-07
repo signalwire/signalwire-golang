@@ -55,6 +55,7 @@ type PromptAction struct {
 	Completed bool
 	Result    CollectResult
 	err       error
+	done      chan bool
 	sync.RWMutex
 }
 
@@ -107,7 +108,7 @@ func (callobj *CallObj) PromptStop(ctrlID *string) error {
 }
 
 // callbacksRunPlayAndCollect TODO DESCRIPTION
-func (callobj *CallObj) callbacksRunPlayAndCollect(_ context.Context, ctrlID string, res *PromptAction) {
+func (callobj *CallObj) callbacksRunPlayAndCollect(ctx context.Context, ctrlID string, res *PromptAction) {
 	var cont bool
 
 	var out bool
@@ -217,9 +218,12 @@ func (callobj *CallObj) callbacksRunPlayAndCollect(_ context.Context, ctrlID str
 			callobj.call.CallPlayAndCollectReadyChans[ctrlID] <- struct{}{}
 		case <-callobj.call.Hangup:
 			out = true
+		case <-ctx.Done():
+			out = true
 		}
 
 		if out {
+			res.done <- res.Result.Successful
 			break
 		}
 	}
@@ -243,6 +247,7 @@ func (callobj *CallObj) PromptAsync(playlist *[]PlayStruct, collect *CollectStru
 
 	go func() {
 		go func() {
+			res.done = make(chan bool, 2)
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallPlayAndCollectControlID
 
@@ -310,8 +315,15 @@ func (action *PromptAction) playAndCollectAsyncStop() error {
 }
 
 // Stop TODO DESCRIPTION
-func (action *PromptAction) Stop() {
+func (action *PromptAction) Stop() StopResult {
+	res := new(StopResult)
 	action.err = action.playAndCollectAsyncStop()
+
+	if action.err == nil {
+		res.Successful = <-action.done
+	}
+
+	return *res
 }
 
 // GetCompleted TODO DESCRIPTION

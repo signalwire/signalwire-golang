@@ -109,6 +109,11 @@ type ResultHangup struct {
 	err        error
 }
 
+// StopResult TODO DESCRIPTION
+type StopResult struct {
+	Successful bool
+}
+
 // ICalling object visible to the end user
 type ICalling interface {
 	DialPhone(fromNumber, toNumber string) ResultDial

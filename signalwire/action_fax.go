@@ -53,6 +53,7 @@ type FaxAction struct {
 	Result    FaxResult
 	eventType FaxEventType
 	err       error
+	done      chan bool
 	sync.RWMutex
 }
 
@@ -130,7 +131,7 @@ func (callobj *CallObj) SendFaxStop(ctrlID *string) error {
 	return callobj.Calling.Relay.RelaySendFaxStop(callobj.Calling.Ctx, callobj.call, ctrlID)
 }
 
-func (callobj *CallObj) callbacksRunFax(_ context.Context, ctrlID string, res *FaxAction) {
+func (callobj *CallObj) callbacksRunFax(ctx context.Context, ctrlID string, res *FaxAction) {
 	for {
 		var out bool
 
@@ -258,9 +259,12 @@ func (callobj *CallObj) callbacksRunFax(_ context.Context, ctrlID string, res *F
 			callobj.call.CallFaxReadyChan <- struct{}{}
 		case <-callobj.call.Hangup:
 			out = true
+		case <-ctx.Done():
+			out = true
 		}
 
 		if out {
+			res.done <- res.Result.Successful
 			break
 		}
 	}
@@ -283,6 +287,7 @@ func (callobj *CallObj) ReceiveFaxAsync() (*FaxAction, error) {
 
 	go func() {
 		go func() {
+			res.done = make(chan bool, 2)
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallFaxControlID
 
@@ -330,6 +335,7 @@ func (callobj *CallObj) SendFaxAsync(doc, id, headerInfo string) (*FaxAction, er
 
 	go func() {
 		go func() {
+			res.done = make(chan bool, 2)
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallFaxControlID
 
@@ -397,8 +403,15 @@ func (action *FaxAction) faxAsyncStop() error {
 }
 
 // Stop TODO DESCRIPTION
-func (action *FaxAction) Stop() {
+func (action *FaxAction) Stop() StopResult {
+	res := new(StopResult)
 	action.err = action.faxAsyncStop()
+
+	if action.err == nil {
+		res.Successful = <-action.done
+	}
+
+	return *res
 }
 
 // GetCompleted TODO DESCRIPTION

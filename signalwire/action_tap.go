@@ -83,6 +83,7 @@ type TapAction struct {
 	Result    TapResult
 	State     TapState
 	err       error
+	done      chan bool
 	sync.RWMutex
 }
 
@@ -158,7 +159,7 @@ func (callobj *CallObj) TapStop(ctrlID *string) error {
 }
 
 // callbacksRunTap TODO DESCRIPTION
-func (callobj *CallObj) callbacksRunTap(_ context.Context, ctrlID string, res *TapAction) {
+func (callobj *CallObj) callbacksRunTap(ctx context.Context, ctrlID string, res *TapAction) {
 	var out bool
 
 	for {
@@ -269,9 +270,12 @@ func (callobj *CallObj) callbacksRunTap(_ context.Context, ctrlID string, res *T
 			callobj.call.CallTapReadyChans[ctrlID] <- struct{}{}
 		case <-callobj.call.Hangup:
 			out = true
+		case <-ctx.Done():
+			out = true
 		}
 
 		if out {
+			res.done <- res.Result.Successful
 			break
 		}
 	}
@@ -294,6 +298,7 @@ func (callobj *CallObj) TapAudioAsync(direction fmt.Stringer, tapdev *TapDevice)
 
 	go func() {
 		go func() {
+			res.done = make(chan bool, 2)
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallTapControlIDs
 
@@ -367,8 +372,15 @@ func (tapaction *TapAction) tapAsyncStop() error {
 }
 
 // Stop TODO DESCRIPTION
-func (tapaction *TapAction) Stop() {
+func (tapaction *TapAction) Stop() StopResult {
+	res := new(StopResult)
 	tapaction.err = tapaction.tapAsyncStop()
+
+	if tapaction.err == nil {
+		res.Successful = <-tapaction.done
+	}
+
+	return *res
 }
 
 // GetCompleted TODO DESCRIPTION

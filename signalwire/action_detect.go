@@ -57,6 +57,7 @@ type DetectMachineAction struct {
 	Result    DetectResult
 	Event     DetectMachineEvent
 	err       error
+	done      chan bool
 	sync.RWMutex
 }
 
@@ -107,6 +108,7 @@ type DetectDigitAction struct {
 	Result    DetectResult
 	Event     DetectDigitEvent
 	err       error
+	done      chan bool
 	sync.RWMutex
 }
 
@@ -118,6 +120,7 @@ type DetectFaxAction struct {
 	Result    DetectResult
 	Event     DetectFaxEvent
 	err       error
+	done      chan bool
 	sync.RWMutex
 }
 
@@ -228,7 +231,7 @@ func (callobj *CallObj) DetectStop(ctrlID *string) error {
 }
 
 // callbacksRunDetectMachine TODO DESCRIPTION
-func (callobj *CallObj) callbacksRunDetectMachine(_ context.Context, ctrlID string, res *DetectMachineAction) {
+func (callobj *CallObj) callbacksRunDetectMachine(ctx context.Context, ctrlID string, res *DetectMachineAction) {
 	for {
 		var out bool
 
@@ -288,18 +291,19 @@ func (callobj *CallObj) callbacksRunDetectMachine(_ context.Context, ctrlID stri
 			res.Unlock()
 		case <-callobj.call.Hangup:
 			out = true
+		case <-ctx.Done():
+			out = true
 		}
 
 		if out {
-			Log.Debug("OUT\n")
-
+			res.done <- res.Result.Successful
 			break
 		}
 	}
 }
 
 // callbacksRunDetectFax TODO DESCRIPTION
-func (callobj *CallObj) callbacksRunDetectFax(_ context.Context, ctrlID string, res *DetectFaxAction) {
+func (callobj *CallObj) callbacksRunDetectFax(ctx context.Context, ctrlID string, res *DetectFaxAction) {
 	for {
 		var out bool
 
@@ -352,16 +356,19 @@ func (callobj *CallObj) callbacksRunDetectFax(_ context.Context, ctrlID string, 
 			res.Unlock()
 		case <-callobj.call.Hangup:
 			out = true
+		case <-ctx.Done():
+			out = true
 		}
 
 		if out {
+			res.done <- res.Result.Successful
 			break
 		}
 	}
 }
 
 // callbacksRunDetectDigit TODO DESCRIPTION
-func (callobj *CallObj) callbacksRunDetectDigit(_ context.Context, ctrlID string, res *DetectDigitAction) {
+func (callobj *CallObj) callbacksRunDetectDigit(ctx context.Context, ctrlID string, res *DetectDigitAction) {
 	for {
 		var out bool
 
@@ -433,9 +440,12 @@ func (callobj *CallObj) callbacksRunDetectDigit(_ context.Context, ctrlID string
 			res.Unlock()
 		case <-callobj.call.Hangup:
 			out = true
+		case <-ctx.Done():
+			out = true
 		}
 
 		if out {
+			res.done <- res.Result.Successful
 			break
 		}
 	}
@@ -458,6 +468,7 @@ func (callobj *CallObj) DetectMachineAsync(det *DetectMachineParams) (*DetectMac
 
 	go func() {
 		go func() {
+			res.done = make(chan bool, 2)
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallDetectMachineControlID
 
@@ -676,8 +687,16 @@ func (detectaction *DetectMachineAction) detectAsyncStop() error {
 }
 
 // Stop TODO DESCRIPTION
-func (detectaction *DetectMachineAction) Stop() {
+func (detectaction *DetectMachineAction) Stop() StopResult {
+	res := new(StopResult)
+
 	detectaction.err = detectaction.detectAsyncStop()
+
+	if detectaction.err == nil {
+		res.Successful = <-detectaction.done
+	}
+
+	return *res
 }
 
 // detectAsyncStop TODO DESCRIPTION
@@ -686,8 +705,16 @@ func (detectaction *DetectDigitAction) detectAsyncStop() error {
 }
 
 // Stop TODO DESCRIPTION
-func (detectaction *DetectDigitAction) Stop() {
+func (detectaction *DetectDigitAction) Stop() StopResult {
+	res := new(StopResult)
+
 	detectaction.err = detectaction.detectAsyncStop()
+
+	if detectaction.err == nil {
+		res.Successful = <-detectaction.done
+	}
+
+	return *res
 }
 
 // detectAsyncStop TODO DESCRIPTION
@@ -696,8 +723,15 @@ func (detectaction *DetectFaxAction) detectAsyncStop() error {
 }
 
 // Stop TODO DESCRIPTION
-func (detectaction *DetectFaxAction) Stop() {
+func (detectaction *DetectFaxAction) Stop() StopResult {
+	res := new(StopResult)
 	detectaction.err = detectaction.detectAsyncStop()
+
+	if detectaction.err == nil {
+		res.Successful = <-detectaction.done
+	}
+
+	return *res
 }
 
 // GetCompleted TODO DESCRIPTION

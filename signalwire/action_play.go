@@ -54,6 +54,7 @@ type PlayAction struct {
 	Result    PlayResult
 	State     PlayState
 	err       error
+	done      chan bool
 	sync.RWMutex
 }
 
@@ -221,9 +222,10 @@ func (callobj *CallObj) PlayStop(ctrlID *string) error {
 }
 
 // callbacksRunPlay TODO DESCRIPTION
-func (callobj *CallObj) callbacksRunPlay(_ context.Context, ctrlID string, res *PlayAction) {
+func (callobj *CallObj) callbacksRunPlay(ctx context.Context, ctrlID string, res *PlayAction) {
+	var out bool
+
 	for {
-		var out bool
 		select {
 		// get play states
 		case playstate := <-callobj.call.CallPlayChans[ctrlID]:
@@ -304,9 +306,12 @@ func (callobj *CallObj) callbacksRunPlay(_ context.Context, ctrlID string, res *
 
 		case <-callobj.call.Hangup:
 			out = true
+		case <-ctx.Done():
+			out = true
 		}
 
 		if out {
+			res.done <- res.Result.Successful
 			break
 		}
 	}
@@ -329,6 +334,7 @@ func (callobj *CallObj) PlaySilenceAsync(duration float64) (*PlayAction, error) 
 
 	go func() {
 		go func() {
+			res.done = make(chan bool, 2)
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallPlayControlIDs
 			callobj.callbacksRunPlay(callobj.Calling.Ctx, ctrlID, res)
@@ -375,6 +381,7 @@ func (callobj *CallObj) PlayRingtoneAsync(name string, duration float64) (*PlayA
 
 	go func() {
 		go func() {
+			res.done = make(chan bool, 2)
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallPlayControlIDs
 
@@ -422,6 +429,7 @@ func (callobj *CallObj) PlayTTSAsync(text, language, gender string) (*PlayAction
 
 	go func() {
 		go func() {
+			res.done = make(chan bool, 2)
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallPlayControlIDs
 
@@ -469,6 +477,7 @@ func (callobj *CallObj) PlayAudioAsync(url string) (*PlayAction, error) {
 
 	go func() {
 		go func() {
+			res.done = make(chan bool, 2)
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallPlayControlIDs
 
@@ -536,8 +545,15 @@ func (playaction *PlayAction) playAsyncStop() error {
 }
 
 // Stop TODO DESCRIPTION
-func (playaction *PlayAction) Stop() {
+func (playaction *PlayAction) Stop() StopResult {
+	res := new(StopResult)
 	playaction.err = playaction.playAsyncStop()
+
+	if playaction.err == nil {
+		res.Successful = <-playaction.done
+	}
+
+	return *res
 }
 
 // GetCompleted TODO DESCRIPTION

@@ -54,6 +54,7 @@ type RecordAction struct {
 	State     RecordState
 	URL       string
 	err       error
+	done      chan bool
 	sync.RWMutex
 }
 
@@ -100,7 +101,7 @@ func (callobj *CallObj) RecordAudioStop(ctrlID *string) error {
 	return callobj.Calling.Relay.RelayRecordAudioStop(callobj.Calling.Ctx, callobj.call, ctrlID)
 }
 
-func (callobj *CallObj) callbacksRunRecord(_ context.Context, ctrlID string, res *RecordAction) {
+func (callobj *CallObj) callbacksRunRecord(ctx context.Context, ctrlID string, res *RecordAction) {
 	for {
 		var out bool
 		select {
@@ -204,9 +205,12 @@ func (callobj *CallObj) callbacksRunRecord(_ context.Context, ctrlID string, res
 			callobj.call.CallRecordReadyChans[ctrlID] <- struct{}{}
 		case <-callobj.call.Hangup:
 			out = true
+		case <-ctx.Done():
+			out = true
 		}
 
 		if out {
+			res.done <- res.Result.Successful
 			break
 		}
 	}
@@ -229,6 +233,7 @@ func (callobj *CallObj) RecordAudioAsync(rec *RecordParams) (*RecordAction, erro
 
 	go func() {
 		go func() {
+			res.done = make(chan bool, 2)
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallRecordControlIDs
 
@@ -288,8 +293,15 @@ func (recordaction *RecordAction) recordAudioAsyncStop() error {
 }
 
 // Stop TODO DESCRIPTION
-func (recordaction *RecordAction) Stop() {
+func (recordaction *RecordAction) Stop() StopResult {
+	res := new(StopResult)
 	recordaction.err = recordaction.recordAudioAsyncStop()
+
+	if recordaction.err == nil {
+		res.Successful = <-recordaction.done
+	}
+
+	return *res
 }
 
 // GetCompleted TODO DESCRIPTION
