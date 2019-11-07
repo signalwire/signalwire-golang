@@ -89,7 +89,7 @@ func (callobj *CallObj) ReceiveFax() (*FaxResult, error) {
 		return &a.Result, err
 	}
 
-	callobj.callbacksRunFax(callobj.Calling.Ctx, ctrlID, a)
+	callobj.callbacksRunFax(callobj.Calling.Ctx, ctrlID, a, true)
 
 	return &a.Result, nil
 }
@@ -113,7 +113,7 @@ func (callobj *CallObj) SendFax(doc, id, headerInfo string) (*FaxResult, error) 
 		return &a.Result, err
 	}
 
-	callobj.callbacksRunFax(callobj.Calling.Ctx, ctrlID, a)
+	callobj.callbacksRunFax(callobj.Calling.Ctx, ctrlID, a, true)
 
 	return &a.Result, nil
 }
@@ -131,7 +131,7 @@ func (callobj *CallObj) SendFaxStop(ctrlID *string) error {
 	return callobj.Calling.Relay.RelaySendFaxStop(callobj.Calling.Ctx, callobj.call, ctrlID)
 }
 
-func (callobj *CallObj) callbacksRunFax(ctx context.Context, ctrlID string, res *FaxAction) {
+func (callobj *CallObj) callbacksRunFax(ctx context.Context, ctrlID string, res *FaxAction, norunCB bool) {
 	for {
 		var out bool
 
@@ -153,7 +153,7 @@ func (callobj *CallObj) callbacksRunFax(ctx context.Context, ctrlID string, res 
 
 				Log.Debug("Fax finished. ctrlID: %s res [%p] Completed [%v] Successful [%v]\n", ctrlID, res, res.Completed, res.Result.Successful)
 
-				if callobj.OnFaxFinished != nil {
+				if callobj.OnFaxFinished != nil && !norunCB {
 					callobj.OnFaxFinished(res)
 				}
 			case FaxPage:
@@ -165,7 +165,7 @@ func (callobj *CallObj) callbacksRunFax(ctx context.Context, ctrlID string, res 
 
 				Log.Debug("Page event. ctrlID: %s\n", ctrlID)
 
-				if callobj.OnFaxPage != nil {
+				if callobj.OnFaxPage != nil && !norunCB {
 					callobj.OnFaxPage(res)
 				}
 			case FaxError:
@@ -178,7 +178,7 @@ func (callobj *CallObj) callbacksRunFax(ctx context.Context, ctrlID string, res 
 
 				res.Unlock()
 
-				if callobj.OnFaxError != nil {
+				if callobj.OnFaxError != nil && !norunCB {
 					callobj.OnFaxError(res)
 				}
 			default:
@@ -291,7 +291,7 @@ func (callobj *CallObj) ReceiveFaxAsync() (*FaxAction, error) {
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallFaxControlID
 
-			callobj.callbacksRunFax(callobj.Calling.Ctx, ctrlID, res)
+			callobj.callbacksRunFax(callobj.Calling.Ctx, ctrlID, res, false)
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
@@ -339,7 +339,7 @@ func (callobj *CallObj) SendFaxAsync(doc, id, headerInfo string) (*FaxAction, er
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallFaxControlID
 
-			callobj.callbacksRunFax(callobj.Calling.Ctx, ctrlID, res)
+			callobj.callbacksRunFax(callobj.Calling.Ctx, ctrlID, res, false)
 		}()
 
 		newCtrlID, _ := GenUUIDv4()

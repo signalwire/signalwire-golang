@@ -89,7 +89,7 @@ func (callobj *CallObj) Prompt(playlist *[]PlayStruct, collect *CollectStruct) (
 		return &a.Result, err
 	}
 
-	callobj.callbacksRunPlayAndCollect(callobj.Calling.Ctx, ctrlID, a)
+	callobj.callbacksRunPlayAndCollect(callobj.Calling.Ctx, ctrlID, a, true)
 
 	return &a.Result, nil
 }
@@ -108,7 +108,7 @@ func (callobj *CallObj) PromptStop(ctrlID *string) error {
 }
 
 // callbacksRunPlayAndCollect TODO DESCRIPTION
-func (callobj *CallObj) callbacksRunPlayAndCollect(ctx context.Context, ctrlID string, res *PromptAction) {
+func (callobj *CallObj) callbacksRunPlayAndCollect(ctx context.Context, ctrlID string, res *PromptAction, norunCB bool) {
 	var cont bool
 
 	var out bool
@@ -152,7 +152,7 @@ func (callobj *CallObj) callbacksRunPlayAndCollect(ctx context.Context, ctrlID s
 
 				out = true
 
-				if callobj.OnPrompt != nil {
+				if callobj.OnPrompt != nil && !norunCB {
 					callobj.OnPrompt(res)
 				}
 
@@ -223,7 +223,10 @@ func (callobj *CallObj) callbacksRunPlayAndCollect(ctx context.Context, ctrlID s
 		}
 
 		if out {
-			res.done <- res.Result.Successful
+			if !norunCB {
+				res.done <- res.Result.Successful
+			}
+
 			break
 		}
 	}
@@ -251,7 +254,7 @@ func (callobj *CallObj) PromptAsync(playlist *[]PlayStruct, collect *CollectStru
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallPlayAndCollectControlID
 
-			callobj.callbacksRunPlayAndCollect(callobj.Calling.Ctx, ctrlID, res)
+			callobj.callbacksRunPlayAndCollect(callobj.Calling.Ctx, ctrlID, res, false)
 		}()
 
 		newCtrlID, _ := GenUUIDv4()

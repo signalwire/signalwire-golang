@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"sync"
+	"time"
 )
 
 // PlayState keeps the state of a play action
@@ -91,44 +92,16 @@ type PlayGenericParams struct {
 	SpecificParams interface{}
 }
 
-func (callobj *CallObj) checkPlayFinished(ctx context.Context, ctrlID string, res *PlayResult) (*PlayResult, error) {
-	if ret := callobj.call.WaitPlayState(ctx, ctrlID, PlayPlaying); !ret {
-		Log.Debug("Playing did not start successfully. CtrlID: %s\n", ctrlID)
-
-		return res, nil
-	}
-
-	var out bool
-
-	for {
-		select {
-		case playstate := <-callobj.call.CallPlayChans[ctrlID]:
-			if playstate == PlayFinished {
-				out = true
-				res.Successful = true
-			}
-		case <-callobj.call.Hangup:
-			out = true
-		}
-
-		if out {
-			break
-		}
-	}
-
-	return res, nil
-}
-
 // PlayAudio TODO DESCRIPTION
 func (callobj *CallObj) PlayAudio(s string) (*PlayResult, error) {
-	res := new(PlayResult)
+	a := new(PlayAction)
 
 	if callobj.Calling == nil {
-		return res, errors.New("nil Calling object")
+		return &a.Result, errors.New("nil Calling object")
 	}
 
 	if callobj.Calling.Relay == nil {
-		return res, errors.New("nil Relay object")
+		return &a.Result, errors.New("nil Relay object")
 	}
 
 	ctrlID, _ := GenUUIDv4()
@@ -136,76 +109,84 @@ func (callobj *CallObj) PlayAudio(s string) (*PlayResult, error) {
 	err := callobj.Calling.Relay.RelayPlayAudio(callobj.Calling.Ctx, callobj.call, ctrlID, s)
 
 	if err != nil {
-		return res, err
+		return &a.Result, err
 	}
 
-	return callobj.checkPlayFinished(callobj.Calling.Ctx, ctrlID, res)
+	callobj.callbacksRunPlay(callobj.Calling.Ctx, ctrlID, a, true)
+
+	return &a.Result, nil
 }
 
 // PlayTTS TODO DESCRIPTION
 func (callobj *CallObj) PlayTTS(text, language, gender string) (*PlayResult, error) {
-	res := new(PlayResult)
+	a := new(PlayAction)
 
 	if callobj.Calling == nil {
-		return res, errors.New("nil Calling object")
+		return &a.Result, errors.New("nil Calling object")
 	}
 
 	if callobj.Calling.Relay == nil {
-		return res, errors.New("nil Relay object")
+		return &a.Result, errors.New("nil Relay object")
 	}
 
 	ctrlID, _ := GenUUIDv4()
 	err := callobj.Calling.Relay.RelayPlayTTS(callobj.Calling.Ctx, callobj.call, ctrlID, text, language, gender)
 
 	if err != nil {
-		return res, err
+		return &a.Result, err
 	}
 
-	return callobj.checkPlayFinished(callobj.Calling.Ctx, ctrlID, res)
+	callobj.callbacksRunPlay(callobj.Calling.Ctx, ctrlID, a, true)
+
+	return &a.Result, nil
 }
 
 // PlaySilence TODO DESCRIPTION
 func (callobj *CallObj) PlaySilence(duration float64) (*PlayResult, error) {
-	res := new(PlayResult)
+	a := new(PlayAction)
 
 	if callobj.Calling == nil {
-		return res, errors.New("nil Calling object")
+		return &a.Result, errors.New("nil Calling object")
 	}
 
 	if callobj.Calling.Relay == nil {
-		return res, errors.New("nil Relay object")
+		return &a.Result, errors.New("nil Relay object")
 	}
 
 	ctrlID, _ := GenUUIDv4()
 	err := callobj.Calling.Relay.RelayPlaySilence(callobj.Calling.Ctx, callobj.call, ctrlID, duration)
 
 	if err != nil {
-		return res, err
+		return &a.Result, err
 	}
 
-	return callobj.checkPlayFinished(callobj.Calling.Ctx, ctrlID, res)
+	callobj.callbacksRunPlay(callobj.Calling.Ctx, ctrlID, a, true)
+
+	return &a.Result, nil
 }
 
 // PlayRingtone TODO DESCRIPTION
 func (callobj *CallObj) PlayRingtone(name string, duration float64) (*PlayResult, error) {
-	res := new(PlayResult)
+	a := new(PlayAction)
 
 	if callobj.Calling == nil {
-		return res, errors.New("nil Calling object")
+		return &a.Result, errors.New("nil Calling object")
 	}
 
 	if callobj.Calling.Relay == nil {
-		return res, errors.New("nil Relay object")
+		return &a.Result, errors.New("nil Relay object")
 	}
 
 	ctrlID, _ := GenUUIDv4()
 	err := callobj.Calling.Relay.RelayPlayRingtone(callobj.Calling.Ctx, callobj.call, ctrlID, name, duration)
 
 	if err != nil {
-		return res, err
+		return &a.Result, err
 	}
 
-	return callobj.checkPlayFinished(callobj.Calling.Ctx, ctrlID, res)
+	callobj.callbacksRunPlay(callobj.Calling.Ctx, ctrlID, a, true)
+
+	return &a.Result, nil
 }
 
 // PlayStop TODO DESCRIPTION
@@ -222,11 +203,15 @@ func (callobj *CallObj) PlayStop(ctrlID *string) error {
 }
 
 // callbacksRunPlay TODO DESCRIPTION
-func (callobj *CallObj) callbacksRunPlay(ctx context.Context, ctrlID string, res *PlayAction) {
+func (callobj *CallObj) callbacksRunPlay(ctx context.Context, ctrlID string, res *PlayAction, norunCB bool) {
 	var out bool
+
+	timer := time.NewTimer(BroadcastEventTimeout * time.Second)
 
 	for {
 		select {
+		case <-timer.C:
+			out = true
 		// get play states
 		case playstate := <-callobj.call.CallPlayChans[ctrlID]:
 			res.RLock()
@@ -249,11 +234,12 @@ func (callobj *CallObj) callbacksRunPlay(ctx context.Context, ctrlID string, res
 
 				out = true
 
-				if callobj.OnPlayFinished != nil {
+				if callobj.OnPlayFinished != nil && !norunCB {
 					callobj.OnPlayFinished(res)
 				}
 
 			case PlayPlaying:
+				timer.Reset(MaxCallDuration * time.Second)
 				res.Lock()
 
 				res.State = playstate
@@ -262,7 +248,7 @@ func (callobj *CallObj) callbacksRunPlay(ctx context.Context, ctrlID string, res
 
 				Log.Debug("Playing. ctrlID: %s\n", ctrlID)
 
-				if callobj.OnPlayPlaying != nil {
+				if callobj.OnPlayPlaying != nil && !norunCB {
 					callobj.OnPlayPlaying(res)
 				}
 			case PlayError:
@@ -277,10 +263,11 @@ func (callobj *CallObj) callbacksRunPlay(ctx context.Context, ctrlID string, res
 
 				out = true
 
-				if callobj.OnPlayError != nil {
+				if callobj.OnPlayError != nil && !norunCB {
 					callobj.OnPlayError(res)
 				}
 			case PlayPaused:
+				timer.Reset(MaxCallDuration * time.Second)
 				res.Lock()
 
 				res.State = playstate
@@ -289,14 +276,14 @@ func (callobj *CallObj) callbacksRunPlay(ctx context.Context, ctrlID string, res
 
 				Log.Debug("Play paused. ctrlID: %s\n", ctrlID)
 
-				if callobj.OnPlayPaused != nil {
+				if callobj.OnPlayPaused != nil && !norunCB {
 					callobj.OnPlayPaused(res)
 				}
 			default:
 				Log.Debug("Unknown state. ctrlID: %s\n", ctrlID)
 			}
 
-			if prevstate != playstate && callobj.OnPlayStateChange != nil {
+			if prevstate != playstate && callobj.OnPlayStateChange != nil && !norunCB {
 				callobj.OnPlayStateChange(res)
 			}
 		case rawEvent := <-callobj.call.CallPlayRawEventChans[ctrlID]:
@@ -311,7 +298,10 @@ func (callobj *CallObj) callbacksRunPlay(ctx context.Context, ctrlID string, res
 		}
 
 		if out {
-			res.done <- res.Result.Successful
+			if !norunCB {
+				res.done <- res.Result.Successful
+			}
+
 			break
 		}
 	}
@@ -337,7 +327,7 @@ func (callobj *CallObj) PlaySilenceAsync(duration float64) (*PlayAction, error) 
 			res.done = make(chan bool, 2)
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallPlayControlIDs
-			callobj.callbacksRunPlay(callobj.Calling.Ctx, ctrlID, res)
+			callobj.callbacksRunPlay(callobj.Calling.Ctx, ctrlID, res, false)
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
@@ -385,7 +375,7 @@ func (callobj *CallObj) PlayRingtoneAsync(name string, duration float64) (*PlayA
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallPlayControlIDs
 
-			callobj.callbacksRunPlay(callobj.Calling.Ctx, ctrlID, res)
+			callobj.callbacksRunPlay(callobj.Calling.Ctx, ctrlID, res, false)
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
@@ -433,7 +423,7 @@ func (callobj *CallObj) PlayTTSAsync(text, language, gender string) (*PlayAction
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallPlayControlIDs
 
-			callobj.callbacksRunPlay(callobj.Calling.Ctx, ctrlID, res)
+			callobj.callbacksRunPlay(callobj.Calling.Ctx, ctrlID, res, false)
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
@@ -481,7 +471,7 @@ func (callobj *CallObj) PlayAudioAsync(url string) (*PlayAction, error) {
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallPlayControlIDs
 
-			callobj.callbacksRunPlay(callobj.Calling.Ctx, ctrlID, res)
+			callobj.callbacksRunPlay(callobj.Calling.Ctx, ctrlID, res, false)
 		}()
 
 		newCtrlID, _ := GenUUIDv4()

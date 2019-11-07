@@ -20,4 +20,5 @@ const (
 	EventQueue              = 10 /* Buffered Channels - max unprocessed events per action */
 	DefaultActionTimeout    = 30
 	HTTPClientTimeout       = 60 /* seconds */
+	MaxCallDuration         = 3600 * 4
 )

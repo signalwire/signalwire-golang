@@ -43,28 +43,6 @@ type ISendDigits interface {
 	GetResult() SendDigitsResult
 }
 
-func (callobj *CallObj) checkSendDigitsFinished(_ context.Context, ctrlID string, res *SendDigitsResult) (*SendDigitsResult, error) {
-	var out bool
-
-	for {
-		select {
-		case state := <-callobj.call.CallSendDigitsChans[ctrlID]:
-			if state == SendDigitsFinished {
-				out = true
-				res.Successful = true
-			}
-		case <-callobj.call.Hangup:
-			out = true
-		}
-
-		if out {
-			break
-		}
-	}
-
-	return res, nil
-}
-
 func checkDtmf(s string) bool {
 	allowed := "wW1234567890*#ABCD"
 
@@ -83,28 +61,30 @@ func (callobj *CallObj) SendDigits(digits string) (*SendDigitsResult, error) {
 		return nil, errors.New("invalid DTMF")
 	}
 
-	res := new(SendDigitsResult)
+	a := new(SendDigitsAction)
 
 	if callobj.Calling == nil {
-		return res, errors.New("nil Calling object")
+		return &a.Result, errors.New("nil Calling object")
 	}
 
 	if callobj.Calling.Relay == nil {
-		return res, errors.New("nil Relay object")
+		return &a.Result, errors.New("nil Relay object")
 	}
 
 	ctrlID, _ := GenUUIDv4()
 	err := callobj.Calling.Relay.RelaySendDigits(callobj.Calling.Ctx, callobj.call, ctrlID, digits)
 
 	if err != nil {
-		return res, err
+		return &a.Result, err
 	}
 
-	return callobj.checkSendDigitsFinished(callobj.Calling.Ctx, ctrlID, res)
+	callobj.callbacksRunSendDigits(callobj.Calling.Ctx, ctrlID, a, true)
+
+	return &a.Result, nil
 }
 
 // callbacksRunSendDigits TODO DESCRIPTION
-func (callobj *CallObj) callbacksRunSendDigits(_ context.Context, ctrlID string, res *SendDigitsAction) {
+func (callobj *CallObj) callbacksRunSendDigits(_ context.Context, ctrlID string, res *SendDigitsAction, norunCB bool) {
 	var out bool
 
 	for {
@@ -130,7 +110,7 @@ func (callobj *CallObj) callbacksRunSendDigits(_ context.Context, ctrlID string,
 
 				out = true
 
-				if callobj.OnSendDigitsFinished != nil {
+				if callobj.OnSendDigitsFinished != nil && !norunCB {
 					callobj.OnSendDigitsFinished(res)
 				}
 
@@ -138,7 +118,7 @@ func (callobj *CallObj) callbacksRunSendDigits(_ context.Context, ctrlID string,
 				Log.Debug("Unknown state. ctrlID: %s\n", ctrlID)
 			}
 
-			if prevstate != state && callobj.OnSendDigitsStateChange != nil {
+			if prevstate != state && callobj.OnSendDigitsStateChange != nil && !norunCB {
 				callobj.OnSendDigitsStateChange(res)
 			}
 		case rawEvent := <-callobj.call.CallSendDigitsRawEventChans[ctrlID]:
@@ -181,7 +161,7 @@ func (callobj *CallObj) SendDigitsAsync(digits string) (*SendDigitsAction, error
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallSendDigitsControlIDs
 
-			callobj.callbacksRunSendDigits(callobj.Calling.Ctx, ctrlID, res)
+			callobj.callbacksRunSendDigits(callobj.Calling.Ctx, ctrlID, res, false)
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
