@@ -7,7 +7,7 @@ type Jsonrpc2Logger struct{}
 
 // Printf is a logger for Jsonrpc2 library
 func (l *Jsonrpc2Logger) Printf(format string, args ...interface{}) {
-	Log.Trace(format, args)
+	Log.Trace(format, args...)
 }
 
 //revive:enable:unused-receiver

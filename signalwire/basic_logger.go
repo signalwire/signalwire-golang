@@ -22,31 +22,31 @@ type BasicLogger struct {
 func CreateNewBasicLogger() *BasicLogger {
 	return &BasicLogger{
 		TraceLevel: log.New(
-			os.Stderr,
+			ioutil.Discard,
 			"TRACE: ",
 			log.Ldate|log.Lshortfile|log.Ltime),
 		DebugLevel: log.New(
-			os.Stderr,
+			ioutil.Discard,
 			"DEBUG: ",
 			log.Ldate|log.Lshortfile|log.Ltime),
 		InfoLevel: log.New(
-			os.Stderr,
+			ioutil.Discard,
 			"INFO: ",
 			log.Ldate|log.Lshortfile|log.Ltime),
 		WarnLevel: log.New(
-			os.Stderr,
+			ioutil.Discard,
 			"WARN: ",
 			log.Ldate|log.Lshortfile|log.Ltime),
 		ErrorLevel: log.New(
-			os.Stderr,
+			ioutil.Discard,
 			"ERROR: ",
 			log.Ldate|log.Lshortfile|log.Ltime),
 		FatalLevel: log.New(
-			os.Stderr,
+			ioutil.Discard,
 			"FATAL: ",
 			log.Ldate|log.Lshortfile|log.Ltime),
 		PanicLevel: log.New(
-			os.Stderr,
+			ioutil.Discard,
 			"PANIC: ",
 			log.Ldate|log.Lshortfile|log.Ltime),
 	}
@@ -201,31 +201,31 @@ func (l *BasicLogger) SetLevel(level int) {
 		panic("panic logger undefined")
 	}
 
-	if level < TraceLevelLog {
-		l.PanicLevel.SetOutput(ioutil.Discard)
+	if level >= TraceLevelLog {
+		l.TraceLevel.SetOutput(os.Stderr)
 	}
 
-	if level < DebugLevelLog {
-		l.DebugLevel.SetOutput(ioutil.Discard)
+	if level >= DebugLevelLog {
+		l.DebugLevel.SetOutput(os.Stderr)
 	}
 
-	if level < InfoLevelLog {
-		l.InfoLevel.SetOutput(ioutil.Discard)
+	if level >= InfoLevelLog {
+		l.InfoLevel.SetOutput(os.Stderr)
 	}
 
-	if level < WarnLevelLog {
-		l.WarnLevel.SetOutput(ioutil.Discard)
+	if level >= WarnLevelLog {
+		l.WarnLevel.SetOutput(os.Stderr)
 	}
 
-	if level < ErrorLevelLog {
-		l.ErrorLevel.SetOutput(ioutil.Discard)
+	if level >= ErrorLevelLog {
+		l.ErrorLevel.SetOutput(os.Stderr)
 	}
 
-	if level < FatalLevelLog {
-		l.FatalLevel.SetOutput(ioutil.Discard)
+	if level >= FatalLevelLog {
+		l.FatalLevel.SetOutput(os.Stderr)
 	}
 
-	if level < PanicLevelLog {
-		l.FatalLevel.SetOutput(ioutil.Discard)
+	if level >= PanicLevelLog {
+		l.PanicLevel.SetOutput(os.Stderr)
 	}
 }
