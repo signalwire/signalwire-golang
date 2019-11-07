@@ -2,13 +2,13 @@ package signalwire
 
 // Available log levels
 const (
-	TraceLevelLog int = iota + 1
-	DebugLevelLog
-	InfoLevelLog
-	WarnLevelLog
-	ErrorLevelLog
+	PanicLevelLog int = iota + 1
 	FatalLevelLog
-	PanicLevelLog
+	ErrorLevelLog
+	WarnLevelLog
+	InfoLevelLog
+	DebugLevelLog
+	TraceLevelLog
 )
 
 // LoggerWrapper defines custom logger interface
