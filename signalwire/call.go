@@ -233,7 +233,6 @@ func (c *CallSession) CallInit(_ context.Context) {
 func (c *CallSession) CallCleanup(_ context.Context) {
 	close(c.CallStateChan)
 	close(c.CallConnectStateChan)
-	close(c.Hangup)
 
 	c.Actions.m = nil
 }

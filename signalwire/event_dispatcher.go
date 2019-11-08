@@ -905,6 +905,10 @@ func (calling *EventCalling) dispatchStateNotif(ctx context.Context, callParams 
 		Log.Debug("no callstate / CB signal sent\n")
 	}
 
+	if callParams.CallState == Ended {
+		close(call.Hangup)
+	}
+
 	return nil
 }
 
