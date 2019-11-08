@@ -310,7 +310,7 @@ func (recordaction *RecordAction) Stop() StopResult {
 	recordaction.err = recordaction.recordAudioAsyncStop()
 
 	if recordaction.err == nil {
-		res.Successful = <-recordaction.done
+		waitStop(res, recordaction.done)
 	}
 
 	return *res

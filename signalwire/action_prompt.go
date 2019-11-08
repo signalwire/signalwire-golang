@@ -394,7 +394,7 @@ func (action *PromptAction) Stop() StopResult {
 	action.err = action.playAndCollectAsyncStop()
 
 	if action.err == nil {
-		res.Successful = <-action.done
+		waitStop(res, action.done)
 	}
 
 	return *res
