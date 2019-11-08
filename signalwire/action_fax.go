@@ -428,7 +428,7 @@ func (action *FaxAction) Stop() StopResult {
 	action.err = action.faxAsyncStop()
 
 	if action.err == nil {
-		res.Successful = <-action.done
+		waitStop(res, action.done)
 	}
 
 	return *res

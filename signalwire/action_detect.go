@@ -698,7 +698,7 @@ func (detectaction *DetectMachineAction) Stop() StopResult {
 	detectaction.err = detectaction.detectAsyncStop()
 
 	if detectaction.err == nil {
-		res.Successful = <-detectaction.done
+		waitStop(res, detectaction.done)
 	}
 
 	return *res
@@ -716,7 +716,7 @@ func (detectaction *DetectDigitAction) Stop() StopResult {
 	detectaction.err = detectaction.detectAsyncStop()
 
 	if detectaction.err == nil {
-		res.Successful = <-detectaction.done
+		waitStop(res, detectaction.done)
 	}
 
 	return *res
@@ -733,7 +733,7 @@ func (detectaction *DetectFaxAction) Stop() StopResult {
 	detectaction.err = detectaction.detectAsyncStop()
 
 	if detectaction.err == nil {
-		res.Successful = <-detectaction.done
+		waitStop(res, detectaction.done)
 	}
 
 	return *res

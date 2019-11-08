@@ -561,7 +561,7 @@ func (playaction *PlayAction) Stop() StopResult {
 	playaction.err = playaction.playAsyncStop()
 
 	if playaction.err == nil {
-		res.Successful = <-playaction.done
+		waitStop(res, playaction.done)
 	}
 
 	return *res

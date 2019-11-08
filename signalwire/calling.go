@@ -3,6 +3,7 @@ package signalwire
 import (
 	"context"
 	"encoding/json"
+	"time"
 )
 
 // Calling TODO DESCRIPTION
@@ -114,6 +115,16 @@ type ResultHangup struct {
 // StopResult TODO DESCRIPTION
 type StopResult struct {
 	Successful bool
+}
+
+func waitStop(res *StopResult, done chan bool) {
+	timer := time.NewTimer(BroadcastEventTimeout * time.Second)
+
+	select {
+	case <-timer.C:
+	case res.Successful = <-done:
+	default:
+	}
 }
 
 // ICalling object visible to the end user

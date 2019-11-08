@@ -367,7 +367,7 @@ func (tapaction *TapAction) Stop() StopResult {
 	tapaction.err = tapaction.tapAsyncStop()
 
 	if tapaction.err == nil {
-		res.Successful = <-tapaction.done
+		waitStop(res, tapaction.done)
 	}
 
 	return *res
