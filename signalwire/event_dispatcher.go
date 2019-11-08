@@ -1235,7 +1235,6 @@ func (calling *EventCalling) dispatchPlayAndCollectResType(ctx context.Context, 
 
 	Log.Debug("call [%p]\n", call)
 
-	<-call.CallPlayAndCollectReadyChans[ctrlID]
 	select {
 	case call.CallPlayAndCollectRawEventChans[ctrlID] <- rawEvent:
 		Log.Debug("sent raw event\n")
@@ -1243,7 +1242,6 @@ func (calling *EventCalling) dispatchPlayAndCollectResType(ctx context.Context, 
 		Log.Debug("no raw event sent\n")
 	}
 
-	<-call.CallPlayAndCollectReadyChans[ctrlID]
 	select {
 	case call.CallPlayAndCollectChans[ctrlID] <- resType:
 		Log.Debug("sent collect resType\n")

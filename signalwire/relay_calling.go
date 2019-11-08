@@ -1264,6 +1264,11 @@ func (relay *RelaySession) RelayPlayAndCollect(ctx context.Context, call *CallSe
 	call.CallPlayAndCollectReadyChans[controlID] = make(chan struct{})
 	call.CallPlayAndCollectRawEventChans[controlID] = make(chan *json.RawMessage, EventQueue)
 
+	call.CallPlayChans[controlID] = make(chan PlayState, EventQueue)
+	call.CallPlayEventChans[controlID] = make(chan ParamsEventCallingCallPlay, EventQueue)
+	call.CallPlayReadyChans[controlID] = make(chan struct{})
+	call.CallPlayRawEventChans[controlID] = make(chan *json.RawMessage, EventQueue)
+
 	call.Unlock()
 
 	select {
