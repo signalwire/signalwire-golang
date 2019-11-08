@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strings"
 	"sync"
+	"time"
 )
 
 // CollectResultType keeps the result type of a Collect action
@@ -54,6 +55,7 @@ type PromptAction struct {
 	ControlID string
 	Completed bool
 	Result    CollectResult
+	State     PlayState
 	err       error
 	done      chan bool
 	sync.RWMutex
@@ -109,13 +111,88 @@ func (callobj *CallObj) PromptStop(ctrlID *string) error {
 
 // callbacksRunPlayAndCollect TODO DESCRIPTION
 func (callobj *CallObj) callbacksRunPlayAndCollect(ctx context.Context, ctrlID string, res *PromptAction, norunCB bool) {
-	var cont bool
-
 	var out bool
+
+	timer := time.NewTimer(BroadcastEventTimeout * time.Second)
+
+	resPlay := new(PlayAction)
 
 	for {
 		select {
+		case playstate := <-callobj.call.CallPlayChans[ctrlID]:
+			resPlay.RLock()
+
+			prevstate := res.State
+
+			resPlay.RUnlock()
+
+			switch playstate {
+			case PlayFinished:
+				resPlay.Lock()
+
+				resPlay.State = playstate
+
+				resPlay.Unlock()
+
+				Log.Debug("Play (prompt)  finished. ctrlID: %s res [%p] Completed [%v] Successful [%v]\n", ctrlID, res, res.Completed, res.Result.Successful)
+
+				if callobj.OnPlayFinished != nil && !norunCB {
+					callobj.OnPlayFinished(resPlay)
+				}
+
+			case PlayPlaying:
+				timer.Reset(MaxCallDuration * time.Second)
+				resPlay.Lock()
+
+				resPlay.State = playstate
+
+				resPlay.Unlock()
+
+				Log.Debug("Playing. ctrlID: %s\n", ctrlID)
+
+				if callobj.OnPlayPlaying != nil && !norunCB {
+					callobj.OnPlayPlaying(resPlay)
+				}
+			case PlayError:
+				Log.Debug("Play (prompt) error. ctrlID: %s\n", ctrlID)
+
+				resPlay.Lock()
+
+				resPlay.State = playstate
+
+				resPlay.Unlock()
+
+				if callobj.OnPlayError != nil && !norunCB {
+					callobj.OnPlayError(resPlay)
+				}
+			case PlayPaused:
+				timer.Reset(MaxCallDuration * time.Second)
+				resPlay.Lock()
+
+				resPlay.State = playstate
+
+				resPlay.Unlock()
+
+				Log.Debug("Play paused. ctrlID: %s\n", ctrlID)
+
+				if callobj.OnPlayPaused != nil && !norunCB {
+					callobj.OnPlayPaused(resPlay)
+				}
+			default:
+				Log.Debug("Unknown state. ctrlID: %s\n", ctrlID)
+			}
+
+			if prevstate != playstate && callobj.OnPlayStateChange != nil && !norunCB {
+				callobj.OnPlayStateChange(resPlay)
+			}
+		case rawEvent := <-callobj.call.CallPlayRawEventChans[ctrlID]:
+			resPlay.Lock()
+			resPlay.Result.Event = *rawEvent
+			resPlay.Unlock()
+
 		case resType := <-callobj.call.CallPlayAndCollectChans[ctrlID]:
+			Log.Debug("Got Prompt result type: %s", resType.String())
+
 			switch resType {
 			case CollectResultError:
 				fallthrough
@@ -141,10 +218,7 @@ func (callobj *CallObj) callbacksRunPlayAndCollect(ctx context.Context, ctrlID s
 
 				res.Result.ResultType = resType
 				res.Result.Successful = true
-
-				if !cont {
-					res.Completed = true
-				}
+				res.Completed = true
 
 				res.Unlock()
 
@@ -207,15 +281,11 @@ func (callobj *CallObj) callbacksRunPlayAndCollect(ctx context.Context, ctrlID s
 			}
 
 			res.Unlock()
-
-			callobj.call.CallPlayAndCollectReadyChans[ctrlID] <- struct{}{}
-
 		case rawEvent := <-callobj.call.CallPlayAndCollectRawEventChans[ctrlID]:
 			res.Lock()
 			res.Result.Event = *rawEvent
 			res.Unlock()
 
-			callobj.call.CallPlayAndCollectReadyChans[ctrlID] <- struct{}{}
 		case <-callobj.call.Hangup:
 			out = true
 		case <-ctx.Done():
