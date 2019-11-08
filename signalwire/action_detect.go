@@ -56,6 +56,7 @@ type DetectMachineAction struct {
 	Completed bool
 	Result    DetectResult
 	Event     DetectMachineEvent
+	Payload   *json.RawMessage
 	err       error
 	done      chan bool
 	sync.RWMutex
@@ -107,6 +108,7 @@ type DetectDigitAction struct {
 	Completed bool
 	Result    DetectResult
 	Event     DetectDigitEvent
+	Payload   *json.RawMessage
 	err       error
 	done      chan bool
 	sync.RWMutex
@@ -119,6 +121,7 @@ type DetectFaxAction struct {
 	Completed bool
 	Result    DetectResult
 	Event     DetectFaxEvent
+	Payload   *json.RawMessage
 	err       error
 	done      chan bool
 	sync.RWMutex
@@ -156,7 +159,7 @@ func (callobj *CallObj) DetectMachine(det *DetectMachineParams) (*DetectResult, 
 
 	ctrlID, _ := GenUUIDv4()
 
-	err := callobj.Calling.Relay.RelayDetectMachine(callobj.Calling.Ctx, callobj.call, ctrlID, det)
+	err := callobj.Calling.Relay.RelayDetectMachine(callobj.Calling.Ctx, callobj.call, ctrlID, det, nil)
 
 	if err != nil {
 		return &a.Result, err
@@ -181,7 +184,7 @@ func (callobj *CallObj) DetectFax(det *DetectFaxParams) (*DetectResult, error) {
 
 	ctrlID, _ := GenUUIDv4()
 
-	err := callobj.Calling.Relay.RelayDetectFax(callobj.Calling.Ctx, callobj.call, ctrlID, det.Tone)
+	err := callobj.Calling.Relay.RelayDetectFax(callobj.Calling.Ctx, callobj.call, ctrlID, det.Tone, nil)
 
 	if err != nil {
 		return &a.Result, err
@@ -206,7 +209,7 @@ func (callobj *CallObj) DetectDigit(det *DetectDigitParams) (*DetectResult, erro
 
 	ctrlID, _ := GenUUIDv4()
 
-	err := callobj.Calling.Relay.RelayDetectDigit(callobj.Calling.Ctx, callobj.call, ctrlID, det.Digits)
+	err := callobj.Calling.Relay.RelayDetectDigit(callobj.Calling.Ctx, callobj.call, ctrlID, det.Digits, nil)
 
 	if err != nil {
 		return &a.Result, err
@@ -227,7 +230,7 @@ func (callobj *CallObj) DetectStop(ctrlID *string) error {
 		return errors.New("nil Relay object")
 	}
 
-	return callobj.Calling.Relay.RelayDetectStop(callobj.Calling.Ctx, callobj.call, ctrlID)
+	return callobj.Calling.Relay.RelayDetectStop(callobj.Calling.Ctx, callobj.call, ctrlID, nil)
 }
 
 // callbacksRunDetectMachine TODO DESCRIPTION
@@ -480,7 +483,7 @@ func (callobj *CallObj) DetectMachineAsync(det *DetectMachineParams) (*DetectMac
 		res.ControlID = newCtrlID
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelayDetectMachine(callobj.Calling.Ctx, callobj.call, newCtrlID, det)
+		err := callobj.Calling.Relay.RelayDetectMachine(callobj.Calling.Ctx, callobj.call, newCtrlID, det, &res.Payload)
 		if err != nil {
 			res.Lock()
 			res.err = err
@@ -513,6 +516,7 @@ func (callobj *CallObj) DetectDigitAsync(det *DetectDigitParams) (*DetectDigitAc
 
 	go func() {
 		go func() {
+			res.done = make(chan bool, 2)
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallDetectDigitControlID
 
@@ -524,7 +528,7 @@ func (callobj *CallObj) DetectDigitAsync(det *DetectDigitParams) (*DetectDigitAc
 		res.ControlID = newCtrlID
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelayDetectDigit(callobj.Calling.Ctx, callobj.call, newCtrlID, det.Digits)
+		err := callobj.Calling.Relay.RelayDetectDigit(callobj.Calling.Ctx, callobj.call, newCtrlID, det.Digits, &res.Payload)
 		if err != nil {
 			res.Lock()
 			res.err = err
@@ -557,6 +561,7 @@ func (callobj *CallObj) DetectFaxAsync(det *DetectFaxParams) (*DetectFaxAction, 
 
 	go func() {
 		go func() {
+			res.done = make(chan bool, 2)
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallDetectFaxControlID
 
@@ -568,7 +573,7 @@ func (callobj *CallObj) DetectFaxAsync(det *DetectFaxParams) (*DetectFaxAction, 
 		res.ControlID = newCtrlID
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelayDetectFax(callobj.Calling.Ctx, callobj.call, newCtrlID, det.Tone)
+		err := callobj.Calling.Relay.RelayDetectFax(callobj.Calling.Ctx, callobj.call, newCtrlID, det.Tone, &res.Payload)
 		if err != nil {
 			res.Lock()
 			res.err = err
@@ -619,7 +624,7 @@ func detectInternalStop(v interface{}) error {
 
 		call = m.CallObj.call
 
-		return m.CallObj.Calling.Relay.RelayDetectStop(m.CallObj.Calling.Ctx, call, &ctrlID)
+		return m.CallObj.Calling.Relay.RelayDetectStop(m.CallObj.Calling.Ctx, call, &ctrlID, &m.Payload)
 	}
 
 	if ok1 {
@@ -647,7 +652,7 @@ func detectInternalStop(v interface{}) error {
 
 		call = d.CallObj.call
 
-		return d.CallObj.Calling.Relay.RelayDetectStop(d.CallObj.Calling.Ctx, call, &ctrlID)
+		return d.CallObj.Calling.Relay.RelayDetectStop(d.CallObj.Calling.Ctx, call, &ctrlID, &d.Payload)
 	}
 
 	if ok2 {
@@ -675,7 +680,7 @@ func detectInternalStop(v interface{}) error {
 
 		call = f.CallObj.call
 
-		return f.CallObj.Calling.Relay.RelayDetectStop(f.CallObj.Calling.Ctx, call, &ctrlID)
+		return f.CallObj.Calling.Relay.RelayDetectStop(f.CallObj.Calling.Ctx, call, &ctrlID, &f.Payload)
 	}
 
 	return errors.New("type assertion failed")
@@ -860,6 +865,39 @@ func (detectaction *DetectDigitAction) GetEvent() *json.RawMessage {
 	detectaction.RLock()
 
 	ret := &detectaction.Result.Event
+
+	detectaction.RUnlock()
+
+	return ret
+}
+
+// GetPayload TODO DESCRIPTION
+func (detectaction *DetectMachineAction) GetPayload() *json.RawMessage {
+	detectaction.RLock()
+
+	ret := detectaction.Payload
+
+	detectaction.RUnlock()
+
+	return ret
+}
+
+// GetPayload TODO DESCRIPTION
+func (detectaction *DetectFaxAction) GetPayload() *json.RawMessage {
+	detectaction.RLock()
+
+	ret := detectaction.Payload
+
+	detectaction.RUnlock()
+
+	return ret
+}
+
+// GetPayload TODO DESCRIPTION
+func (detectaction *DetectDigitAction) GetPayload() *json.RawMessage {
+	detectaction.RLock()
+
+	ret := detectaction.Payload
 
 	detectaction.RUnlock()
 

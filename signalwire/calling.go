@@ -2,6 +2,7 @@ package signalwire
 
 import (
 	"context"
+	"encoding/json"
 )
 
 // Calling TODO DESCRIPTION
@@ -16,6 +17,7 @@ type CallObj struct {
 	call    *CallSession
 	I       ICallObj
 	Calling *Calling
+	Payload *json.RawMessage
 
 	OnStateChange           func(*CallObj)
 	OnRinging               func(*CallObj)
@@ -145,7 +147,9 @@ func (calling *Calling) DialPhone(fromNumber, toNumber string) ResultDial {
 
 	newcall.SetActive(true)
 
-	if err := calling.Relay.I.RelayPhoneDial(calling.Ctx, newcall, fromNumber, toNumber, DefaultRingTimeout); err != nil {
+	var savePayload *json.RawMessage
+
+	if err := calling.Relay.I.RelayPhoneDial(calling.Ctx, newcall, fromNumber, toNumber, DefaultRingTimeout, &savePayload); err != nil {
 		newcall.SetActive(false)
 
 		res.err = err
@@ -158,6 +162,7 @@ func (calling *Calling) DialPhone(fromNumber, toNumber string) ResultDial {
 	c := &CallObj{I: J}
 	c.I = J
 	c.call = newcall
+	c.Payload = savePayload
 	c.Calling = calling
 
 	if ret := newcall.I.WaitCallStateInternal(calling.Ctx, Answered, DefaultRingTimeout); !ret {
@@ -181,7 +186,7 @@ func (callobj *CallObj) Hangup() (*ResultHangup, error) {
 	call := callobj.call
 
 	if call.CallState != Ending && call.CallState != Ended {
-		if err := callobj.Calling.Relay.RelayCallEnd(callobj.Calling.Ctx, call); err != nil {
+		if err := callobj.Calling.Relay.RelayCallEnd(callobj.Calling.Ctx, call, &callobj.Payload); err != nil {
 			res.err = err
 			return res, err
 		}
@@ -211,7 +216,7 @@ func (callobj *CallObj) Answer() (*ResultAnswer, error) {
 	if call.CallState != Answered {
 		Log.Info("Answering call [%p]\n", call)
 
-		if err := callobj.Calling.Relay.RelayCallAnswer(callobj.Calling.Ctx, call); err != nil {
+		if err := callobj.Calling.Relay.RelayCallAnswer(callobj.Calling.Ctx, call, &callobj.Payload); err != nil {
 			Log.Debug("cannot answer call. err: %v\n", err)
 
 			return res, err
@@ -374,7 +379,7 @@ func (calling *Calling) Dial(c *CallObj) ResultDial {
 
 	c.call.SetActive(true)
 
-	if err := calling.Relay.I.RelayPhoneDial(calling.Ctx, c.call, c.call.From, c.call.To, c.call.Timeout); err != nil {
+	if err := calling.Relay.I.RelayPhoneDial(calling.Ctx, c.call, c.call.From, c.call.To, c.call.Timeout, &c.Payload); err != nil {
 		res.err = err
 
 		c.call.SetActive(false)

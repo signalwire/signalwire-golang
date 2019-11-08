@@ -82,7 +82,7 @@ type IBlade interface {
 	BladeConnect(ctx context.Context, bladeAuth *BladeAuth) error
 	BladeSetup(ctx context.Context) error
 	BladeAddSubscription(ctx context.Context, signalwireChannels []string) error
-	BladeExecute(ctx context.Context, v interface{}, res interface{}) (interface{}, error)
+	BladeExecute(ctx context.Context, v interface{}, res interface{} /*, payload *json.RawMessage*/) (interface{}, error)
 	BladeSignalwireReceive(ctx context.Context, signalwireContexts []string) error
 	BladeWaitDisconnect(ctx context.Context)
 	BladeDisconnect(ctx context.Context) error
@@ -463,8 +463,13 @@ func (blade *BladeSession) BladeAddSubscription(ctx context.Context, signalwireC
 	return nil
 }
 
+/*
+type PlaceHolder struct {
+	Params json.RawMessage
+}*/
+
 // BladeExecute TODO DESCRIPTION
-func (blade *BladeSession) BladeExecute(ctx context.Context, v interface{}, res interface{}) (interface{}, error) {
+func (blade *BladeSession) BladeExecute(ctx context.Context, v interface{}, res interface{} /*, payload *json.RawMessage*/) (interface{}, error) {
 	if blade == nil {
 		return nil, errors.New("empty blade session object")
 	}

@@ -207,7 +207,7 @@ func main() {
 		}
 	}
 
-	if err := Relay.RelayPlayAudio(ctx, call, "1234abcdef", "https://cdn.signalwire.com/default-music/welcome.mp3"); err != nil {
+	if err := Relay.RelayPlayAudio(ctx, call, "1234abcdef", "https://cdn.signalwire.com/default-music/welcome.mp3", nil); err != nil {
 		signalwire.Log.Fatal("cannot play audio on call: %v\n", err)
 	}
 
@@ -223,7 +223,7 @@ func main() {
 	}
 
 	if call.CallState != signalwire.Ending && call.CallState != signalwire.Ended {
-		if err := Relay.RelayCallEnd(ctx, call); err != nil {
+		if err := Relay.RelayCallEnd(ctx, call, nil); err != nil {
 			signalwire.Log.Fatal("call.end error: %v\n", err)
 		}
 	}

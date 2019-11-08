@@ -56,6 +56,7 @@ type PromptAction struct {
 	Completed bool
 	Result    CollectResult
 	State     PlayState
+	Payload   *json.RawMessage
 	err       error
 	done      chan bool
 	sync.RWMutex
@@ -85,7 +86,7 @@ func (callobj *CallObj) Prompt(playlist *[]PlayStruct, collect *CollectStruct) (
 
 	ctrlID, _ := GenUUIDv4()
 
-	err := callobj.Calling.Relay.RelayPlayAndCollect(callobj.Calling.Ctx, callobj.call, ctrlID, playlist, collect)
+	err := callobj.Calling.Relay.RelayPlayAndCollect(callobj.Calling.Ctx, callobj.call, ctrlID, playlist, collect, nil)
 
 	if err != nil {
 		return &a.Result, err
@@ -106,7 +107,7 @@ func (callobj *CallObj) PromptStop(ctrlID *string) error {
 		return errors.New("nil Relay object")
 	}
 
-	return callobj.Calling.Relay.RelayPlayAndCollectStop(callobj.Calling.Ctx, callobj.call, ctrlID)
+	return callobj.Calling.Relay.RelayPlayAndCollectStop(callobj.Calling.Ctx, callobj.call, ctrlID, nil)
 }
 
 // callbacksRunPlayAndCollect TODO DESCRIPTION
@@ -332,7 +333,7 @@ func (callobj *CallObj) PromptAsync(playlist *[]PlayStruct, collect *CollectStru
 		res.ControlID = newCtrlID
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelayPlayAndCollect(callobj.Calling.Ctx, callobj.call, newCtrlID, playlist, collect)
+		err := callobj.Calling.Relay.RelayPlayAndCollect(callobj.Calling.Ctx, callobj.call, newCtrlID, playlist, collect, &res.Payload)
 
 		if err != nil {
 			res.Lock()
@@ -384,7 +385,7 @@ func (action *PromptAction) playAndCollectAsyncStop() error {
 
 	call := action.CallObj.call
 
-	return action.CallObj.Calling.Relay.RelayPlayAndCollectStop(action.CallObj.Calling.Ctx, call, &c)
+	return action.CallObj.Calling.Relay.RelayPlayAndCollectStop(action.CallObj.Calling.Ctx, call, &c, &action.Payload)
 }
 
 // Stop TODO DESCRIPTION
@@ -484,7 +485,7 @@ func (action *PromptAction) Volume(vol float64) (*PlayVolumeResult, error) {
 
 	call := action.CallObj.call
 
-	err = action.CallObj.Calling.Relay.RelayPlayAndCollectVolume(action.CallObj.Calling.Ctx, call, &c, vol)
+	err = action.CallObj.Calling.Relay.RelayPlayAndCollectVolume(action.CallObj.Calling.Ctx, call, &c, vol, &action.Payload)
 
 	if err != nil {
 		return res, err
@@ -500,6 +501,17 @@ func (action *PromptAction) GetEvent() *json.RawMessage {
 	action.RLock()
 
 	ret := &action.Result.Event
+
+	action.RUnlock()
+
+	return ret
+}
+
+// GetPayload TODO DESCRIPTION
+func (action *PromptAction) GetPayload() *json.RawMessage {
+	action.RLock()
+
+	ret := action.Payload
 
 	action.RUnlock()
 

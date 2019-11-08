@@ -53,7 +53,7 @@ func (s CallDirection) String() string {
 	return [...]string{"Inbound", "Outbound"}[s]
 }
 
-// CallTypeState keeps the type of a call
+// CallType keeps the type of a call
 type CallType int
 
 // Call state constants
@@ -233,7 +233,6 @@ func (c *CallSession) CallInit(_ context.Context) {
 func (c *CallSession) CallCleanup(_ context.Context) {
 	close(c.CallStateChan)
 	close(c.CallConnectStateChan)
-	close(c.Hangup)
 
 	c.Actions.m = nil
 }

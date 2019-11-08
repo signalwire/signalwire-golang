@@ -51,6 +51,7 @@ type FaxAction struct {
 	ControlID string
 	Completed bool
 	Result    FaxResult
+	Payload   *json.RawMessage
 	eventType FaxEventType
 	err       error
 	done      chan bool
@@ -70,6 +71,13 @@ const (
 	StrError = "error"
 )
 
+// FaxParamsInternal TODO DESCRIPTION
+type FaxParamsInternal struct {
+	doc        string
+	id         string
+	headerInfo string
+}
+
 // ReceiveFax TODO DESCRIPTION
 func (callobj *CallObj) ReceiveFax() (*FaxResult, error) {
 	a := new(FaxAction)
@@ -83,7 +91,7 @@ func (callobj *CallObj) ReceiveFax() (*FaxResult, error) {
 	}
 
 	ctrlID, _ := GenUUIDv4()
-	err := callobj.Calling.Relay.RelayReceiveFax(callobj.Calling.Ctx, callobj.call, &ctrlID)
+	err := callobj.Calling.Relay.RelayReceiveFax(callobj.Calling.Ctx, callobj.call, &ctrlID, nil)
 
 	if err != nil {
 		return &a.Result, err
@@ -107,7 +115,14 @@ func (callobj *CallObj) SendFax(doc, id, headerInfo string) (*FaxResult, error) 
 	}
 
 	ctrlID, _ := GenUUIDv4()
-	err := callobj.Calling.Relay.RelaySendFax(callobj.Calling.Ctx, callobj.call, &ctrlID, doc, id, headerInfo)
+
+	var fax FaxParamsInternal
+
+	fax.doc = doc
+	fax.id = id
+	fax.headerInfo = headerInfo
+
+	err := callobj.Calling.Relay.RelaySendFax(callobj.Calling.Ctx, callobj.call, &ctrlID, &fax, nil)
 
 	if err != nil {
 		return &a.Result, err
@@ -128,7 +143,7 @@ func (callobj *CallObj) SendFaxStop(ctrlID *string) error {
 		return errors.New("nil Relay object")
 	}
 
-	return callobj.Calling.Relay.RelaySendFaxStop(callobj.Calling.Ctx, callobj.call, ctrlID)
+	return callobj.Calling.Relay.RelaySendFaxStop(callobj.Calling.Ctx, callobj.call, ctrlID, nil)
 }
 
 func (callobj *CallObj) callbacksRunFax(ctx context.Context, ctrlID string, res *FaxAction, norunCB bool) {
@@ -299,7 +314,7 @@ func (callobj *CallObj) ReceiveFaxAsync() (*FaxAction, error) {
 		res.ControlID = newCtrlID
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelayReceiveFax(callobj.Calling.Ctx, callobj.call, &newCtrlID)
+		err := callobj.Calling.Relay.RelayReceiveFax(callobj.Calling.Ctx, callobj.call, &newCtrlID, &res.Payload)
 
 		if err != nil {
 			res.Lock()
@@ -347,7 +362,12 @@ func (callobj *CallObj) SendFaxAsync(doc, id, headerInfo string) (*FaxAction, er
 		res.ControlID = newCtrlID
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelaySendFax(callobj.Calling.Ctx, callobj.call, &newCtrlID, doc, id, headerInfo)
+		var fax FaxParamsInternal
+
+		fax.doc = doc
+		fax.id = id
+		fax.headerInfo = headerInfo
+		err := callobj.Calling.Relay.RelaySendFax(callobj.Calling.Ctx, callobj.call, &newCtrlID, &fax, &res.Payload)
 
 		if err != nil {
 			res.Lock()
@@ -399,7 +419,7 @@ func (action *FaxAction) faxAsyncStop() error {
 
 	call := action.CallObj.call
 
-	return action.CallObj.Calling.Relay.RelaySendFaxStop(action.CallObj.Calling.Ctx, call, &c)
+	return action.CallObj.Calling.Relay.RelaySendFaxStop(action.CallObj.Calling.Ctx, call, &c, &action.Payload)
 }
 
 // Stop TODO DESCRIPTION
@@ -485,6 +505,17 @@ func (action *FaxAction) GetRemoteIdentity() string {
 	action.RLock()
 
 	ret := action.Result.RemoteIdentity
+
+	action.RUnlock()
+
+	return ret
+}
+
+// GetPayload TODO DESCRIPTION
+func (action *FaxAction) GetPayload() *json.RawMessage {
+	action.RLock()
+
+	ret := action.Payload
 
 	action.RUnlock()
 

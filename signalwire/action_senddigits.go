@@ -33,6 +33,7 @@ type SendDigitsAction struct {
 	Completed bool
 	Result    SendDigitsResult
 	State     SendDigitsState
+	Payload   *json.RawMessage
 	err       error
 	sync.RWMutex
 }
@@ -72,7 +73,7 @@ func (callobj *CallObj) SendDigits(digits string) (*SendDigitsResult, error) {
 	}
 
 	ctrlID, _ := GenUUIDv4()
-	err := callobj.Calling.Relay.RelaySendDigits(callobj.Calling.Ctx, callobj.call, ctrlID, digits)
+	err := callobj.Calling.Relay.RelaySendDigits(callobj.Calling.Ctx, callobj.call, ctrlID, digits, nil)
 
 	if err != nil {
 		return &a.Result, err
@@ -169,7 +170,7 @@ func (callobj *CallObj) SendDigitsAsync(digits string) (*SendDigitsAction, error
 		res.ControlID = newCtrlID
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelaySendDigits(callobj.Calling.Ctx, callobj.call, newCtrlID, digits)
+		err := callobj.Calling.Relay.RelaySendDigits(callobj.Calling.Ctx, callobj.call, newCtrlID, digits, &res.Payload)
 
 		if err != nil {
 			res.Lock()
@@ -226,6 +227,17 @@ func (action *SendDigitsAction) GetEvent() *json.RawMessage {
 	action.RLock()
 
 	ret := &action.Result.Event
+
+	action.RUnlock()
+
+	return ret
+}
+
+// GetPayload TODO DESCRIPTION
+func (action *SendDigitsAction) GetPayload() *json.RawMessage {
+	action.RLock()
+
+	ret := action.Payload
 
 	action.RUnlock()
 

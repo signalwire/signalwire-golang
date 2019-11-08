@@ -35,6 +35,7 @@ type ConnectAction struct {
 	Completed bool
 	Result    ConnectResult
 	State     CallConnectState
+	Payload   *json.RawMessage
 	err       error
 	sync.RWMutex
 }
@@ -52,7 +53,7 @@ func (callobj *CallObj) Connect(ringback *[]RingbackStruct, devices *[][]DeviceS
 		return res, errors.New("nil Relay object")
 	}
 
-	if err := callobj.Calling.Relay.RelayConnect(callobj.Calling.Ctx, callobj.call, ringback, devices); err != nil {
+	if err := callobj.Calling.Relay.RelayConnect(callobj.Calling.Ctx, callobj.call, ringback, devices, nil); err != nil {
 		return res, err
 	}
 
@@ -81,7 +82,7 @@ func (callobj *CallObj) ConnectAsync(fromNumber, toNumber string) (*ConnectActio
 			callobj.callbacksRunConnect(callobj.Calling.Ctx, res, false)
 		}()
 
-		err := callobj.Calling.Relay.RelayPhoneConnect(callobj.Calling.Ctx, callobj.call, fromNumber, toNumber)
+		err := callobj.Calling.Relay.RelayPhoneConnect(callobj.Calling.Ctx, callobj.call, fromNumber, toNumber, &res.Payload)
 
 		if err != nil {
 			res.Lock()
@@ -190,6 +191,17 @@ func GetEvent(action *ConnectAction) *json.RawMessage {
 	action.RLock()
 
 	ret := &action.Result.Event
+
+	action.RUnlock()
+
+	return ret
+}
+
+// GetPayload TODO DESCRIPTION
+func (action *ConnectAction) GetPayload() *json.RawMessage {
+	action.RLock()
+
+	ret := action.Payload
 
 	action.RUnlock()
 
