@@ -71,6 +71,7 @@ const (
 	StrError = "error"
 )
 
+// FaxParamsInternal TODO DESCRIPTION
 type FaxParamsInternal struct {
 	doc        string
 	id         string

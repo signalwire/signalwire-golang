@@ -24,7 +24,7 @@ type IRelay interface {
 	RelayRecordAudioStop(ctx context.Context, call *CallSession, ctrlID *string, payload **json.RawMessage) error
 	RelayConnect(ctx context.Context, call *CallSession, ringback *[]RingbackStruct, devices *[][]DeviceStruct, payload **json.RawMessage) error
 	RelayCallAnswer(ctx context.Context, call *CallSession, payload **json.RawMessage) error
-	RelayPlayTTS(ctx context.Context, call *CallSession, ctrlID string, text, language, gender string, payload **json.RawMessage) error
+	RelayPlayTTS(ctx context.Context, call *CallSession, ctrlID string, tts *TTSParamsInternal, payload **json.RawMessage) error
 	RelayPlayRingtone(ctx context.Context, call *CallSession, ctrlID string, name string, duration float64, payload **json.RawMessage) error
 	RelayPlaySilence(ctx context.Context, call *CallSession, ctrlID string, duration float64, payload **json.RawMessage) error
 	RelayPlay(ctx context.Context, call *CallSession, controlID string, play []PlayStruct, payload **json.RawMessage) error

@@ -53,6 +53,8 @@ func (relay *RelaySession) RelayPhoneDial(ctx context.Context, call *CallSession
 		},
 	}
 
+	savePayload(payload, v)
+
 	var ReplyBladeExecuteDecode ReplyBladeExecute
 
 	reply, err := relay.Blade.I.BladeExecute(ctx, &v, &ReplyBladeExecuteDecode)
@@ -119,6 +121,8 @@ func (relay *RelaySession) RelayPhoneConnect(ctx context.Context, call *CallSess
 		},
 	}
 
+	savePayload(payload, v)
+
 	var ReplyBladeExecuteDecode ReplyBladeExecute
 
 	reply, err := relay.Blade.I.BladeExecute(ctx, &v, &ReplyBladeExecuteDecode)
@@ -171,6 +175,8 @@ func (relay *RelaySession) RelayConnect(ctx context.Context, call *CallSession, 
 		},
 	}
 
+	savePayload(payload, v)
+
 	var ReplyBladeExecuteDecode ReplyBladeExecute
 
 	reply, err := relay.Blade.I.BladeExecute(ctx, &v, &ReplyBladeExecuteDecode)
@@ -208,6 +214,8 @@ func (relay *RelaySession) RelayCallAnswer(ctx context.Context, call *CallSessio
 			CallID: call.CallID,
 		},
 	}
+
+	savePayload(payload, v)
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute
 
@@ -247,6 +255,8 @@ func (relay *RelaySession) RelayCallEnd(ctx context.Context, call *CallSession, 
 			CallID: call.CallID,
 		},
 	}
+
+	savePayload(payload, v)
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute
 
@@ -315,7 +325,7 @@ func (relay *RelaySession) RelayPlayAudio(ctx context.Context, call *CallSession
 }
 
 // RelayPlayTTS TODO DESCRIPTION
-func (relay *RelaySession) RelayPlayTTS(ctx context.Context, call *CallSession, ctrlID string, text, language, gender string, payload **json.RawMessage) error {
+func (relay *RelaySession) RelayPlayTTS(ctx context.Context, call *CallSession, ctrlID string, tts *TTSParamsInternal, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -323,9 +333,9 @@ func (relay *RelaySession) RelayPlayTTS(ctx context.Context, call *CallSession, 
 	}
 
 	playTTSParams := PlayTTSParams{
-		Text:     text,
-		Language: language,
-		Gender:   gender,
+		Text:     tts.text,
+		Language: tts.language,
+		Gender:   tts.gender,
 	}
 
 	play := []PlayStruct{{

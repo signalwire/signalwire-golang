@@ -93,6 +93,13 @@ type PlayGenericParams struct {
 	SpecificParams interface{}
 }
 
+// TTSParamsInternal  TODO DESCRIPTION
+type TTSParamsInternal struct {
+	text     string
+	language string
+	gender   string
+}
+
 // PlayAudio TODO DESCRIPTION
 func (callobj *CallObj) PlayAudio(s string) (*PlayResult, error) {
 	a := new(PlayAction)
@@ -131,7 +138,14 @@ func (callobj *CallObj) PlayTTS(text, language, gender string) (*PlayResult, err
 	}
 
 	ctrlID, _ := GenUUIDv4()
-	err := callobj.Calling.Relay.RelayPlayTTS(callobj.Calling.Ctx, callobj.call, ctrlID, text, language, gender, nil)
+
+	var tts TTSParamsInternal
+
+	tts.text = text
+	tts.language = language
+	tts.gender = gender
+
+	err := callobj.Calling.Relay.RelayPlayTTS(callobj.Calling.Ctx, callobj.call, ctrlID, &tts, nil)
 
 	if err != nil {
 		return &a.Result, err
@@ -432,7 +446,13 @@ func (callobj *CallObj) PlayTTSAsync(text, language, gender string) (*PlayAction
 		res.ControlID = newCtrlID
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelayPlayTTS(callobj.Calling.Ctx, callobj.call, newCtrlID, text, language, gender, &res.Payload)
+		var tts TTSParamsInternal
+
+		tts.text = text
+		tts.language = language
+		tts.gender = gender
+
+		err := callobj.Calling.Relay.RelayPlayTTS(callobj.Calling.Ctx, callobj.call, newCtrlID, &tts, &res.Payload)
 
 		if err != nil {
 			res.Lock()

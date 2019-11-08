@@ -53,7 +53,7 @@ func (s CallDirection) String() string {
 	return [...]string{"Inbound", "Outbound"}[s]
 }
 
-// CallTypeState keeps the type of a call
+// CallType keeps the type of a call
 type CallType int
 
 // Call state constants
