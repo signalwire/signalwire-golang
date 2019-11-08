@@ -45,37 +45,31 @@ func spinner(delay time.Duration) {
 }
 
 // MyOnDetectFinished ran when Detect Action finishes
-func MyOnDetectFinished(_ interface{}) {
+func MyOnDetectFinished(det *signalwire.DetectAction) {
 	signalwire.Log.Info("Detect finished.\n")
 }
 
 // MyOnDetectUpdate ran on Detector update
-func MyOnDetectUpdate(det interface{}) {
+func MyOnDetectUpdate(det *signalwire.DetectAction) {
 	signalwire.Log.Info("Detect update.\n")
 
-	detectAction, ok := det.(*signalwire.DetectMachineAction)
-	if ok {
+	switch det.DetectorType {
+	case signalwire.MachineDetector:
 		signalwire.Log.Info("Machine Detect Action.\n")
-		// stop the Machine detector if READY
-		if detectAction.GetDetectorEvent() == signalwire.DetectMachineReady {
+
+		if det.GetDetectorEvent() == signalwire.DetectMachineReady {
 			signalwire.Log.Info("Machine READY.\n")
-			detectAction.Stop()
 		}
-	}
 
-	_, ok2 := det.(*signalwire.DetectFaxAction)
-	if ok2 {
+	case signalwire.FaxDetector:
 		signalwire.Log.Info("Fax Detect Action.\n")
-	}
-
-	_, ok3 := det.(*signalwire.DetectDigitAction)
-	if ok3 {
-		signalwire.Log.Info("Digits Detect Action.\n")
+	case signalwire.DigitDetector:
+		signalwire.Log.Info("Digits Action.\n")
 	}
 }
 
 // MyOnDetectError ran on Detector error
-func MyOnDetectError(_ interface{}) {
+func MyOnDetectError(det *signalwire.DetectAction) {
 	signalwire.Log.Error("Detect error.\n")
 }
 
@@ -144,33 +138,33 @@ func MyReady(consumer *signalwire.Consumer) {
 		time.Sleep(1 * time.Second)
 
 		if detectMachineAction.GetCompleted() {
-			signalwire.Log.Info("Machine Detection Successful(%v) State %v\n", detectMachineAction.Result.Successful, detectMachineAction.Event.String())
+			signalwire.Log.Info("Machine Detection Successful(%v) State %v\n", detectMachineAction.Result.Successful, detectMachineAction.Result.Result)
 			break
 		}
 
-		signalwire.Log.Info("Last Machine event: %s", detectMachineAction.GetDetectorEvent().String())
+		signalwire.Log.Info("Last Machine event: %s", detectMachineAction.GetDetectorEvent())
 	}
 
 	for {
 		time.Sleep(1 * time.Second)
 
 		if detectDigitAction.GetCompleted() {
-			signalwire.Log.Info("Digit Detection Successful(%v) State %v\n", detectDigitAction.Result.Successful, detectDigitAction.Event.String())
+			signalwire.Log.Info("Digit Detection Successful(%v) State %v\n", detectDigitAction.Result.Successful, detectDigitAction.Result.Result)
 			break
 		}
 
-		signalwire.Log.Info("Last Digit event: %s", detectDigitAction.GetDetectorEvent().String())
+		signalwire.Log.Info("Last Digit event: %s", detectDigitAction.GetDetectorEvent())
 	}
 
 	for {
 		time.Sleep(1 * time.Second)
 
 		if detectFaxAction.GetCompleted() {
-			signalwire.Log.Info("Fax Detection Successful(%v) State %v\n", detectFaxAction.Result.Successful, detectFaxAction.Event.String())
+			signalwire.Log.Info("Fax Detection Successful(%v) State %v\n", detectFaxAction.Result.Successful, detectFaxAction.Result.Result)
 			break
 		}
 
-		signalwire.Log.Info("Last Fax event: %s", detectFaxAction.GetDetectorEvent().String())
+		signalwire.Log.Info("Last Fax event: %s", detectFaxAction.GetDetectorEvent())
 	}
 
 	if resultDial.Call.GetCallState() != signalwire.Ending && resultDial.Call.GetCallState() != signalwire.Ended {
