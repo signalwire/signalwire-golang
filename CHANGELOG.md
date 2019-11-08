@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+- decorate each Action with the Payload (Relay command params - can be inspected by the SDK user)
 - add Play states for Prompt Action and run callbacks
 - fix incorrect log level of basic logger
 - remove silenced default logger code, upstream fix

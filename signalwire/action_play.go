@@ -54,6 +54,7 @@ type PlayAction struct {
 	Completed bool
 	Result    PlayResult
 	State     PlayState
+	Payload   *json.RawMessage
 	err       error
 	done      chan bool
 	sync.RWMutex
@@ -106,7 +107,7 @@ func (callobj *CallObj) PlayAudio(s string) (*PlayResult, error) {
 
 	ctrlID, _ := GenUUIDv4()
 
-	err := callobj.Calling.Relay.RelayPlayAudio(callobj.Calling.Ctx, callobj.call, ctrlID, s)
+	err := callobj.Calling.Relay.RelayPlayAudio(callobj.Calling.Ctx, callobj.call, ctrlID, s, nil)
 
 	if err != nil {
 		return &a.Result, err
@@ -130,7 +131,7 @@ func (callobj *CallObj) PlayTTS(text, language, gender string) (*PlayResult, err
 	}
 
 	ctrlID, _ := GenUUIDv4()
-	err := callobj.Calling.Relay.RelayPlayTTS(callobj.Calling.Ctx, callobj.call, ctrlID, text, language, gender)
+	err := callobj.Calling.Relay.RelayPlayTTS(callobj.Calling.Ctx, callobj.call, ctrlID, text, language, gender, nil)
 
 	if err != nil {
 		return &a.Result, err
@@ -154,7 +155,7 @@ func (callobj *CallObj) PlaySilence(duration float64) (*PlayResult, error) {
 	}
 
 	ctrlID, _ := GenUUIDv4()
-	err := callobj.Calling.Relay.RelayPlaySilence(callobj.Calling.Ctx, callobj.call, ctrlID, duration)
+	err := callobj.Calling.Relay.RelayPlaySilence(callobj.Calling.Ctx, callobj.call, ctrlID, duration, nil)
 
 	if err != nil {
 		return &a.Result, err
@@ -178,7 +179,7 @@ func (callobj *CallObj) PlayRingtone(name string, duration float64) (*PlayResult
 	}
 
 	ctrlID, _ := GenUUIDv4()
-	err := callobj.Calling.Relay.RelayPlayRingtone(callobj.Calling.Ctx, callobj.call, ctrlID, name, duration)
+	err := callobj.Calling.Relay.RelayPlayRingtone(callobj.Calling.Ctx, callobj.call, ctrlID, name, duration, nil)
 
 	if err != nil {
 		return &a.Result, err
@@ -199,7 +200,7 @@ func (callobj *CallObj) PlayStop(ctrlID *string) error {
 		return errors.New("nil Relay object")
 	}
 
-	return callobj.Calling.Relay.RelayPlayStop(callobj.Calling.Ctx, callobj.call, ctrlID)
+	return callobj.Calling.Relay.RelayPlayStop(callobj.Calling.Ctx, callobj.call, ctrlID, nil)
 }
 
 // callbacksRunPlay TODO DESCRIPTION
@@ -335,7 +336,7 @@ func (callobj *CallObj) PlaySilenceAsync(duration float64) (*PlayAction, error) 
 		res.ControlID = newCtrlID
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelayPlaySilence(callobj.Calling.Ctx, callobj.call, newCtrlID, duration)
+		err := callobj.Calling.Relay.RelayPlaySilence(callobj.Calling.Ctx, callobj.call, newCtrlID, duration, &res.Payload)
 
 		if err != nil {
 			res.Lock()
@@ -383,7 +384,7 @@ func (callobj *CallObj) PlayRingtoneAsync(name string, duration float64) (*PlayA
 		res.ControlID = newCtrlID
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelayPlayRingtone(callobj.Calling.Ctx, callobj.call, newCtrlID, name, duration)
+		err := callobj.Calling.Relay.RelayPlayRingtone(callobj.Calling.Ctx, callobj.call, newCtrlID, name, duration, &res.Payload)
 
 		if err != nil {
 			res.Lock()
@@ -431,7 +432,7 @@ func (callobj *CallObj) PlayTTSAsync(text, language, gender string) (*PlayAction
 		res.ControlID = newCtrlID
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelayPlayTTS(callobj.Calling.Ctx, callobj.call, newCtrlID, text, language, gender)
+		err := callobj.Calling.Relay.RelayPlayTTS(callobj.Calling.Ctx, callobj.call, newCtrlID, text, language, gender, &res.Payload)
 
 		if err != nil {
 			res.Lock()
@@ -479,7 +480,7 @@ func (callobj *CallObj) PlayAudioAsync(url string) (*PlayAction, error) {
 		res.ControlID = newCtrlID
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelayPlayAudio(callobj.Calling.Ctx, callobj.call, newCtrlID, url)
+		err := callobj.Calling.Relay.RelayPlayAudio(callobj.Calling.Ctx, callobj.call, newCtrlID, url, &res.Payload)
 
 		if err != nil {
 			res.Lock()
@@ -531,7 +532,7 @@ func (playaction *PlayAction) playAsyncStop() error {
 
 	call := playaction.CallObj.call
 
-	return playaction.CallObj.Calling.Relay.RelayPlayStop(playaction.CallObj.Calling.Ctx, call, &c)
+	return playaction.CallObj.Calling.Relay.RelayPlayStop(playaction.CallObj.Calling.Ctx, call, &c, &playaction.Payload)
 }
 
 // Stop TODO DESCRIPTION
@@ -551,6 +552,17 @@ func (playaction *PlayAction) GetCompleted() bool {
 	playaction.RLock()
 
 	ret := playaction.Completed
+
+	playaction.RUnlock()
+
+	return ret
+}
+
+// GetPayload TODO DESCRIPTION
+func (playaction *PlayAction) GetPayload() *json.RawMessage {
+	playaction.RLock()
+
+	ret := playaction.Payload
 
 	playaction.RUnlock()
 
@@ -631,7 +643,7 @@ func (playaction *PlayAction) PlayVolume(vol float64) (*PlayVolumeResult, error)
 
 	call := playaction.CallObj.call
 
-	err = playaction.CallObj.Calling.Relay.RelayPlayVolume(playaction.CallObj.Calling.Ctx, call, &c, vol)
+	err = playaction.CallObj.Calling.Relay.RelayPlayVolume(playaction.CallObj.Calling.Ctx, call, &c, vol, nil)
 
 	if err != nil {
 		return res, err
@@ -661,7 +673,7 @@ func (playaction *PlayAction) PlayPause() (*PlayVolumeResult, error) {
 
 	call := playaction.CallObj.call
 
-	err = playaction.CallObj.Calling.Relay.RelayPlayPause(playaction.CallObj.Calling.Ctx, call, &c)
+	err = playaction.CallObj.Calling.Relay.RelayPlayPause(playaction.CallObj.Calling.Ctx, call, &c, &playaction.Payload)
 
 	if err != nil {
 		return res, err
@@ -691,7 +703,7 @@ func (playaction *PlayAction) PlayResume() (*PlayVolumeResult, error) {
 
 	call := playaction.CallObj.call
 
-	err = playaction.CallObj.Calling.Relay.RelayPlayResume(playaction.CallObj.Calling.Ctx, call, &c)
+	err = playaction.CallObj.Calling.Relay.RelayPlayResume(playaction.CallObj.Calling.Ctx, call, &c, &playaction.Payload)
 
 	if err != nil {
 		return res, err

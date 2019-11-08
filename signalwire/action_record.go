@@ -54,6 +54,7 @@ type RecordAction struct {
 	Result    RecordResult
 	State     RecordState
 	URL       string
+	Payload   *json.RawMessage
 	err       error
 	done      chan bool
 	sync.RWMutex
@@ -78,7 +79,7 @@ func (callobj *CallObj) RecordAudio(rec *RecordParams) (*RecordResult, error) {
 	}
 
 	ctrlID, _ := GenUUIDv4()
-	err := callobj.Calling.Relay.RelayRecordAudio(callobj.Calling.Ctx, callobj.call, ctrlID, rec)
+	err := callobj.Calling.Relay.RelayRecordAudio(callobj.Calling.Ctx, callobj.call, ctrlID, rec, nil)
 
 	if err != nil {
 		return &a.Result, err
@@ -99,7 +100,7 @@ func (callobj *CallObj) RecordAudioStop(ctrlID *string) error {
 		return errors.New("nil Relay object")
 	}
 
-	return callobj.Calling.Relay.RelayRecordAudioStop(callobj.Calling.Ctx, callobj.call, ctrlID)
+	return callobj.Calling.Relay.RelayRecordAudioStop(callobj.Calling.Ctx, callobj.call, ctrlID, nil)
 }
 
 func (callobj *CallObj) callbacksRunRecord(ctx context.Context, ctrlID string, res *RecordAction, norunCB bool) {
@@ -257,7 +258,7 @@ func (callobj *CallObj) RecordAudioAsync(rec *RecordParams) (*RecordAction, erro
 		res.ControlID = newCtrlID
 		res.Unlock()
 
-		err := callobj.Calling.Relay.I.RelayRecordAudio(callobj.Calling.Ctx, callobj.call, newCtrlID, rec)
+		err := callobj.Calling.Relay.I.RelayRecordAudio(callobj.Calling.Ctx, callobj.call, newCtrlID, rec, &res.Payload)
 		if err != nil {
 			res.Lock()
 
@@ -300,7 +301,7 @@ func (recordaction *RecordAction) recordAudioAsyncStop() error {
 
 	call := recordaction.CallObj.call
 
-	return recordaction.CallObj.Calling.Relay.RelayRecordAudioStop(recordaction.CallObj.Calling.Ctx, call, &c)
+	return recordaction.CallObj.Calling.Relay.RelayRecordAudioStop(recordaction.CallObj.Calling.Ctx, call, &c, &recordaction.Payload)
 }
 
 // Stop TODO DESCRIPTION
@@ -397,6 +398,17 @@ func (recordaction *RecordAction) GetEvent() *json.RawMessage {
 	recordaction.RLock()
 
 	ret := &recordaction.Result.Event
+
+	recordaction.RUnlock()
+
+	return ret
+}
+
+// GetPayload TODO DESCRIPTION
+func (recordaction *RecordAction) GetPayload() *json.RawMessage {
+	recordaction.RLock()
+
+	ret := recordaction.Payload
 
 	recordaction.RUnlock()
 

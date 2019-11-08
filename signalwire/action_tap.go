@@ -83,6 +83,7 @@ type TapAction struct {
 	Completed bool
 	Result    TapResult
 	State     TapState
+	Payload   *json.RawMessage
 	err       error
 	done      chan bool
 	sync.RWMutex
@@ -115,7 +116,7 @@ func (callobj *CallObj) TapAudio(direction fmt.Stringer, tapdev *TapDevice) (*Ta
 
 	var err error
 
-	a.Result.SourceDevice, err = callobj.Calling.Relay.RelayTapAudio(callobj.Calling.Ctx, callobj.call, ctrlID, direction.String(), tapdev)
+	a.Result.SourceDevice, err = callobj.Calling.Relay.RelayTapAudio(callobj.Calling.Ctx, callobj.call, ctrlID, direction.String(), tapdev, nil)
 
 	if err != nil {
 		return &a.Result, err
@@ -136,7 +137,7 @@ func (callobj *CallObj) TapStop(ctrlID *string) error {
 		return errors.New("nil Relay object")
 	}
 
-	return callobj.Calling.Relay.RelayTapStop(callobj.Calling.Ctx, callobj.call, ctrlID)
+	return callobj.Calling.Relay.RelayTapStop(callobj.Calling.Ctx, callobj.call, ctrlID, nil)
 }
 
 // callbacksRunTap TODO DESCRIPTION
@@ -299,7 +300,7 @@ func (callobj *CallObj) TapAudioAsync(direction fmt.Stringer, tapdev *TapDevice)
 		res.ControlID = newCtrlID
 		res.Unlock()
 
-		srcDevice, err := callobj.Calling.Relay.RelayTapAudio(callobj.Calling.Ctx, callobj.call, newCtrlID, direction.String(), tapdev)
+		srcDevice, err := callobj.Calling.Relay.RelayTapAudio(callobj.Calling.Ctx, callobj.call, newCtrlID, direction.String(), tapdev, &res.Payload)
 
 		if err != nil {
 			res.Lock()
@@ -357,7 +358,7 @@ func (tapaction *TapAction) tapAsyncStop() error {
 
 	call := tapaction.CallObj.call
 
-	return tapaction.CallObj.Calling.Relay.RelayTapStop(tapaction.CallObj.Calling.Ctx, call, &c)
+	return tapaction.CallObj.Calling.Relay.RelayTapStop(tapaction.CallObj.Calling.Ctx, call, &c, &tapaction.Payload)
 }
 
 // Stop TODO DESCRIPTION
@@ -425,6 +426,17 @@ func (tapaction *TapAction) GetEvent() *json.RawMessage {
 	tapaction.RLock()
 
 	ret := &tapaction.Result.Event
+
+	tapaction.RUnlock()
+
+	return ret
+}
+
+// GetPayload TODO DESCRIPTION
+func (tapaction *TapAction) GetPayload() *json.RawMessage {
+	tapaction.RLock()
+
+	ret := tapaction.Payload
 
 	tapaction.RUnlock()
 
