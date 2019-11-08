@@ -193,7 +193,7 @@ func main() {
 
 		Relay.Blade = blade
 
-		if err := Relay.RelayPhoneDial(ctx, call, fromNumber, toNumber, 10); err != nil {
+		if err := Relay.RelayPhoneDial(ctx, call, fromNumber, toNumber, 10, nil); err != nil {
 			signalwire.Log.Fatal("cannot dial phone number: %v\n", err)
 		}
 
@@ -204,7 +204,7 @@ func main() {
 			signalwire.Log.Fatal("did not get Answered state\n")
 		}
 
-		if err := Relay.RelayPlayAudio(ctx, call, "1234abc", "https://cdn.signalwire.com/default-music/welcome.mp3"); err != nil {
+		if err := Relay.RelayPlayAudio(ctx, call, "1234abc", "https://cdn.signalwire.com/default-music/welcome.mp3", nil); err != nil {
 			signalwire.Log.Fatal("cannot play audio on call: %v\n", err)
 		}
 
@@ -219,7 +219,7 @@ func main() {
 		}
 
 		if call.CallState != signalwire.Ending && call.CallState != signalwire.Ended {
-			if err := Relay.RelayCallEnd(ctx, call); err != nil {
+			if err := Relay.RelayCallEnd(ctx, call, nil); err != nil {
 				signalwire.Log.Fatal("call.end error: %v\n", err)
 			}
 		}

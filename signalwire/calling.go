@@ -199,7 +199,7 @@ func (callobj *CallObj) Hangup() (*ResultHangup, error) {
 	if call.CallState == Ended {
 		// todo: handle race conds on hangup (don't write on closed channels)
 		res.Reason = call.CallDisconnectReason
-		call.CallCleanup(callobj.Calling.Ctx)
+		//		call.CallCleanup(callobj.Calling.Ctx)
 	}
 
 	res.Successful = true

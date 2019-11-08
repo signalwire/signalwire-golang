@@ -299,7 +299,9 @@ func (callobj *CallObj) callbacksRunDetectMachine(ctx context.Context, ctrlID st
 		}
 
 		if out {
+			Log.Debug("blocked")
 			res.done <- res.Result.Successful
+			Log.Debug("not blocked")
 			break
 		}
 	}
@@ -695,12 +697,14 @@ func (detectaction *DetectMachineAction) detectAsyncStop() error {
 func (detectaction *DetectMachineAction) Stop() StopResult {
 	res := new(StopResult)
 
+	Log.Debug("*DetectMachineAction) Stop():::")
 	detectaction.err = detectaction.detectAsyncStop()
 
 	if detectaction.err == nil {
 		res.Successful = <-detectaction.done
 	}
 
+	Log.Debug("*DetectMachineAction) Stop()")
 	return *res
 }
 
@@ -719,6 +723,7 @@ func (detectaction *DetectDigitAction) Stop() StopResult {
 		res.Successful = <-detectaction.done
 	}
 
+	Log.Debug("*DetectDigitAction) Stop()")
 	return *res
 }
 
@@ -736,6 +741,7 @@ func (detectaction *DetectFaxAction) Stop() StopResult {
 		res.Successful = <-detectaction.done
 	}
 
+	Log.Debug("*DetectFaxAction) Stop()")
 	return *res
 }
 
