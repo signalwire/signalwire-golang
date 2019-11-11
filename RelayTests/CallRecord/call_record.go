@@ -96,7 +96,9 @@ func main() {
 
 	go func() {
 		interrupt := make(chan os.Signal, 1)
+
 		signal.Notify(interrupt, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1)
+
 		for {
 			s := <-interrupt
 
@@ -110,6 +112,7 @@ func main() {
 					trace.Stop()
 					traceFh.Close()
 				}
+
 				signalwire.Log.Info("Exit\n")
 
 				os.Exit(0)

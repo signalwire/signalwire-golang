@@ -91,7 +91,9 @@ func main() {
 
 	go func() {
 		interrupt := make(chan os.Signal, 1)
+
 		signal.Notify(interrupt, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1)
+
 		for {
 			s := <-interrupt
 

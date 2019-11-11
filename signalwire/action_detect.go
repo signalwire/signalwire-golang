@@ -7,8 +7,10 @@ import (
 	"sync"
 )
 
+// DetectorType type of running detector
 type DetectorType int
 
+// TODO DESCRIPTION
 const (
 	MachineDetector DetectorType = iota
 	FaxDetector
@@ -66,7 +68,6 @@ type DetectResult struct {
 type DetectAction struct {
 	CallObj      *CallObj
 	ControlID    string
-	Completed    bool
 	Result       DetectResult
 	detEvent     interface{}
 	DetectorType DetectorType
@@ -74,6 +75,8 @@ type DetectAction struct {
 	err          error
 	done         chan bool
 	sync.RWMutex
+	waitForBeep bool
+	Completed   bool
 }
 
 // DetectDigitEvent TODO DESCRIPTION
@@ -121,6 +124,15 @@ type IDetectAction interface {
 	Stop()
 }
 
+// DetectMachineParams TODO DESCRIPTION
+type DetectMachineParams struct {
+	InitialTimeout        float64
+	EndSilenceTimeout     float64
+	MachineVoiceThreshold float64
+	MachineWordsThreshold float64
+	WaitForBeep           bool // special param that does not get sent
+}
+
 // DetectMachine TODO DESCRIPTION
 func (callobj *CallObj) DetectMachine(det *DetectMachineParams) (*DetectResult, error) {
 	a := new(DetectAction)
@@ -135,12 +147,19 @@ func (callobj *CallObj) DetectMachine(det *DetectMachineParams) (*DetectResult, 
 
 	ctrlID, _ := GenUUIDv4()
 
-	err := callobj.Calling.Relay.RelayDetectMachine(callobj.Calling.Ctx, callobj.call, ctrlID, det, nil)
+	var detInternal DetectMachineParamsInternal
+	detInternal.InitialTimeout = det.InitialTimeout
+	detInternal.EndSilenceTimeout = det.EndSilenceTimeout
+	detInternal.MachineVoiceThreshold = det.MachineVoiceThreshold
+	detInternal.MachineWordsThreshold = det.MachineWordsThreshold
+
+	err := callobj.Calling.Relay.RelayDetectMachine(callobj.Calling.Ctx, callobj.call, ctrlID, &detInternal, nil)
 
 	if err != nil {
 		return &a.Result, err
 	}
 
+	a.waitForBeep = det.WaitForBeep
 	callobj.callbacksRunDetectMachine(callobj.Calling.Ctx, ctrlID, a)
 
 	return &a.Result, nil
@@ -244,13 +263,26 @@ func (callobj *CallObj) callbacksRunDetectMachine(ctx context.Context, ctrlID st
 					callobj.OnDetectFinished(res)
 				}
 			case DetectMachineMachine:
-				res.Lock()
+				if !res.waitForBeep {
+					res.Lock()
 
-				res.detEvent = detectevent
-				res.Result.Result = detectevent.String()
-				res.Result.Type = DetectorMachine
+					res.detEvent = detectevent
+					res.Result.Result = detectevent.String()
+					res.Result.Type = DetectorMachine
 
-				res.Unlock()
+					res.Result.Successful = true
+					res.Completed = true
+
+					res.Unlock()
+
+					res.Stop()
+
+					out = true
+
+					if callobj.OnDetectFinished != nil {
+						callobj.OnDetectFinished(res)
+					}
+				}
 
 			case DetectMachineHuman:
 				res.Lock()
@@ -259,7 +291,18 @@ func (callobj *CallObj) callbacksRunDetectMachine(ctx context.Context, ctrlID st
 				res.Result.Result = detectevent.String()
 				res.Result.Type = DetectorHuman
 
+				res.Result.Successful = true
+				res.Completed = true
+
 				res.Unlock()
+
+				res.Stop()
+
+				out = true
+
+				if callobj.OnDetectFinished != nil {
+					callobj.OnDetectFinished(res)
+				}
 
 			case DetectMachineUnknown:
 				res.Lock()
@@ -268,10 +311,41 @@ func (callobj *CallObj) callbacksRunDetectMachine(ctx context.Context, ctrlID st
 				res.Result.Result = detectevent.String()
 				res.Result.Type = DetectorUnknown
 
+				res.Result.Successful = true
+				res.Completed = true
+
 				res.Unlock()
 
+				res.Stop()
+
+				out = true
+
+				if callobj.OnDetectFinished != nil {
+					callobj.OnDetectFinished(res)
+				}
+
 			case DetectMachineReady:
-				fallthrough
+				if res.waitForBeep {
+					res.Lock()
+
+					res.detEvent = detectevent
+					res.Result.Result = detectevent.String()
+					res.Result.Type = DetectorUnknown
+
+					res.Result.Successful = true
+					res.Completed = true
+
+					res.Unlock()
+
+					res.Stop()
+
+					out = true
+
+					if callobj.OnDetectFinished != nil {
+						callobj.OnDetectFinished(res)
+					}
+				}
+
 			case DetectMachineNotReady:
 				res.Lock()
 
@@ -479,11 +553,20 @@ func (callobj *CallObj) DetectMachineAsync(det *DetectMachineParams) (*DetectAct
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
+
 		res.Lock()
+
 		res.ControlID = newCtrlID
+
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelayDetectMachine(callobj.Calling.Ctx, callobj.call, newCtrlID, det, &res.Payload)
+		var detInternal DetectMachineParamsInternal
+		detInternal.InitialTimeout = det.InitialTimeout
+		detInternal.EndSilenceTimeout = det.EndSilenceTimeout
+		detInternal.MachineVoiceThreshold = det.MachineVoiceThreshold
+		detInternal.MachineWordsThreshold = det.MachineWordsThreshold
+
+		err := callobj.Calling.Relay.RelayDetectMachine(callobj.Calling.Ctx, callobj.call, newCtrlID, &detInternal, &res.Payload)
 		if err != nil {
 			res.Lock()
 			res.err = err
@@ -525,8 +608,11 @@ func (callobj *CallObj) DetectDigitAsync(det *DetectDigitParams) (*DetectAction,
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
+
 		res.Lock()
+
 		res.ControlID = newCtrlID
+
 		res.Unlock()
 
 		err := callobj.Calling.Relay.RelayDetectDigit(callobj.Calling.Ctx, callobj.call, newCtrlID, det.Digits, &res.Payload)
@@ -571,8 +657,11 @@ func (callobj *CallObj) DetectFaxAsync(det *DetectFaxParams) (*DetectAction, err
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
+
 		res.Lock()
+
 		res.ControlID = newCtrlID
+
 		res.Unlock()
 
 		err := callobj.Calling.Relay.RelayDetectFax(callobj.Calling.Ctx, callobj.call, newCtrlID, det.Tone, &res.Payload)

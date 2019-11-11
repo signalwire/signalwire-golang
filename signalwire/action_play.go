@@ -346,8 +346,11 @@ func (callobj *CallObj) PlaySilenceAsync(duration float64) (*PlayAction, error) 
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
+
 		res.Lock()
+
 		res.ControlID = newCtrlID
+
 		res.Unlock()
 
 		err := callobj.Calling.Relay.RelayPlaySilence(callobj.Calling.Ctx, callobj.call, newCtrlID, duration, &res.Payload)
@@ -394,8 +397,11 @@ func (callobj *CallObj) PlayRingtoneAsync(name string, duration float64) (*PlayA
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
+
 		res.Lock()
+
 		res.ControlID = newCtrlID
+
 		res.Unlock()
 
 		err := callobj.Calling.Relay.RelayPlayRingtone(callobj.Calling.Ctx, callobj.call, newCtrlID, name, duration, &res.Payload)
@@ -442,8 +448,11 @@ func (callobj *CallObj) PlayTTSAsync(text, language, gender string) (*PlayAction
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
+
 		res.Lock()
+
 		res.ControlID = newCtrlID
+
 		res.Unlock()
 
 		var tts TTSParamsInternal
@@ -496,8 +505,11 @@ func (callobj *CallObj) PlayAudioAsync(url string) (*PlayAction, error) {
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
+
 		res.Lock()
+
 		res.ControlID = newCtrlID
+
 		res.Unlock()
 
 		err := callobj.Calling.Relay.RelayPlayAudio(callobj.Calling.Ctx, callobj.call, newCtrlID, url, &res.Payload)

@@ -166,8 +166,11 @@ func (callobj *CallObj) SendDigitsAsync(digits string) (*SendDigitsAction, error
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
+
 		res.Lock()
+
 		res.ControlID = newCtrlID
+
 		res.Unlock()
 
 		err := callobj.Calling.Relay.RelaySendDigits(callobj.Calling.Ctx, callobj.call, newCtrlID, digits, &res.Payload)

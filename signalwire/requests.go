@@ -526,8 +526,8 @@ type ParamsCallRecord struct {
 // ParamsCallRecordStop TODO DESCRIPTION
 type ParamsCallRecordStop ParamsGenericAction
 
-// DetectMachineParams TODO DESCRIPTION
-type DetectMachineParams struct {
+// DetectMachineParamsInternal TODO DESCRIPTION
+type DetectMachineParamsInternal struct {
 	InitialTimeout        float64 `json:"initial_timeout,omitempty"`
 	EndSilenceTimeout     float64 `json:"end_silence_timeout,omitempty"`
 	MachineVoiceThreshold float64 `json:"machine_voice_threshold,omitempty"`
