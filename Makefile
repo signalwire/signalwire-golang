@@ -1,10 +1,14 @@
 GO_BIN ?= go
+RM_BIN ?= rm
 
 export PATH := $(PATH):/usr/local/go/bin
 
 linter-install:
-	$(GO_BIN) get -u github.com/golangci/golangci-lint/cmd/golangci-lint
+	$(RM_BIN) -f go.mod go.sum
+	$(GO_BIN) mod init linter
+	$(GO_BIN) get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.21.0
 	$(GO_BIN) get -u github.com/mgechev/revive
+	$(RM_BIN) -f go.mod go.sum
 
 test:
 	make test -C signalwire
