@@ -124,6 +124,7 @@ func (client *ClientSession) connectInternal(ctx context.Context, cancel context
 
 	go func() {
 		sProtocol = <-blade.Netcast
+
 		wg.Done()
 	}()
 

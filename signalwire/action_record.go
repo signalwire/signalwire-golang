@@ -254,8 +254,11 @@ func (callobj *CallObj) RecordAudioAsync(rec *RecordParams) (*RecordAction, erro
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
+
 		res.Lock()
+
 		res.ControlID = newCtrlID
+
 		res.Unlock()
 
 		err := callobj.Calling.Relay.I.RelayRecordAudio(callobj.Calling.Ctx, callobj.call, newCtrlID, rec, &res.Payload)

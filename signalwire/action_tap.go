@@ -296,8 +296,11 @@ func (callobj *CallObj) TapAudioAsync(direction fmt.Stringer, tapdev *TapDevice)
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
+
 		res.Lock()
+
 		res.ControlID = newCtrlID
+
 		res.Unlock()
 
 		srcDevice, err := callobj.Calling.Relay.RelayTapAudio(callobj.Calling.Ctx, callobj.call, newCtrlID, direction.String(), tapdev, &res.Payload)

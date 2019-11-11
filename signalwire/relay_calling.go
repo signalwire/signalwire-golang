@@ -795,14 +795,14 @@ func (relay *RelaySession) RelayDetectFax(ctx context.Context, call *CallSession
 }
 
 // RelayDetectMachine TODO DESCRIPTION
-func (relay *RelaySession) RelayDetectMachine(ctx context.Context, call *CallSession, controlID string, det *DetectMachineParams, payload **json.RawMessage) error {
+func (relay *RelaySession) RelayDetectMachine(ctx context.Context, call *CallSession, controlID string, det *DetectMachineParamsInternal, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
 
-	detectMachineParams := DetectMachineParams{
+	detectMachineParams := DetectMachineParamsInternal{
 		InitialTimeout:        det.InitialTimeout,
 		EndSilenceTimeout:     det.EndSilenceTimeout,
 		MachineVoiceThreshold: det.MachineVoiceThreshold,

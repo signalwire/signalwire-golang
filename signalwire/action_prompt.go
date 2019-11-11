@@ -329,8 +329,11 @@ func (callobj *CallObj) PromptAsync(playlist *[]PlayStruct, collect *CollectStru
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
+
 		res.Lock()
+
 		res.ControlID = newCtrlID
+
 		res.Unlock()
 
 		err := callobj.Calling.Relay.RelayPlayAndCollect(callobj.Calling.Ctx, callobj.call, newCtrlID, playlist, collect, &res.Payload)

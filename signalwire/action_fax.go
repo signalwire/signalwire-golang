@@ -310,8 +310,11 @@ func (callobj *CallObj) ReceiveFaxAsync() (*FaxAction, error) {
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
+
 		res.Lock()
+
 		res.ControlID = newCtrlID
+
 		res.Unlock()
 
 		err := callobj.Calling.Relay.RelayReceiveFax(callobj.Calling.Ctx, callobj.call, &newCtrlID, &res.Payload)
@@ -358,8 +361,11 @@ func (callobj *CallObj) SendFaxAsync(doc, id, headerInfo string) (*FaxAction, er
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
+
 		res.Lock()
+
 		res.ControlID = newCtrlID
+
 		res.Unlock()
 
 		var fax FaxParamsInternal
