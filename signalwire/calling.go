@@ -109,6 +109,7 @@ type ResultAnswer struct {
 type ResultHangup struct {
 	Successful bool
 	Reason     CallDisconnectReason
+	Event      *json.RawMessage
 	err        error
 }
 
@@ -208,8 +209,8 @@ func (callobj *CallObj) Hangup() (*ResultHangup, error) {
 	}
 
 	if call.CallState == Ended {
-		// todo: handle race conds on hangup (don't write on closed channels)
 		res.Reason = call.CallDisconnectReason
+		res.Event = call.Event
 		call.CallCleanup(callobj.Calling.Ctx)
 	}
 
@@ -431,6 +432,11 @@ func (resultHangup *ResultHangup) GetSuccessful() bool {
 // GetError TODO DESCRIPTION
 func (resultHangup *ResultHangup) GetError() bool {
 	return resultHangup.Successful
+}
+
+// GetEvent TODO DESCRIPTION
+func (resultHangup *ResultHangup) GetEvent() *json.RawMessage {
+	return resultHangup.Event
 }
 
 // GetSuccessful TODO DESCRIPTION
