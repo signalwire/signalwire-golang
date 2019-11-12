@@ -645,6 +645,17 @@ func (playaction *PlayAction) GetSuccessful() bool {
 	return ret
 }
 
+// GetControlID TODO DESCRIPTION
+func (playaction *PlayAction) GetControlID() string {
+	playaction.RLock()
+
+	ret := playaction.ControlID
+
+	playaction.RUnlock()
+
+	return ret
+}
+
 // GetEvent TODO DESCRIPTION
 func (playaction *PlayAction) GetEvent() *json.RawMessage {
 	playaction.RLock()

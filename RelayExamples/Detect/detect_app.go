@@ -45,7 +45,7 @@ func spinner(delay time.Duration) {
 }
 
 // MyOnDetectFinished ran when Detect Action finishes
-func MyOnDetectFinished(det *signalwire.DetectAction) {
+func MyOnDetectFinished(_ *signalwire.DetectAction) {
 	signalwire.Log.Info("Detect finished.\n")
 }
 
@@ -69,7 +69,7 @@ func MyOnDetectUpdate(det *signalwire.DetectAction) {
 }
 
 // MyOnDetectError ran on Detector error
-func MyOnDetectError(det *signalwire.DetectAction) {
+func MyOnDetectError(_ *signalwire.DetectAction) {
 	signalwire.Log.Error("Detect error.\n")
 }
 

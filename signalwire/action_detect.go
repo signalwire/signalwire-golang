@@ -818,3 +818,14 @@ func (detectaction *DetectAction) GetPayload() *json.RawMessage {
 
 	return ret
 }
+
+// GetControlID TODO DESCRIPTION
+func (detectaction *DetectAction) GetControlID() string {
+	detectaction.RLock()
+
+	ret := detectaction.ControlID
+
+	detectaction.RUnlock()
+
+	return ret
+}

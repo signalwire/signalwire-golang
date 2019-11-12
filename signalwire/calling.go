@@ -18,7 +18,7 @@ type CallObj struct {
 	call    *CallSession
 	I       ICallObj
 	Calling *Calling
-	Payload *json.RawMessage
+	Payload *json.RawMessage // last command payload
 
 	OnStateChange           func(*CallObj)
 	OnRinging               func(*CallObj)
@@ -522,4 +522,14 @@ func (callobj *CallObj) Ended() bool {
 // GetType TODO DESCRIPTION
 func (callobj *CallObj) GetType() string {
 	return callobj.call.GetType()
+}
+
+// GetEvent TODO DESCRIPTION
+func (callobj *CallObj) GetEvent() *json.RawMessage {
+	return callobj.call.GetEventPayload()
+}
+
+// GetEventName this is expensive
+func (callobj *CallObj) GetEventName() string {
+	return callobj.call.GetEventName()
 }

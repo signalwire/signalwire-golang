@@ -246,3 +246,14 @@ func (action *SendDigitsAction) GetPayload() *json.RawMessage {
 
 	return ret
 }
+
+// GetControlID TODO DESCRIPTION
+func (action *SendDigitsAction) GetControlID() string {
+	action.RLock()
+
+	ret := action.ControlID
+
+	action.RUnlock()
+
+	return ret
+}

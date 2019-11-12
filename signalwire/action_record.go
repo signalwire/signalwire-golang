@@ -417,3 +417,14 @@ func (recordaction *RecordAction) GetPayload() *json.RawMessage {
 
 	return ret
 }
+
+// GetControlID TODO DESCRIPTION
+func (recordaction *RecordAction) GetControlID() string {
+	recordaction.RLock()
+
+	ret := recordaction.ControlID
+
+	recordaction.RUnlock()
+
+	return ret
+}
