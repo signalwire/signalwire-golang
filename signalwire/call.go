@@ -473,6 +473,60 @@ func (c *CallSession) GetTagID() string {
 	return s
 }
 
+// GetEvent TODO DESCRIPTION
+func (c *CallSession) GetEventPayload() *json.RawMessage {
+	c.RLock()
+	e := c.Event
+	c.RUnlock()
+
+	return e
+}
+
+type innerParams struct {
+	EventType string `json:"event_type"`
+}
+
+type evParams struct {
+	Params innerParams `json:"params"`
+	Rest   json.RawMessage
+}
+
+type eventPlaceHolder struct {
+	Params evParams `json:"params"`
+	Rest   json.RawMessage
+}
+
+// GetEvent TODO DESCRIPTION
+func (c *CallSession) GetEventName() string {
+	c.RLock()
+	e := c.Event
+	c.RUnlock()
+
+	if e != nil {
+		placeholder := new(eventPlaceHolder)
+
+		ev := struct {
+			Params *json.RawMessage `json:"params"`
+		}{Params: e}
+
+		b, err := json.Marshal(ev)
+		if err != nil {
+			Log.Error("payload: cannot marshal")
+		}
+
+		err = json.Unmarshal(b, placeholder)
+		if err != nil {
+			Log.Error("payload: cannot unmarshal to RawMessage")
+		}
+
+		return placeholder.Params.Params.EventType
+	}
+
+	Log.Error("no Event!")
+
+	return ""
+}
+
 // Actions TODO DESCRIPTION
 type Actions struct {
 	sync.RWMutex
