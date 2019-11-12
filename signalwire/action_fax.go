@@ -538,3 +538,14 @@ func (action *FaxAction) GetEvent() *json.RawMessage {
 
 	return ret
 }
+
+// GetControlID TODO DESCRIPTION
+func (action *FaxAction) GetControlID() string {
+	action.RLock()
+
+	ret := action.ControlID
+
+	action.RUnlock()
+
+	return ret
+}

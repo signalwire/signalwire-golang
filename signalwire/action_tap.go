@@ -445,3 +445,14 @@ func (tapaction *TapAction) GetPayload() *json.RawMessage {
 
 	return ret
 }
+
+// GetControlID TODO DESCRIPTION
+func (tapaction *TapAction) GetControlID() string {
+	tapaction.RLock()
+
+	ret := tapaction.ControlID
+
+	tapaction.RUnlock()
+
+	return ret
+}
