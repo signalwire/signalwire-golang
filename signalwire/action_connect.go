@@ -31,7 +31,6 @@ type ConnectResult struct {
 
 // ConnectAction TODO DESCRIPTION
 type ConnectAction struct {
-	CallObj   *CallObj
 	ControlID string
 	Completed bool
 	Result    ConnectResult
@@ -76,8 +75,6 @@ func (callobj *CallObj) ConnectAsync(fromNumber, toNumber string) (*ConnectActio
 	if callobj.Calling.Relay == nil {
 		return res, errors.New("nil Relay object")
 	}
-
-	res.CallObj = callobj
 
 	res.Result.CallObj = callobj
 
@@ -218,7 +215,7 @@ func (action *ConnectAction) GetPayload() *json.RawMessage {
 func (action *ConnectAction) GetCall() *CallObj {
 	action.RLock()
 
-	ret := action.CallObj
+	ret := action.Result.CallObj
 
 	action.RUnlock()
 
