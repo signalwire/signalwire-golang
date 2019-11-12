@@ -133,6 +133,16 @@ type DetectMachineParams struct {
 	WaitForBeep           bool // special param that does not get sent
 }
 
+// AMD TODO DESCRIPTION
+func (callobj *CallObj) AMD(det *DetectMachineParams) (*DetectResult, error) {
+	return callobj.DetectMachine(det)
+}
+
+// AMDAsync TODO DESCRIPTION
+func (callobj *CallObj) AMDAsync(det *DetectMachineParams) (*DetectAction, error) {
+	return callobj.DetectMachineAsync(det)
+}
+
 // DetectMachine TODO DESCRIPTION
 func (callobj *CallObj) DetectMachine(det *DetectMachineParams) (*DetectResult, error) {
 	a := new(DetectAction)

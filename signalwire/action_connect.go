@@ -26,11 +26,11 @@ func (s CallConnectState) String() string {
 type ConnectResult struct {
 	Successful bool
 	Event      json.RawMessage
+	CallObj    *CallObj
 }
 
 // ConnectAction TODO DESCRIPTION
 type ConnectAction struct {
-	CallObj   *CallObj
 	ControlID string
 	Completed bool
 	Result    ConnectResult
@@ -44,6 +44,8 @@ type ConnectAction struct {
 func (callobj *CallObj) Connect(ringback *[]RingbackStruct, devices *[][]DeviceStruct) (*ConnectResult, error) {
 	a := new(ConnectAction)
 	res := &a.Result
+
+	a.Result.CallObj = callobj
 
 	if callobj.Calling == nil {
 		return res, errors.New("nil Calling object")
@@ -74,7 +76,8 @@ func (callobj *CallObj) ConnectAsync(fromNumber, toNumber string) (*ConnectActio
 		return res, errors.New("nil Relay object")
 	}
 
-	res.CallObj = callobj
+	res.Result.CallObj = callobj
+
 	done := make(chan struct{}, 1)
 
 	go func() {
@@ -202,6 +205,17 @@ func (action *ConnectAction) GetPayload() *json.RawMessage {
 	action.RLock()
 
 	ret := action.Payload
+
+	action.RUnlock()
+
+	return ret
+}
+
+// GetCall TODO DESCRIPTION
+func (action *ConnectAction) GetCall() *CallObj {
+	action.RLock()
+
+	ret := action.Result.CallObj
 
 	action.RUnlock()
 

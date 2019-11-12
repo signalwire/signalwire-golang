@@ -33,7 +33,7 @@ type IEventCalling interface {
 	callSendDigitsStateFromStr(s string) (SendDigitsState, error)
 	callDirectionFromStr(s string) (CallDirection, error)
 	callPlayAndCollectStateFromStr(s string) (CollectResultType, error)
-	dispatchStateNotif(ctx context.Context, callParams CallParams) error
+	dispatchStateNotif(ctx context.Context, callParams CallParams, rawEvent *json.RawMessage) error
 	dispatchConnectStateNotif(ctx context.Context, callParams CallParams, peer PeerDeviceStruct, ccstate CallConnectState, rawEvent *json.RawMessage) error
 	dispatchPlayState(ctx context.Context, callID, ctrlID string, playState PlayState, rawEvent *json.RawMessage) error
 	dispatchRecordState(ctx context.Context, callID, ctrlID string, recordState RecordState, rawEvent *json.RawMessage) error
@@ -49,8 +49,8 @@ type IEventCalling interface {
 	getCall(ctx context.Context, tag, callID string) (*CallSession, error)
 	getBroadcastParams(ctx context.Context, in, out interface{}) error
 	onCallingEventConnect(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error
-	onCallingEventReceive(ctx context.Context, broadcast NotifParamsBladeBroadcast) error
-	onCallingEventState(ctx context.Context, broadcast NotifParamsBladeBroadcast) error
+	onCallingEventReceive(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error
+	onCallingEventState(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error
 	onCallingEventPlay(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error
 	onCallingEventCollect(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error
 	onCallingEventRecord(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error
@@ -497,7 +497,7 @@ func (calling *EventCalling) onCallingEventConnect(ctx context.Context, broadcas
 	)
 }
 
-func (calling *EventCalling) onCallingEventState(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+func (calling *EventCalling) onCallingEventState(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
 	var params ParamsEventCallingCallState
 
 	if err := calling.getBroadcastParams(ctx, broadcast.Params.Params, &params); err != nil {
@@ -520,11 +520,11 @@ func (calling *EventCalling) onCallingEventState(ctx context.Context, broadcast 
 	callParams.CallState = state
 	callParams.EndReason = params.EndReason
 
-	return calling.I.dispatchStateNotif(ctx, callParams)
+	return calling.I.dispatchStateNotif(ctx, callParams, rawEvent)
 }
 
 // onCallingEvent_Receive  this is almost the same as onCallingEvent_State
-func (calling *EventCalling) onCallingEventReceive(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+func (calling *EventCalling) onCallingEventReceive(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
 	var params ParamsEventCallingCallReceive
 
 	if err := calling.getBroadcastParams(ctx, broadcast.Params.Params, &params); err != nil {
@@ -548,7 +548,7 @@ func (calling *EventCalling) onCallingEventReceive(ctx context.Context, broadcas
 	callParams.Context = params.Context
 
 	// only state Created
-	return calling.I.dispatchStateNotif(ctx, callParams)
+	return calling.I.dispatchStateNotif(ctx, callParams, rawEvent)
 }
 
 func (calling *EventCalling) onCallingEventPlay(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
@@ -851,7 +851,7 @@ func (tasking *EventTasking) onTaskingEvent(ctx context.Context, broadcast Notif
 	return nil
 }
 
-func (calling *EventCalling) dispatchStateNotif(ctx context.Context, callParams CallParams) error {
+func (calling *EventCalling) dispatchStateNotif(ctx context.Context, callParams CallParams, rawEvent *json.RawMessage) error {
 	Log.Debug("tag [%s] callstate [%s] blade [%p] direction: %s\n", callParams.TagID, callParams.CallState.String(), calling.blade, callParams.Direction)
 	Log.Debug("direction : %v\n", callParams.Direction)
 
@@ -872,6 +872,8 @@ func (calling *EventCalling) dispatchStateNotif(ctx context.Context, callParams 
 	call.UpdateCallState(callParams.CallState)
 
 	call.Blade = calling.blade
+
+	call.Event = rawEvent
 
 	if (callParams.CallState == Created) && (callParams.Direction == InboundStr) {
 		calling.blade.I.handleInboundCall(ctx, callParams.CallID)

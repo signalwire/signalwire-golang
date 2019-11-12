@@ -142,6 +142,7 @@ type CallSession struct {
 	Actions  Actions
 	Blade    *BladeSession
 	I        ICall
+	Event    *json.RawMessage
 	sync.RWMutex
 }
 

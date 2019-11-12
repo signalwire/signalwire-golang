@@ -802,11 +802,11 @@ func (blade *BladeSession) eventNotif(ctx context.Context, broadcast NotifParams
 				return err
 			}
 		case "calling.call.state":
-			if err := calling.onCallingEventState(ctx, broadcast); err != nil {
+			if err := calling.onCallingEventState(ctx, broadcast, rawEvent); err != nil {
 				return err
 			}
 		case "calling.call.receive":
-			if err := calling.onCallingEventReceive(ctx, broadcast); err != nil {
+			if err := calling.onCallingEventReceive(ctx, broadcast, rawEvent); err != nil {
 				return err
 			}
 		case "calling.call.play":
