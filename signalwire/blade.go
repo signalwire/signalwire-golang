@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	okCode = "200"
+	okCode       = "200"
+	debugJSONRPC = true // show jsonrpc2 command, replies and notifications
 )
 
 // BladeAuth holds auth data for the WS connection
@@ -82,7 +83,7 @@ type IBlade interface {
 	BladeConnect(ctx context.Context, bladeAuth *BladeAuth) error
 	BladeSetup(ctx context.Context) error
 	BladeAddSubscription(ctx context.Context, signalwireChannels []string) error
-	BladeExecute(ctx context.Context, v interface{}, res interface{} /*, payload *json.RawMessage*/) (interface{}, error)
+	BladeExecute(ctx context.Context, v interface{}, res interface{}) (interface{}, error)
 	BladeSignalwireReceive(ctx context.Context, signalwireContexts []string) error
 	BladeWaitDisconnect(ctx context.Context)
 	BladeDisconnect(ctx context.Context) error
@@ -402,8 +403,6 @@ func (blade *BladeSession) BladeSetup(ctx context.Context) error {
 		Params:   ParamsSignalwireSetupStruct{},
 	}
 
-	Log.Debug("blade.BladeExecute: %p\n", blade.BladeExecute)
-
 	reply, err := blade.I.BladeExecute(ctx, &v, &ReplySetupDecode)
 	if err != nil {
 		return err
@@ -463,13 +462,14 @@ func (blade *BladeSession) BladeAddSubscription(ctx context.Context, signalwireC
 	return nil
 }
 
-/*
-type PlaceHolder struct {
-	Params json.RawMessage
-}*/
+type placeHolderCmd struct {
+	Protocol string          `json:"protocol"`
+	Method   string          `json:"method"`
+	Params   json.RawMessage `json:"params"`
+}
 
 // BladeExecute TODO DESCRIPTION
-func (blade *BladeSession) BladeExecute(ctx context.Context, v interface{}, res interface{} /*, payload *json.RawMessage*/) (interface{}, error) {
+func (blade *BladeSession) BladeExecute(ctx context.Context, v interface{}, res interface{}) (interface{}, error) {
 	if blade == nil {
 		return nil, errors.New("empty blade session object")
 	}
@@ -487,6 +487,27 @@ func (blade *BladeSession) BladeExecute(ctx context.Context, v interface{}, res 
 
 	blade.jOpts = nil
 	blade.jOpts = append(blade.jOpts, jsonrpc2.PickID(id))
+
+	if debugJSONRPC {
+		placeholder := new(placeHolderCmd)
+
+		b, err := json.Marshal(v)
+		if err != nil {
+			Log.Error("payload: cannot marshal")
+		}
+
+		err = json.Unmarshal(b, placeholder)
+		if err != nil {
+			Log.Error("payload: cannot unmarshal to RawMessage")
+		}
+
+		bp, err := json.MarshalIndent(&placeholder, "", "\t")
+		if err != nil {
+			Log.Error("error:", err)
+		}
+
+		Log.Debug("blade.execute params: %s\n", bp)
+	}
 
 	if err := blade.conn.Call(ctx, "blade.execute", v, res, blade.jOpts...); err != nil {
 		blade.LastError = err
@@ -704,7 +725,9 @@ func (ReqHandler) Handle(ctx context.Context, c *jsonrpc2.Conn, req *jsonrpc2.Re
 		}
 	}
 
-	Log.Debug("%s: %s\n", req.ID, *req.Params)
+	if debugJSONRPC {
+		Log.Debug("%s: %s\n", req.ID, *req.Params)
+	}
 }
 
 // BladeWaitDisconnect TODO DESCRIPTION
