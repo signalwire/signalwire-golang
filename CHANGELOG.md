@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [1.0.0-rc.1] - 2019-11-13
 - add Event Name and Event Payload properties per call, add getter for ControlID per Action
 - add AMD and AMDAsync Methods
 - decorate each Action with the Payload (Relay command params - can be inspected by the SDK user)
