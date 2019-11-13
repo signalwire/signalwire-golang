@@ -678,8 +678,6 @@ func (relay *RelaySession) RelayRecordAudio(ctx context.Context, call *CallSessi
 
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
-	call.AddAction(controlID, "init")
-
 	if r.Result.Code != okCode {
 		return errors.New(r.Result.Message)
 	}

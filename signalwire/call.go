@@ -473,7 +473,7 @@ func (c *CallSession) GetTagID() string {
 	return s
 }
 
-// GetEvent TODO DESCRIPTION
+// GetEventPayload TODO DESCRIPTION
 func (c *CallSession) GetEventPayload() *json.RawMessage {
 	c.RLock()
 	e := c.Event
@@ -496,7 +496,7 @@ type eventPlaceHolder struct {
 	Rest   json.RawMessage
 }
 
-// GetEvent TODO DESCRIPTION
+// GetEventName TODO DESCRIPTION
 func (c *CallSession) GetEventName() string {
 	c.RLock()
 	e := c.Event
