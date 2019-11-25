@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/binary"
 	"flag"
 	"fmt"
 	"io"
@@ -9,12 +10,14 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/pion/rtp"
 	"github.com/signalwire/signalwire-golang/signalwire"
 	"github.com/zaf/g711"
+	"gopkg.in/hraban/opus.v2"
 )
 
 // App environment settings
@@ -53,7 +56,7 @@ func depak(rawpacket []byte) (*[]byte, error) {
 	return &packet.Payload, nil
 }
 
-func rtpListen() {
+func rtpListen(codec string, ptime uint8, rate uint) {
 	addrStr := fmt.Sprintf("%s:%d", listenAddress, listenPort)
 
 	conn, err := net.ListenPacket("udp", addrStr)
@@ -63,8 +66,28 @@ func rtpListen() {
 
 	defer conn.Close()
 
+	var g711dec *g711.Decoder
+
+	var opusdec *opus.Decoder
+
 	b := new(bytes.Buffer)
-	udec, _ := g711.NewUlawDecoder(b)
+
+	switch strings.ToUpper(codec) {
+	case "PCMU":
+		g711dec, _ = g711.NewUlawDecoder(b)
+	case "PCMA":
+		g711dec, _ = g711.NewAlawDecoder(b)
+	case "OPUS":
+		if rate == 0 {
+			rate = 48000
+		}
+
+		opusdec, _ = opus.NewDecoder(int(rate), 1)
+	default:
+		signalwire.Log.Warn("Unknown codec")
+		return
+	}
+
 	/* this file can be imported in Audacity, 8000 hz, 1 channel, Little-Endian, Signed 16 bit PCM */
 	out, err := os.Create("tapaudio.raw")
 	if err != nil {
@@ -72,6 +95,18 @@ func rtpListen() {
 	}
 
 	defer out.Close()
+
+	var pcm []int16
+
+	if opusdec != nil {
+		if ptime == 0 {
+			ptime = 20
+		}
+
+		frameSize := uint(ptime) * rate / 1000
+
+		pcm = make([]int16, frameSize)
+	}
 
 	for {
 		buf := make([]byte, 1024)
@@ -87,11 +122,25 @@ func rtpListen() {
 			signalwire.Log.Fatal("%v", err)
 		}
 
-		b.Write(*payload)
+		if g711dec != nil {
+			b.Write(*payload)
 
-		_, err = io.Copy(out, udec)
-		if err != nil {
-			signalwire.Log.Fatal("Decoding failed: %v\n", err)
+			_, err = io.Copy(out, g711dec)
+			if err != nil {
+				signalwire.Log.Fatal("Decoding failed: %v\n", err)
+			}
+		} else if opusdec != nil {
+			data := (*payload)[:n]
+
+			n, err := opusdec.Decode(data, pcm)
+			if err != nil {
+				signalwire.Log.Fatal("Decoding failed: %v\n", err)
+			}
+			err = binary.Write(b, binary.LittleEndian, pcm[:n])
+			if err != nil {
+				signalwire.Log.Fatal("binary.Write failed:", err)
+			}
+			_, _ = io.Copy(out, b)
 		}
 	}
 }
@@ -143,7 +192,7 @@ func MyReady(consumer *signalwire.Consumer) {
 		signalwire.Log.Fatal("Error occurred while trying to tap audio: %v\n", err)
 	}
 
-	go rtpListen()
+	go rtpListen(tapdevice.Params.Codec, tapdevice.Params.Ptime, tapdevice.Params.Rate)
 
 	time.Sleep(10 * time.Second)
 	tapAction.Stop()
