@@ -2,12 +2,13 @@ package signalwire
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 )
 
 // RelayPhoneDial make outbound phone call
-func (relay *RelaySession) RelayPhoneDial(ctx context.Context, call *CallSession, fromNumber string, toNumber string, timeout uint) error {
+func (relay *RelaySession) RelayPhoneDial(ctx context.Context, call *CallSession, fromNumber string, toNumber string, timeout uint, payload **json.RawMessage) error {
 	var err error
 
 	if relay == nil {
@@ -34,6 +35,7 @@ func (relay *RelaySession) RelayPhoneDial(ctx context.Context, call *CallSession
 	}
 
 	call.CallInit(ctx)
+	call.SetType(CallTypePhone)
 
 	v := ParamsBladeExecuteStruct{
 		Protocol: relay.Blade.Protocol,
@@ -50,6 +52,8 @@ func (relay *RelaySession) RelayPhoneDial(ctx context.Context, call *CallSession
 			Tag: call.TagID,
 		},
 	}
+
+	savePayload(payload, v)
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute
 
@@ -75,7 +79,7 @@ func (relay *RelaySession) RelayPhoneDial(ctx context.Context, call *CallSession
 }
 
 // RelayPhoneConnect TODO DESCRIPTION
-func (relay *RelaySession) RelayPhoneConnect(ctx context.Context, call *CallSession, fromNumber string, toNumber string) error {
+func (relay *RelaySession) RelayPhoneConnect(ctx context.Context, call *CallSession, fromNumber string, toNumber string, payload **json.RawMessage) error {
 	if relay == nil {
 		return errors.New("empty relay object")
 	}
@@ -117,6 +121,8 @@ func (relay *RelaySession) RelayPhoneConnect(ctx context.Context, call *CallSess
 		},
 	}
 
+	savePayload(payload, v)
+
 	var ReplyBladeExecuteDecode ReplyBladeExecute
 
 	reply, err := relay.Blade.I.BladeExecute(ctx, &v, &ReplyBladeExecuteDecode)
@@ -139,7 +145,7 @@ func (relay *RelaySession) RelayPhoneConnect(ctx context.Context, call *CallSess
 }
 
 // RelayConnect TODO DESCRIPTION
-func (relay *RelaySession) RelayConnect(ctx context.Context, call *CallSession, ringback *[]RingbackStruct, devices *[][]DeviceStruct) error {
+func (relay *RelaySession) RelayConnect(ctx context.Context, call *CallSession, ringback *[]RingbackStruct, devices *[][]DeviceStruct, payload **json.RawMessage) error {
 	if relay == nil {
 		return errors.New("empty relay object")
 	}
@@ -169,6 +175,8 @@ func (relay *RelaySession) RelayConnect(ctx context.Context, call *CallSession, 
 		},
 	}
 
+	savePayload(payload, v)
+
 	var ReplyBladeExecuteDecode ReplyBladeExecute
 
 	reply, err := relay.Blade.I.BladeExecute(ctx, &v, &ReplyBladeExecuteDecode)
@@ -191,7 +199,7 @@ func (relay *RelaySession) RelayConnect(ctx context.Context, call *CallSession, 
 }
 
 // RelayCallAnswer TODO DESCRIPTION
-func (relay *RelaySession) RelayCallAnswer(ctx context.Context, call *CallSession) error {
+func (relay *RelaySession) RelayCallAnswer(ctx context.Context, call *CallSession, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -206,6 +214,8 @@ func (relay *RelaySession) RelayCallAnswer(ctx context.Context, call *CallSessio
 			CallID: call.CallID,
 		},
 	}
+
+	savePayload(payload, v)
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute
 
@@ -229,7 +239,7 @@ func (relay *RelaySession) RelayCallAnswer(ctx context.Context, call *CallSessio
 }
 
 // RelayCallEnd TODO DESCRIPTION
-func (relay *RelaySession) RelayCallEnd(ctx context.Context, call *CallSession) error {
+func (relay *RelaySession) RelayCallEnd(ctx context.Context, call *CallSession, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -245,6 +255,8 @@ func (relay *RelaySession) RelayCallEnd(ctx context.Context, call *CallSession) 
 			CallID: call.CallID,
 		},
 	}
+
+	savePayload(payload, v)
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute
 
@@ -283,7 +295,7 @@ func (relay *RelaySession) RelayOnInboundAnswer(ctx context.Context) (*CallSessi
 	}
 
 	if call != nil {
-		err := relay.RelayCallAnswer(ctx, call)
+		err := relay.RelayCallAnswer(ctx, call, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -293,7 +305,7 @@ func (relay *RelaySession) RelayOnInboundAnswer(ctx context.Context) (*CallSessi
 }
 
 // RelayPlayAudio TODO DESCRIPTION
-func (relay *RelaySession) RelayPlayAudio(ctx context.Context, call *CallSession, ctrlID string, url string) error {
+func (relay *RelaySession) RelayPlayAudio(ctx context.Context, call *CallSession, ctrlID string, url string, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -309,11 +321,11 @@ func (relay *RelaySession) RelayPlayAudio(ctx context.Context, call *CallSession
 		Params: playAudioParams,
 	}}
 
-	return relay.RelayPlay(ctx, call, ctrlID, play)
+	return relay.RelayPlay(ctx, call, ctrlID, play, payload)
 }
 
 // RelayPlayTTS TODO DESCRIPTION
-func (relay *RelaySession) RelayPlayTTS(ctx context.Context, call *CallSession, ctrlID string, text, language, gender string) error {
+func (relay *RelaySession) RelayPlayTTS(ctx context.Context, call *CallSession, ctrlID string, tts *TTSParamsInternal, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -321,9 +333,9 @@ func (relay *RelaySession) RelayPlayTTS(ctx context.Context, call *CallSession, 
 	}
 
 	playTTSParams := PlayTTSParams{
-		Text:     text,
-		Language: language,
-		Gender:   gender,
+		Text:     tts.text,
+		Language: tts.language,
+		Gender:   tts.gender,
 	}
 
 	play := []PlayStruct{{
@@ -331,11 +343,11 @@ func (relay *RelaySession) RelayPlayTTS(ctx context.Context, call *CallSession, 
 		Params: playTTSParams,
 	}}
 
-	return relay.RelayPlay(ctx, call, ctrlID, play)
+	return relay.RelayPlay(ctx, call, ctrlID, play, payload)
 }
 
 // RelayPlayRingtone TODO DESCRIPTION
-func (relay *RelaySession) RelayPlayRingtone(ctx context.Context, call *CallSession, ctrlID string, name string, duration float64) error {
+func (relay *RelaySession) RelayPlayRingtone(ctx context.Context, call *CallSession, ctrlID string, name string, duration float64, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -352,11 +364,11 @@ func (relay *RelaySession) RelayPlayRingtone(ctx context.Context, call *CallSess
 		Params: playRingtoneParams,
 	}}
 
-	return relay.RelayPlay(ctx, call, ctrlID, play)
+	return relay.RelayPlay(ctx, call, ctrlID, play, payload)
 }
 
 // RelayPlaySilence TODO DESCRIPTION
-func (relay *RelaySession) RelayPlaySilence(ctx context.Context, call *CallSession, ctrlID string, duration float64) error {
+func (relay *RelaySession) RelayPlaySilence(ctx context.Context, call *CallSession, ctrlID string, duration float64, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -372,11 +384,11 @@ func (relay *RelaySession) RelayPlaySilence(ctx context.Context, call *CallSessi
 		Params: playSilenceParams,
 	}}
 
-	return relay.RelayPlay(ctx, call, ctrlID, play)
+	return relay.RelayPlay(ctx, call, ctrlID, play, payload)
 }
 
 // RelayPlay TODO DESCRIPTION
-func (relay *RelaySession) RelayPlay(ctx context.Context, call *CallSession, controlID string, play []PlayStruct) error {
+func (relay *RelaySession) RelayPlay(ctx context.Context, call *CallSession, controlID string, play []PlayStruct, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -394,11 +406,15 @@ func (relay *RelaySession) RelayPlay(ctx context.Context, call *CallSession, con
 		},
 	}
 
+	/* prepare payload per Action in case user want to inspect it. We'll not send this, jsonrpc2 lib will do it's own marshaling on v */
+	savePayload(payload, v)
+
 	call.Lock()
 
 	call.CallPlayChans[controlID] = make(chan PlayState, EventQueue)
 	call.CallPlayEventChans[controlID] = make(chan ParamsEventCallingCallPlay, EventQueue)
 	call.CallPlayReadyChans[controlID] = make(chan struct{})
+	call.CallPlayRawEventChans[controlID] = make(chan *json.RawMessage, EventQueue)
 
 	call.Unlock()
 
@@ -412,7 +428,7 @@ func (relay *RelaySession) RelayPlay(ctx context.Context, call *CallSession, con
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute
 
-	reply, err := relay.Blade.BladeExecute(ctx, &v, &ReplyBladeExecuteDecode)
+	reply, err := relay.Blade.BladeExecute(ctx, &v, &ReplyBladeExecuteDecode /*, payload*/)
 	if err != nil {
 		return err
 	}
@@ -432,7 +448,7 @@ func (relay *RelaySession) RelayPlay(ctx context.Context, call *CallSession, con
 }
 
 // RelayPlayVolume TODO DESCRIPTION
-func (relay *RelaySession) RelayPlayVolume(ctx context.Context, call *CallSession, ctrlID *string, vol float64) error {
+func (relay *RelaySession) RelayPlayVolume(ctx context.Context, call *CallSession, ctrlID *string, vol float64, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -449,6 +465,8 @@ func (relay *RelaySession) RelayPlayVolume(ctx context.Context, call *CallSessio
 			Volume:    vol,
 		},
 	}
+
+	savePayload(payload, v)
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute
 
@@ -472,7 +490,7 @@ func (relay *RelaySession) RelayPlayVolume(ctx context.Context, call *CallSessio
 }
 
 // RelayPlayResume TODO DESCRIPTION
-func (relay *RelaySession) RelayPlayResume(ctx context.Context, call *CallSession, ctrlID *string) error {
+func (relay *RelaySession) RelayPlayResume(ctx context.Context, call *CallSession, ctrlID *string, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -488,6 +506,8 @@ func (relay *RelaySession) RelayPlayResume(ctx context.Context, call *CallSessio
 			ControlID: *ctrlID,
 		},
 	}
+
+	savePayload(payload, v)
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute
 
@@ -511,7 +531,7 @@ func (relay *RelaySession) RelayPlayResume(ctx context.Context, call *CallSessio
 }
 
 // RelayPlayPause TODO DESCRIPTION
-func (relay *RelaySession) RelayPlayPause(ctx context.Context, call *CallSession, ctrlID *string) error {
+func (relay *RelaySession) RelayPlayPause(ctx context.Context, call *CallSession, ctrlID *string, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -527,6 +547,8 @@ func (relay *RelaySession) RelayPlayPause(ctx context.Context, call *CallSession
 			ControlID: *ctrlID,
 		},
 	}
+
+	savePayload(payload, v)
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute
 
@@ -550,7 +572,7 @@ func (relay *RelaySession) RelayPlayPause(ctx context.Context, call *CallSession
 }
 
 // RelayPlayStop TODO DESCRIPTION
-func (relay *RelaySession) RelayPlayStop(ctx context.Context, call *CallSession, ctrlID *string) error {
+func (relay *RelaySession) RelayPlayStop(ctx context.Context, call *CallSession, ctrlID *string, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -566,6 +588,8 @@ func (relay *RelaySession) RelayPlayStop(ctx context.Context, call *CallSession,
 			ControlID: *ctrlID,
 		},
 	}
+
+	savePayload(payload, v)
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute
 
@@ -589,7 +613,7 @@ func (relay *RelaySession) RelayPlayStop(ctx context.Context, call *CallSession,
 }
 
 // RelayRecordAudio TODO DESCRIPTION
-func (relay *RelaySession) RelayRecordAudio(ctx context.Context, call *CallSession, controlID string, rec *RecordParams) error {
+func (relay *RelaySession) RelayRecordAudio(ctx context.Context, call *CallSession, controlID string, rec *RecordParams, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -621,11 +645,14 @@ func (relay *RelaySession) RelayRecordAudio(ctx context.Context, call *CallSessi
 		},
 	}
 
+	savePayload(payload, v)
+
 	call.Lock()
 
 	call.CallRecordChans[controlID] = make(chan RecordState, EventQueue)
 	call.CallRecordEventChans[controlID] = make(chan ParamsEventCallingCallRecord, EventQueue)
 	call.CallRecordReadyChans[controlID] = make(chan struct{})
+	call.CallRecordRawEventChans[controlID] = make(chan *json.RawMessage, EventQueue)
 
 	call.Unlock()
 
@@ -651,8 +678,6 @@ func (relay *RelaySession) RelayRecordAudio(ctx context.Context, call *CallSessi
 
 	Log.Debug("reply ReplyBladeExecuteDecode: %v\n", r)
 
-	call.AddAction(controlID, "init")
-
 	if r.Result.Code != okCode {
 		return errors.New(r.Result.Message)
 	}
@@ -661,7 +686,7 @@ func (relay *RelaySession) RelayRecordAudio(ctx context.Context, call *CallSessi
 }
 
 // RelayRecordAudioStop TODO DESCRIPTION
-func (relay *RelaySession) RelayRecordAudioStop(ctx context.Context, call *CallSession, ctrlID *string) error {
+func (relay *RelaySession) RelayRecordAudioStop(ctx context.Context, call *CallSession, ctrlID *string, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -677,6 +702,8 @@ func (relay *RelaySession) RelayRecordAudioStop(ctx context.Context, call *CallS
 			ControlID: *ctrlID,
 		},
 	}
+
+	savePayload(payload, v)
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute
 
@@ -700,7 +727,7 @@ func (relay *RelaySession) RelayRecordAudioStop(ctx context.Context, call *CallS
 }
 
 // RelayDetectDigit TODO DESCRIPTION
-func (relay *RelaySession) RelayDetectDigit(ctx context.Context, call *CallSession, controlID string, digits string) error {
+func (relay *RelaySession) RelayDetectDigit(ctx context.Context, call *CallSession, controlID string, digits string, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -729,11 +756,11 @@ func (relay *RelaySession) RelayDetectDigit(ctx context.Context, call *CallSessi
 		Log.Debug("controlID was not sent to go routine\n")
 	}
 
-	return relay.RelayDetect(ctx, call, controlID, detect)
+	return relay.RelayDetect(ctx, call, controlID, detect, payload)
 }
 
 // RelayDetectFax TODO DESCRIPTION
-func (relay *RelaySession) RelayDetectFax(ctx context.Context, call *CallSession, controlID string, faxtone string) error {
+func (relay *RelaySession) RelayDetectFax(ctx context.Context, call *CallSession, controlID string, faxtone string, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -762,18 +789,18 @@ func (relay *RelaySession) RelayDetectFax(ctx context.Context, call *CallSession
 		Log.Debug("controlID was not sent to go routine\n")
 	}
 
-	return relay.RelayDetect(ctx, call, controlID, detect)
+	return relay.RelayDetect(ctx, call, controlID, detect, payload)
 }
 
 // RelayDetectMachine TODO DESCRIPTION
-func (relay *RelaySession) RelayDetectMachine(ctx context.Context, call *CallSession, controlID string, det *DetectMachineParams) error {
+func (relay *RelaySession) RelayDetectMachine(ctx context.Context, call *CallSession, controlID string, det *DetectMachineParamsInternal, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
 
-	detectMachineParams := DetectMachineParams{
+	detectMachineParams := DetectMachineParamsInternal{
 		InitialTimeout:        det.InitialTimeout,
 		EndSilenceTimeout:     det.EndSilenceTimeout,
 		MachineVoiceThreshold: det.MachineVoiceThreshold,
@@ -798,16 +825,23 @@ func (relay *RelaySession) RelayDetectMachine(ctx context.Context, call *CallSes
 		Log.Debug("controlID was not sent to go routine\n")
 	}
 
-	return relay.RelayDetect(ctx, call, controlID, detect)
+	return relay.RelayDetect(ctx, call, controlID, detect, payload)
 }
 
 // RelayDetect TODO DESCRIPTION
-func (relay *RelaySession) RelayDetect(ctx context.Context, call *CallSession, controlID string, detect DetectStruct) error {
+func (relay *RelaySession) RelayDetect(ctx context.Context, call *CallSession, controlID string, detect DetectStruct, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
+
+	call.Lock()
+
+	call.CallDetectReadyChans[controlID] = make(chan struct{})
+	call.CallDetectRawEventChans[controlID] = make(chan *json.RawMessage, EventQueue)
+
+	call.Unlock()
 
 	v := ParamsBladeExecuteStruct{
 		Protocol: relay.Blade.Protocol,
@@ -820,6 +854,8 @@ func (relay *RelaySession) RelayDetect(ctx context.Context, call *CallSession, c
 			Timeout:   DefaultActionTimeout,
 		},
 	}
+
+	savePayload(payload, v)
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute
 
@@ -843,7 +879,7 @@ func (relay *RelaySession) RelayDetect(ctx context.Context, call *CallSession, c
 }
 
 // RelayDetectStop TODO DESCRIPTION
-func (relay *RelaySession) RelayDetectStop(ctx context.Context, call *CallSession, ctrlID *string) error {
+func (relay *RelaySession) RelayDetectStop(ctx context.Context, call *CallSession, ctrlID *string, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -859,6 +895,8 @@ func (relay *RelaySession) RelayDetectStop(ctx context.Context, call *CallSessio
 			ControlID: *ctrlID,
 		},
 	}
+
+	savePayload(payload, v)
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute
 
@@ -882,7 +920,7 @@ func (relay *RelaySession) RelayDetectStop(ctx context.Context, call *CallSessio
 }
 
 // RelaySendFax TODO DESCRIPTION
-func (relay *RelaySession) RelaySendFax(ctx context.Context, call *CallSession, ctrlID *string, doc, id, headerInfo string) error {
+func (relay *RelaySession) RelaySendFax(ctx context.Context, call *CallSession, ctrlID *string, fax *FaxParamsInternal, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -896,11 +934,13 @@ func (relay *RelaySession) RelaySendFax(ctx context.Context, call *CallSession, 
 			NodeID:     call.NodeID,
 			CallID:     call.CallID,
 			ControlID:  *ctrlID,
-			Document:   doc,
-			Identity:   id,
-			HeaderInfo: headerInfo,
+			Document:   fax.doc,
+			Identity:   fax.id,
+			HeaderInfo: fax.headerInfo,
 		},
 	}
+
+	savePayload(payload, v)
 
 	select {
 	case call.CallFaxControlID <- *ctrlID:
@@ -932,7 +972,7 @@ func (relay *RelaySession) RelaySendFax(ctx context.Context, call *CallSession, 
 }
 
 // RelayReceiveFax TODO DESCRIPTION
-func (relay *RelaySession) RelayReceiveFax(ctx context.Context, call *CallSession, ctrlID *string) error {
+func (relay *RelaySession) RelayReceiveFax(ctx context.Context, call *CallSession, ctrlID *string, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -948,6 +988,8 @@ func (relay *RelaySession) RelayReceiveFax(ctx context.Context, call *CallSessio
 			ControlID: *ctrlID,
 		},
 	}
+
+	savePayload(payload, v)
 
 	select {
 	case call.CallFaxControlID <- *ctrlID:
@@ -979,7 +1021,7 @@ func (relay *RelaySession) RelayReceiveFax(ctx context.Context, call *CallSessio
 }
 
 // RelaySendFaxStop TODO DESCRIPTION
-func (relay *RelaySession) RelaySendFaxStop(ctx context.Context, call *CallSession, ctrlID *string) error {
+func (relay *RelaySession) RelaySendFaxStop(ctx context.Context, call *CallSession, ctrlID *string, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -995,6 +1037,8 @@ func (relay *RelaySession) RelaySendFaxStop(ctx context.Context, call *CallSessi
 			ControlID: *ctrlID,
 		},
 	}
+
+	savePayload(payload, v)
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute
 
@@ -1018,7 +1062,7 @@ func (relay *RelaySession) RelaySendFaxStop(ctx context.Context, call *CallSessi
 }
 
 // RelayReceiveFaxStop TODO DESCRIPTION
-func (relay *RelaySession) RelayReceiveFaxStop(ctx context.Context, call *CallSession, ctrlID *string) error {
+func (relay *RelaySession) RelayReceiveFaxStop(ctx context.Context, call *CallSession, ctrlID *string, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -1034,6 +1078,8 @@ func (relay *RelaySession) RelayReceiveFaxStop(ctx context.Context, call *CallSe
 			ControlID: *ctrlID,
 		},
 	}
+
+	savePayload(payload, v)
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute
 
@@ -1057,7 +1103,7 @@ func (relay *RelaySession) RelayReceiveFaxStop(ctx context.Context, call *CallSe
 }
 
 // RelayTapAudio TODO DESCRIPTION
-func (relay *RelaySession) RelayTapAudio(ctx context.Context, call *CallSession, ctrlID, direction string, device *TapDevice) (TapDevice, error) {
+func (relay *RelaySession) RelayTapAudio(ctx context.Context, call *CallSession, ctrlID, direction string, device *TapDevice, payload **json.RawMessage) (TapDevice, error) {
 	tapAudioParams := TapAudioParams{
 		Direction: direction,
 	}
@@ -1068,11 +1114,11 @@ func (relay *RelaySession) RelayTapAudio(ctx context.Context, call *CallSession,
 	}
 
 	// return source Tap device
-	return relay.RelayTap(ctx, call, ctrlID, tap, device)
+	return relay.RelayTap(ctx, call, ctrlID, tap, device, payload)
 }
 
 // RelayTap TODO DESCRIPTION
-func (relay *RelaySession) RelayTap(ctx context.Context, call *CallSession, controlID string, tap TapStruct, device *TapDevice) (TapDevice, error) {
+func (relay *RelaySession) RelayTap(ctx context.Context, call *CallSession, controlID string, tap TapStruct, device *TapDevice, payload **json.RawMessage) (TapDevice, error) {
 	var srcDevice TapDevice
 
 	if len(call.CallID) == 0 {
@@ -1093,11 +1139,14 @@ func (relay *RelaySession) RelayTap(ctx context.Context, call *CallSession, cont
 		},
 	}
 
+	savePayload(payload, v)
+
 	call.Lock()
 
 	call.CallTapChans[controlID] = make(chan TapState, EventQueue)
 	call.CallTapEventChans[controlID] = make(chan ParamsEventCallingCallTap, EventQueue)
 	call.CallTapReadyChans[controlID] = make(chan struct{})
+	call.CallTapRawEventChans[controlID] = make(chan *json.RawMessage, EventQueue)
 
 	call.Unlock()
 
@@ -1131,7 +1180,7 @@ func (relay *RelaySession) RelayTap(ctx context.Context, call *CallSession, cont
 }
 
 // RelayTapStop TODO DESCRIPTION
-func (relay *RelaySession) RelayTapStop(ctx context.Context, call *CallSession, ctrlID *string) error {
+func (relay *RelaySession) RelayTapStop(ctx context.Context, call *CallSession, ctrlID *string, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -1147,6 +1196,8 @@ func (relay *RelaySession) RelayTapStop(ctx context.Context, call *CallSession, 
 			ControlID: *ctrlID,
 		},
 	}
+
+	savePayload(payload, v)
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute
 
@@ -1170,7 +1221,7 @@ func (relay *RelaySession) RelayTapStop(ctx context.Context, call *CallSession, 
 }
 
 // RelaySendDigits TODO DESCRIPTION
-func (relay *RelaySession) RelaySendDigits(ctx context.Context, call *CallSession, controlID, digits string) error {
+func (relay *RelaySession) RelaySendDigits(ctx context.Context, call *CallSession, controlID, digits string, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -1188,9 +1239,13 @@ func (relay *RelaySession) RelaySendDigits(ctx context.Context, call *CallSessio
 		},
 	}
 
+	savePayload(payload, v)
+
 	call.Lock()
 
 	call.CallSendDigitsChans[controlID] = make(chan SendDigitsState, EventQueue)
+	call.CallSendDigitsReadyChans[controlID] = make(chan struct{})
+	call.CallSendDigitsRawEventChans[controlID] = make(chan *json.RawMessage, EventQueue)
 
 	call.Unlock()
 
@@ -1224,7 +1279,7 @@ func (relay *RelaySession) RelaySendDigits(ctx context.Context, call *CallSessio
 }
 
 // RelayPlayAndCollect TODO DESCRIPTION
-func (relay *RelaySession) RelayPlayAndCollect(ctx context.Context, call *CallSession, controlID string, playlist *[]PlayStruct, collect *CollectStruct) error {
+func (relay *RelaySession) RelayPlayAndCollect(ctx context.Context, call *CallSession, controlID string, playlist *[]PlayStruct, collect *CollectStruct, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -1243,11 +1298,19 @@ func (relay *RelaySession) RelayPlayAndCollect(ctx context.Context, call *CallSe
 		},
 	}
 
+	savePayload(payload, v)
+
 	call.Lock()
 
 	call.CallPlayAndCollectChans[controlID] = make(chan CollectResultType, EventQueue)
 	call.CallPlayAndCollectEventChans[controlID] = make(chan ParamsEventCallingCallPlayAndCollect, EventQueue)
 	call.CallPlayAndCollectReadyChans[controlID] = make(chan struct{})
+	call.CallPlayAndCollectRawEventChans[controlID] = make(chan *json.RawMessage, EventQueue)
+
+	call.CallPlayChans[controlID] = make(chan PlayState, EventQueue)
+	call.CallPlayEventChans[controlID] = make(chan ParamsEventCallingCallPlay, EventQueue)
+	call.CallPlayReadyChans[controlID] = make(chan struct{})
+	call.CallPlayRawEventChans[controlID] = make(chan *json.RawMessage, EventQueue)
 
 	call.Unlock()
 
@@ -1281,7 +1344,7 @@ func (relay *RelaySession) RelayPlayAndCollect(ctx context.Context, call *CallSe
 }
 
 // RelayPlayAndCollectVolume TODO DESCRIPTION
-func (relay *RelaySession) RelayPlayAndCollectVolume(ctx context.Context, call *CallSession, ctrlID *string, vol float64) error {
+func (relay *RelaySession) RelayPlayAndCollectVolume(ctx context.Context, call *CallSession, ctrlID *string, vol float64, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -1298,6 +1361,8 @@ func (relay *RelaySession) RelayPlayAndCollectVolume(ctx context.Context, call *
 			Volume:    vol,
 		},
 	}
+
+	savePayload(payload, v)
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute
 
@@ -1321,7 +1386,7 @@ func (relay *RelaySession) RelayPlayAndCollectVolume(ctx context.Context, call *
 }
 
 // RelayPlayAndCollectStop TODO DESCRIPTION
-func (relay *RelaySession) RelayPlayAndCollectStop(ctx context.Context, call *CallSession, ctrlID *string) error {
+func (relay *RelaySession) RelayPlayAndCollectStop(ctx context.Context, call *CallSession, ctrlID *string, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -1337,6 +1402,8 @@ func (relay *RelaySession) RelayPlayAndCollectStop(ctx context.Context, call *Ca
 			ControlID: *ctrlID,
 		},
 	}
+
+	savePayload(payload, v)
 
 	var ReplyBladeExecuteDecode ReplyBladeExecute
 
@@ -1357,4 +1424,26 @@ func (relay *RelaySession) RelayPlayAndCollectStop(ctx context.Context, call *Ca
 	}
 
 	return nil
+}
+
+type placeHolder struct {
+	Params json.RawMessage
+}
+
+func savePayload(payload **json.RawMessage, v interface{}) {
+	if payload != nil {
+		placeholder := new(placeHolder)
+
+		b, err := json.Marshal(v)
+		if err != nil {
+			Log.Error("payload: cannot marshal")
+		}
+
+		err = json.Unmarshal(b, placeholder)
+		if err != nil {
+			Log.Error("payload: cannot unmarshal to RawMessage")
+		}
+
+		*payload = &placeholder.Params
+	}
 }

@@ -2,6 +2,7 @@ package signalwire
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sync"
 )
@@ -24,15 +25,17 @@ func (s CallConnectState) String() string {
 // ConnectResult TODO DESCRIPTION
 type ConnectResult struct {
 	Successful bool
+	Event      json.RawMessage
+	CallObj    *CallObj
 }
 
 // ConnectAction TODO DESCRIPTION
 type ConnectAction struct {
-	CallObj   *CallObj
 	ControlID string
 	Completed bool
 	Result    ConnectResult
 	State     CallConnectState
+	Payload   *json.RawMessage
 	err       error
 	sync.RWMutex
 }
@@ -42,6 +45,8 @@ func (callobj *CallObj) Connect(ringback *[]RingbackStruct, devices *[][]DeviceS
 	a := new(ConnectAction)
 	res := &a.Result
 
+	a.Result.CallObj = callobj
+
 	if callobj.Calling == nil {
 		return res, errors.New("nil Calling object")
 	}
@@ -50,11 +55,11 @@ func (callobj *CallObj) Connect(ringback *[]RingbackStruct, devices *[][]DeviceS
 		return res, errors.New("nil Relay object")
 	}
 
-	if err := callobj.Calling.Relay.RelayConnect(callobj.Calling.Ctx, callobj.call, ringback, devices); err != nil {
+	if err := callobj.Calling.Relay.RelayConnect(callobj.Calling.Ctx, callobj.call, ringback, devices, nil); err != nil {
 		return res, err
 	}
 
-	callobj.callbacksRunConnect(callobj.Calling.Ctx, a)
+	callobj.callbacksRunConnect(callobj.Calling.Ctx, a, true)
 
 	return res, nil
 }
@@ -71,15 +76,16 @@ func (callobj *CallObj) ConnectAsync(fromNumber, toNumber string) (*ConnectActio
 		return res, errors.New("nil Relay object")
 	}
 
-	res.CallObj = callobj
+	res.Result.CallObj = callobj
+
 	done := make(chan struct{}, 1)
 
 	go func() {
 		go func() {
-			callobj.callbacksRunConnect(callobj.Calling.Ctx, res)
+			callobj.callbacksRunConnect(callobj.Calling.Ctx, res, false)
 		}()
 
-		err := callobj.Calling.Relay.RelayPhoneConnect(callobj.Calling.Ctx, callobj.call, fromNumber, toNumber)
+		err := callobj.Calling.Relay.RelayPhoneConnect(callobj.Calling.Ctx, callobj.call, fromNumber, toNumber, &res.Payload)
 
 		if err != nil {
 			res.Lock()
@@ -99,10 +105,10 @@ func (callobj *CallObj) ConnectAsync(fromNumber, toNumber string) (*ConnectActio
 }
 
 // callbacksRunConnect TODO DESCRIPTION
-func (callobj *CallObj) callbacksRunConnect(_ context.Context, res *ConnectAction) {
-	for {
-		var out bool
+func (callobj *CallObj) callbacksRunConnect(ctx context.Context, res *ConnectAction, norunCB bool) {
+	var out bool
 
+	for {
 		select {
 		case connectstate := <-callobj.call.CallConnectStateChan:
 			res.RLock()
@@ -123,7 +129,7 @@ func (callobj *CallObj) callbacksRunConnect(_ context.Context, res *ConnectActio
 
 				out = true
 
-				if callobj.OnConnectDisconnected != nil {
+				if callobj.OnConnectDisconnected != nil && !norunCB {
 					callobj.OnConnectDisconnected(res)
 				}
 
@@ -134,7 +140,7 @@ func (callobj *CallObj) callbacksRunConnect(_ context.Context, res *ConnectActio
 
 				res.Unlock()
 
-				if callobj.OnConnectConnecting != nil {
+				if callobj.OnConnectConnecting != nil && !norunCB {
 					callobj.OnConnectConnecting(res)
 				}
 			case CallConnectFailed:
@@ -147,7 +153,7 @@ func (callobj *CallObj) callbacksRunConnect(_ context.Context, res *ConnectActio
 
 				out = true
 
-				if callobj.OnConnectFailed != nil {
+				if callobj.OnConnectFailed != nil && !norunCB {
 					callobj.OnConnectFailed(res)
 				}
 			case CallConnectConnected:
@@ -157,17 +163,23 @@ func (callobj *CallObj) callbacksRunConnect(_ context.Context, res *ConnectActio
 
 				res.Unlock()
 
-				if callobj.OnConnectConnected != nil {
+				if callobj.OnConnectConnected != nil && !norunCB {
 					callobj.OnConnectConnected(res)
 				}
 			default:
 				out = true
 			}
 
-			if prevstate != connectstate && callobj.OnConnectStateChange != nil {
+			if prevstate != connectstate && callobj.OnConnectStateChange != nil && !norunCB {
 				callobj.OnConnectStateChange(res)
 			}
+		case rawEvent := <-callobj.call.CallConnectRawEventChan:
+			res.Lock()
+			res.Result.Event = *rawEvent
+			res.Unlock()
 		case <-callobj.call.Hangup:
+			out = true
+		case <-ctx.Done():
 			out = true
 		}
 
@@ -175,4 +187,37 @@ func (callobj *CallObj) callbacksRunConnect(_ context.Context, res *ConnectActio
 			break
 		}
 	}
+}
+
+// GetEvent TODO DESCRIPTION
+func GetEvent(action *ConnectAction) *json.RawMessage {
+	action.RLock()
+
+	ret := &action.Result.Event
+
+	action.RUnlock()
+
+	return ret
+}
+
+// GetPayload TODO DESCRIPTION
+func (action *ConnectAction) GetPayload() *json.RawMessage {
+	action.RLock()
+
+	ret := action.Payload
+
+	action.RUnlock()
+
+	return ret
+}
+
+// GetCall TODO DESCRIPTION
+func (action *ConnectAction) GetCall() *CallObj {
+	action.RLock()
+
+	ret := action.Result.CallObj
+
+	action.RUnlock()
+
+	return ret
 }

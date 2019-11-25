@@ -79,11 +79,10 @@ func (m *MsgSession) MsgInit(_ context.Context) {
 }
 
 // MsgCleanup close the channels, etc
+// app writer should set m to nil to clean it up
 func (m *MsgSession) MsgCleanup(_ context.Context) {
 	close(m.MsgStateChan)
 	close(m.ReplyMsgID)
-
-	m = nil /*let the garbage collector clean it up */
 }
 
 // UpdateMsgState TODO DESCRIPTION
@@ -218,6 +217,15 @@ func (m *MsgSession) SetMsgID(msgID string) {
 	m.Lock()
 	m.MsgParams.MsgID = msgID
 	m.Unlock()
+}
+
+// GetMsgID TODO DESCRIPTION
+func (m *MsgSession) GetMsgID() string {
+	m.RLock()
+	id := m.MsgParams.MsgID
+	m.RUnlock()
+
+	return id
 }
 
 // SetRegion TODO DESCRIPTION

@@ -275,6 +275,11 @@ func (resultSend *SendResult) GetReason() string {
 	return resultSend.Msg.msg.GetFailureReason()
 }
 
+// GetMsgID TODO DESCRIPTION
+func (resultSend *SendResult) GetMsgID() string {
+	return resultSend.Msg.msg.GetMsgID()
+}
+
 // SetMedia TODO DESCRIPTION
 func (msgobj *MsgObj) SetMedia(media []string) {
 	msgobj.msg.SetMedia(media)

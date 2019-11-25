@@ -58,32 +58,32 @@ func (mr *MockIClientSessionMockRecorder) setClient(host, contexts interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "setClient", reflect.TypeOf((*MockIClientSession)(nil).setClient), host, contexts)
 }
 
-// connect mocks base method
-func (m *MockIClientSession) connect(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup) error {
+// connectInternal mocks base method
+func (m *MockIClientSession) connectInternal(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "connect", ctx, cancel, runWG)
+	ret := m.ctrl.Call(m, "connectInternal", ctx, cancel, runWG)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// connect indicates an expected call of connect
-func (mr *MockIClientSessionMockRecorder) connect(ctx, cancel, runWG interface{}) *gomock.Call {
+// connectInternal indicates an expected call of connectInternal
+func (mr *MockIClientSessionMockRecorder) connectInternal(ctx, cancel, runWG interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "connect", reflect.TypeOf((*MockIClientSession)(nil).connect), ctx, cancel, runWG)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "connectInternal", reflect.TypeOf((*MockIClientSession)(nil).connectInternal), ctx, cancel, runWG)
 }
 
-// disconnect mocks base method
-func (m *MockIClientSession) disconnect() error {
+// disconnectInternal mocks base method
+func (m *MockIClientSession) disconnectInternal() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "disconnect")
+	ret := m.ctrl.Call(m, "disconnectInternal")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// disconnect indicates an expected call of disconnect
-func (mr *MockIClientSessionMockRecorder) disconnect() *gomock.Call {
+// disconnectInternal indicates an expected call of disconnectInternal
+func (mr *MockIClientSessionMockRecorder) disconnectInternal() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "disconnect", reflect.TypeOf((*MockIClientSession)(nil).disconnect))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "disconnectInternal", reflect.TypeOf((*MockIClientSession)(nil).disconnectInternal))
 }
 
 // setupInbound mocks base method

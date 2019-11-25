@@ -2,9 +2,11 @@ package signalwire
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 )
 
 // TapState keeps the state of a tap action
@@ -71,6 +73,7 @@ type TapResult struct {
 	SourceDevice      TapDevice
 	DestinationDevice TapDevice
 	Tap               Tap
+	Event             json.RawMessage
 }
 
 // TapAction TODO DESCRIPTION
@@ -80,7 +83,9 @@ type TapAction struct {
 	Completed bool
 	Result    TapResult
 	State     TapState
+	Payload   *json.RawMessage
 	err       error
+	done      chan bool
 	sync.RWMutex
 }
 
@@ -95,51 +100,31 @@ type ITapAction interface {
 	GetDestinationDevice() TapDevice
 }
 
-func (callobj *CallObj) checkTapFinished(_ context.Context, ctrlID string, res *TapResult) (*TapResult, error) {
-	var out bool
-
-	for {
-		select {
-		case tapstate := <-callobj.call.CallTapChans[ctrlID]:
-			if tapstate == TapFinished {
-				out = true
-				res.Successful = true
-			}
-		case <-callobj.call.Hangup:
-			out = true
-		}
-
-		if out {
-			break
-		}
-	}
-
-	return res, nil
-}
-
 // TapAudio TODO DESCRIPTION
 func (callobj *CallObj) TapAudio(direction fmt.Stringer, tapdev *TapDevice) (*TapResult, error) {
-	res := new(TapResult)
+	a := new(TapAction)
 
 	if callobj.Calling == nil {
-		return res, errors.New("nil Calling object")
+		return &a.Result, errors.New("nil Calling object")
 	}
 
 	if callobj.Calling.Relay == nil {
-		return res, errors.New("nil Relay object")
+		return &a.Result, errors.New("nil Relay object")
 	}
 
 	ctrlID, _ := GenUUIDv4()
 
 	var err error
 
-	res.SourceDevice, err = callobj.Calling.Relay.RelayTapAudio(callobj.Calling.Ctx, callobj.call, ctrlID, direction.String(), tapdev)
+	a.Result.SourceDevice, err = callobj.Calling.Relay.RelayTapAudio(callobj.Calling.Ctx, callobj.call, ctrlID, direction.String(), tapdev, nil)
 
 	if err != nil {
-		return res, err
+		return &a.Result, err
 	}
 
-	return callobj.checkTapFinished(callobj.Calling.Ctx, ctrlID, res)
+	callobj.callbacksRunTap(callobj.Calling.Ctx, ctrlID, a, true)
+
+	return &a.Result, nil
 }
 
 // TapStop TODO DESCRIPTION
@@ -152,15 +137,19 @@ func (callobj *CallObj) TapStop(ctrlID *string) error {
 		return errors.New("nil Relay object")
 	}
 
-	return callobj.Calling.Relay.RelayTapStop(callobj.Calling.Ctx, callobj.call, ctrlID)
+	return callobj.Calling.Relay.RelayTapStop(callobj.Calling.Ctx, callobj.call, ctrlID, nil)
 }
 
 // callbacksRunTap TODO DESCRIPTION
-func (callobj *CallObj) callbacksRunTap(_ context.Context, ctrlID string, res *TapAction) {
+func (callobj *CallObj) callbacksRunTap(ctx context.Context, ctrlID string, res *TapAction, norunCB bool) {
 	var out bool
+
+	timer := time.NewTimer(BroadcastEventTimeout * time.Second)
 
 	for {
 		select {
+		case <-timer.C:
+			out = true
 		// get tap states
 		case tapstate := <-callobj.call.CallTapChans[ctrlID]:
 			res.RLock()
@@ -183,11 +172,12 @@ func (callobj *CallObj) callbacksRunTap(_ context.Context, ctrlID string, res *T
 
 				out = true
 
-				if callobj.OnTapFinished != nil {
+				if callobj.OnTapFinished != nil && !norunCB {
 					callobj.OnTapFinished(res)
 				}
 
 			case TapTapping:
+				timer.Reset(MaxCallDuration * time.Second)
 				res.Lock()
 
 				res.State = tapstate
@@ -196,14 +186,14 @@ func (callobj *CallObj) callbacksRunTap(_ context.Context, ctrlID string, res *T
 
 				Log.Debug("Tapping. ctrlID: %s\n", ctrlID)
 
-				if callobj.OnTapTapping != nil {
+				if callobj.OnTapTapping != nil && !norunCB {
 					callobj.OnTapTapping(res)
 				}
 			default:
 				Log.Debug("Unknown state. ctrlID: %s\n", ctrlID)
 			}
 
-			if prevstate != tapstate && callobj.OnTapStateChange != nil {
+			if prevstate != tapstate && callobj.OnTapStateChange != nil && !norunCB {
 				callobj.OnTapStateChange(res)
 			}
 
@@ -259,11 +249,23 @@ func (callobj *CallObj) callbacksRunTap(_ context.Context, ctrlID string, res *T
 
 			callobj.call.CallTapReadyChans[ctrlID] <- struct{}{}
 
+		case rawEvent := <-callobj.call.CallTapRawEventChans[ctrlID]:
+			res.Lock()
+			res.Result.Event = *rawEvent
+			res.Unlock()
+
+			callobj.call.CallTapReadyChans[ctrlID] <- struct{}{}
 		case <-callobj.call.Hangup:
+			out = true
+		case <-ctx.Done():
 			out = true
 		}
 
 		if out {
+			if !norunCB {
+				res.done <- res.Result.Successful
+			}
+
 			break
 		}
 	}
@@ -286,18 +288,22 @@ func (callobj *CallObj) TapAudioAsync(direction fmt.Stringer, tapdev *TapDevice)
 
 	go func() {
 		go func() {
+			res.done = make(chan bool, 2)
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallTapControlIDs
 
-			callobj.callbacksRunTap(callobj.Calling.Ctx, ctrlID, res)
+			callobj.callbacksRunTap(callobj.Calling.Ctx, ctrlID, res, false)
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
+
 		res.Lock()
+
 		res.ControlID = newCtrlID
+
 		res.Unlock()
 
-		srcDevice, err := callobj.Calling.Relay.RelayTapAudio(callobj.Calling.Ctx, callobj.call, newCtrlID, direction.String(), tapdev)
+		srcDevice, err := callobj.Calling.Relay.RelayTapAudio(callobj.Calling.Ctx, callobj.call, newCtrlID, direction.String(), tapdev, &res.Payload)
 
 		if err != nil {
 			res.Lock()
@@ -355,12 +361,19 @@ func (tapaction *TapAction) tapAsyncStop() error {
 
 	call := tapaction.CallObj.call
 
-	return tapaction.CallObj.Calling.Relay.RelayTapStop(tapaction.CallObj.Calling.Ctx, call, &c)
+	return tapaction.CallObj.Calling.Relay.RelayTapStop(tapaction.CallObj.Calling.Ctx, call, &c, &tapaction.Payload)
 }
 
 // Stop TODO DESCRIPTION
-func (tapaction *TapAction) Stop() {
+func (tapaction *TapAction) Stop() StopResult {
+	res := new(StopResult)
 	tapaction.err = tapaction.tapAsyncStop()
+
+	if tapaction.err == nil {
+		waitStop(res, tapaction.done)
+	}
+
+	return *res
 }
 
 // GetCompleted TODO DESCRIPTION
@@ -385,6 +398,17 @@ func (tapaction *TapAction) GetResult() TapResult {
 	return ret
 }
 
+// GetState TODO DESCRIPTION
+func (tapaction *TapAction) GetState() TapState {
+	tapaction.RLock()
+
+	ret := tapaction.State
+
+	tapaction.RUnlock()
+
+	return ret
+}
+
 // GetTap TODO DESCRIPTION
 func (tapaction *TapAction) GetTap() *Tap {
 	return &tapaction.Result.Tap
@@ -398,4 +422,37 @@ func (tapaction *TapAction) GetSourceDevice() *TapDevice {
 // GetDestinationDevice TODO DESCRIPTION
 func (tapaction *TapAction) GetDestinationDevice() *TapDevice {
 	return &tapaction.Result.DestinationDevice
+}
+
+// GetEvent TODO DESCRIPTION
+func (tapaction *TapAction) GetEvent() *json.RawMessage {
+	tapaction.RLock()
+
+	ret := &tapaction.Result.Event
+
+	tapaction.RUnlock()
+
+	return ret
+}
+
+// GetPayload TODO DESCRIPTION
+func (tapaction *TapAction) GetPayload() *json.RawMessage {
+	tapaction.RLock()
+
+	ret := tapaction.Payload
+
+	tapaction.RUnlock()
+
+	return ret
+}
+
+// GetControlID TODO DESCRIPTION
+func (tapaction *TapAction) GetControlID() string {
+	tapaction.RLock()
+
+	ret := tapaction.ControlID
+
+	tapaction.RUnlock()
+
+	return ret
 }

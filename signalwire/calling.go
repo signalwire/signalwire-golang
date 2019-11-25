@@ -2,6 +2,8 @@ package signalwire
 
 import (
 	"context"
+	"encoding/json"
+	"time"
 )
 
 // Calling TODO DESCRIPTION
@@ -16,6 +18,7 @@ type CallObj struct {
 	call    *CallSession
 	I       ICallObj
 	Calling *Calling
+	Payload *json.RawMessage // last command payload
 
 	OnStateChange           func(*CallObj)
 	OnRinging               func(*CallObj)
@@ -32,9 +35,9 @@ type CallObj struct {
 	OnRecordPaused          func(*RecordAction)
 	OnRecordFinished        func(*RecordAction)
 	OnRecordNoInput         func(*RecordAction)
-	OnDetectUpdate          func(interface{})
-	OnDetectError           func(interface{})
-	OnDetectFinished        func(interface{})
+	OnDetectUpdate          func(*DetectAction)
+	OnDetectError           func(*DetectAction)
+	OnDetectFinished        func(*DetectAction)
 	OnFaxFinished           func(*FaxAction)
 	OnFaxPage               func(*FaxAction)
 	OnFaxError              func(*FaxAction)
@@ -64,22 +67,22 @@ type ICallObj interface {
 	RecordAudioAsync(r *RecordParams) (*RecordAction, error)
 	RecordAudioStop(ctrlID *string) error
 	DetectMachine(det *DetectMachineParams) (*DetectResult, error)
-	DetectMachineAsync(det *DetectMachineParams) (*DetectMachineAction, error)
+	DetectMachineAsync(det *DetectMachineParams) (*DetectAction, error)
 	DetectFax(det *DetectFaxParams) (*DetectResult, error)
-	DetectFaxAsync(det *DetectFaxParams) (*DetectFaxAction, error)
+	DetectFaxAsync(det *DetectFaxParams) (*DetectAction, error)
 	DetectDigit(det *DetectDigitParams) (*DetectResult, error)
-	DetectDigitAsync(det *DetectDigitParams) (*DetectDigitAction, error)
+	DetectDigitAsync(det *DetectDigitParams) (*DetectAction, error)
 	DetectStop(ctrlID *string) error
 	ReceiveFax() (*FaxResult, error)
 	SendFax(doc, id, headerInfo string) (*FaxResult, error)
 	SendFaxStop(ctrlID *string) error
 	ReceiveFaxAsync() (*FaxAction, error)
 	SendFaxAsync(doc, id, headerInfo string) (*FaxAction, error)
-	WaitFor(state CallState) bool
-	WaitForRinging() bool
-	WaitForAnswered() bool
-	WaitForEnding() bool
-	WaitForEnded() bool
+	WaitFor(state CallState, timeout uint) bool
+	WaitForRinging(timeout uint) bool
+	WaitForAnswered(timeout uint) bool
+	WaitForEnding(timeout uint) bool
+	WaitForEnded(timeout uint) bool
 	Active() bool
 	GetState() CallState
 	GetPrevState() CallState
@@ -106,7 +109,23 @@ type ResultAnswer struct {
 type ResultHangup struct {
 	Successful bool
 	Reason     CallDisconnectReason
+	Event      *json.RawMessage
 	err        error
+}
+
+// StopResult TODO DESCRIPTION
+type StopResult struct {
+	Successful bool
+}
+
+func waitStop(res *StopResult, done chan bool) {
+	timer := time.NewTimer(BroadcastEventTimeout * time.Second)
+
+	select {
+	case <-timer.C:
+	case res.Successful = <-done:
+	default:
+	}
 }
 
 // ICalling object visible to the end user
@@ -140,7 +159,9 @@ func (calling *Calling) DialPhone(fromNumber, toNumber string) ResultDial {
 
 	newcall.SetActive(true)
 
-	if err := calling.Relay.I.RelayPhoneDial(calling.Ctx, newcall, fromNumber, toNumber, DefaultRingTimeout); err != nil {
+	var savePayload *json.RawMessage
+
+	if err := calling.Relay.I.RelayPhoneDial(calling.Ctx, newcall, fromNumber, toNumber, DefaultRingTimeout, &savePayload); err != nil {
 		newcall.SetActive(false)
 
 		res.err = err
@@ -153,9 +174,10 @@ func (calling *Calling) DialPhone(fromNumber, toNumber string) ResultDial {
 	c := &CallObj{I: J}
 	c.I = J
 	c.call = newcall
+	c.Payload = savePayload
 	c.Calling = calling
 
-	if ret := newcall.I.WaitCallStateInternal(calling.Ctx, Answered); !ret {
+	if ret := newcall.I.WaitCallStateInternal(calling.Ctx, Answered, DefaultRingTimeout); !ret {
 		Log.Debug("did not get Answered state\n")
 
 		c.call.SetActive(false)
@@ -176,19 +198,19 @@ func (callobj *CallObj) Hangup() (*ResultHangup, error) {
 	call := callobj.call
 
 	if call.CallState != Ending && call.CallState != Ended {
-		if err := callobj.Calling.Relay.RelayCallEnd(callobj.Calling.Ctx, call); err != nil {
+		if err := callobj.Calling.Relay.RelayCallEnd(callobj.Calling.Ctx, call, &callobj.Payload); err != nil {
 			res.err = err
 			return res, err
 		}
 	}
 
-	if ret := call.WaitCallStateInternal(callobj.Calling.Ctx, Ended); !ret {
+	if ret := call.WaitCallStateInternal(callobj.Calling.Ctx, Ended, BroadcastEventTimeout); !ret {
 		Log.Debug("did not get Ended state for call\n")
 	}
 
 	if call.CallState == Ended {
-		// todo: handle race conds on hangup (don't write on closed channels)
 		res.Reason = call.CallDisconnectReason
+		res.Event = call.Event
 		call.CallCleanup(callobj.Calling.Ctx)
 	}
 
@@ -206,7 +228,7 @@ func (callobj *CallObj) Answer() (*ResultAnswer, error) {
 	if call.CallState != Answered {
 		Log.Info("Answering call [%p]\n", call)
 
-		if err := callobj.Calling.Relay.RelayCallAnswer(callobj.Calling.Ctx, call); err != nil {
+		if err := callobj.Calling.Relay.RelayCallAnswer(callobj.Calling.Ctx, call, &callobj.Payload); err != nil {
 			Log.Debug("cannot answer call. err: %v\n", err)
 
 			return res, err
@@ -215,12 +237,17 @@ func (callobj *CallObj) Answer() (*ResultAnswer, error) {
 
 	// 'Answered' state event may have already come before we get the 200 for calling.answer command.
 	if call.CallState != Answered {
-		if ret := call.WaitCallStateInternal(callobj.Calling.Ctx, Answered); !ret {
+		if ret := call.WaitCallStateInternal(callobj.Calling.Ctx, Answered, BroadcastEventTimeout); !ret {
 			Log.Debug("did not get Answered state for inbound call\n")
 
 			return res, nil
 		}
 	}
+
+	go func(ctx context.Context) {
+		// states && callbacks
+		callobj.callbacksRunCallState(ctx)
+	}(callobj.Calling.Ctx)
 
 	res.Successful = true
 
@@ -237,8 +264,8 @@ func (callobj *CallObj) GetCallState() CallState {
 }
 
 // WaitFor TODO DESCRIPTION
-func (callobj *CallObj) WaitFor(want CallState) bool {
-	if ret := callobj.call.WaitCallStateInternal(callobj.Calling.Ctx, want); !ret {
+func (callobj *CallObj) WaitFor(want CallState, timeout uint) bool {
+	if ret := callobj.call.WaitCallStateInternal(callobj.Calling.Ctx, want, timeout); !ret {
 		Log.Error("did not get %s state for call\n", want.String())
 		return false
 	}
@@ -247,8 +274,8 @@ func (callobj *CallObj) WaitFor(want CallState) bool {
 }
 
 // WaitForRinging TODO DESCRIPTION
-func (callobj *CallObj) WaitForRinging() bool {
-	if ret := callobj.call.WaitCallStateInternal(callobj.Calling.Ctx, Ringing); !ret {
+func (callobj *CallObj) WaitForRinging(timeout uint) bool {
+	if ret := callobj.call.WaitCallStateInternal(callobj.Calling.Ctx, Ringing, timeout); !ret {
 		Log.Error("did not get Ringing state for call\n")
 		return false
 	}
@@ -257,8 +284,8 @@ func (callobj *CallObj) WaitForRinging() bool {
 }
 
 // WaitForAnswered TODO DESCRIPTION
-func (callobj *CallObj) WaitForAnswered() bool {
-	if ret := callobj.call.WaitCallStateInternal(callobj.Calling.Ctx, Answered); !ret {
+func (callobj *CallObj) WaitForAnswered(timeout uint) bool {
+	if ret := callobj.call.WaitCallStateInternal(callobj.Calling.Ctx, Answered, timeout); !ret {
 		Log.Error("did not get Answered state for call\n")
 		return false
 	}
@@ -267,8 +294,8 @@ func (callobj *CallObj) WaitForAnswered() bool {
 }
 
 // WaitForEnding TODO DESCRIPTION
-func (callobj *CallObj) WaitForEnding() bool {
-	if ret := callobj.call.WaitCallStateInternal(callobj.Calling.Ctx, Ending); !ret {
+func (callobj *CallObj) WaitForEnding(timeout uint) bool {
+	if ret := callobj.call.WaitCallStateInternal(callobj.Calling.Ctx, Ending, timeout); !ret {
 		Log.Error("did not get Ending state for call\n")
 		return false
 	}
@@ -277,8 +304,8 @@ func (callobj *CallObj) WaitForEnding() bool {
 }
 
 // WaitForEnded TODO DESCRIPTION
-func (callobj *CallObj) WaitForEnded() bool {
-	if ret := callobj.call.WaitCallStateInternal(callobj.Calling.Ctx, Ended); !ret {
+func (callobj *CallObj) WaitForEnded(timeout uint) bool {
+	if ret := callobj.call.WaitCallStateInternal(callobj.Calling.Ctx, Ended, timeout); !ret {
 		Log.Error("did not get Ended state for call\n")
 		return false
 	}
@@ -304,6 +331,48 @@ func (calling *Calling) NewCall(from, to string) *CallObj {
 	return c
 }
 
+func (callobj *CallObj) callbacksRunCallState(ctx context.Context) {
+	var out bool
+
+	for {
+		select {
+		case rcvState := <-callobj.call.cbStateChan:
+			if rcvState != callobj.call.GetPrevState() {
+				if callobj.OnStateChange != nil {
+					callobj.OnStateChange(callobj)
+				}
+			}
+
+			switch rcvState {
+			case Answered:
+				if callobj.OnAnswered != nil {
+					callobj.OnAnswered(callobj)
+				}
+			case Ringing:
+				if callobj.OnRinging != nil {
+					callobj.OnRinging(callobj)
+				}
+			case Ending:
+				if callobj.OnEnding != nil {
+					callobj.OnEnding(callobj)
+				}
+			case Ended:
+				if callobj.OnEnded != nil {
+					callobj.OnEnded(callobj)
+				}
+
+				out = true
+			}
+		case <-ctx.Done():
+			out = true
+		}
+
+		if out {
+			break
+		}
+	}
+}
+
 // Dial TODO DESCRIPTION
 func (calling *Calling) Dial(c *CallObj) ResultDial {
 	res := new(ResultDial)
@@ -322,7 +391,7 @@ func (calling *Calling) Dial(c *CallObj) ResultDial {
 
 	c.call.SetActive(true)
 
-	if err := calling.Relay.I.RelayPhoneDial(calling.Ctx, c.call, c.call.From, c.call.To, c.call.Timeout); err != nil {
+	if err := calling.Relay.I.RelayPhoneDial(calling.Ctx, c.call, c.call.From, c.call.To, c.call.Timeout, &c.Payload); err != nil {
 		res.err = err
 
 		c.call.SetActive(false)
@@ -330,7 +399,7 @@ func (calling *Calling) Dial(c *CallObj) ResultDial {
 		return *res
 	}
 
-	if ret := c.call.I.WaitCallStateInternal(calling.Ctx, Answered); !ret {
+	if ret := c.call.I.WaitCallStateInternal(calling.Ctx, Answered, c.call.GetTimeout()); !ret {
 		Log.Debug("did not get Answered state\n")
 
 		c.call.SetActive(false)
@@ -338,6 +407,11 @@ func (calling *Calling) Dial(c *CallObj) ResultDial {
 
 		return *res
 	}
+
+	go func(ctx context.Context) {
+		// states && callbacks
+		c.callbacksRunCallState(ctx)
+	}(calling.Ctx)
 
 	res.Call = c
 	res.Successful = true
@@ -358,6 +432,11 @@ func (resultHangup *ResultHangup) GetSuccessful() bool {
 // GetError TODO DESCRIPTION
 func (resultHangup *ResultHangup) GetError() bool {
 	return resultHangup.Successful
+}
+
+// GetEvent TODO DESCRIPTION
+func (resultHangup *ResultHangup) GetEvent() *json.RawMessage {
+	return resultHangup.Event
 }
 
 // GetSuccessful TODO DESCRIPTION
@@ -430,7 +509,27 @@ func (callobj *CallObj) Busy() bool {
 	return callobj.call.CallDisconnectReason == CallBusy
 }
 
+// Failed TODO DESCRIPTION
+func (callobj *CallObj) Failed() bool {
+	return callobj.call.CallDisconnectReason == CallGenericError
+}
+
 // Ended TODO DESCRIPTION
 func (callobj *CallObj) Ended() bool {
 	return callobj.call.GetState() == Ended
+}
+
+// GetType TODO DESCRIPTION
+func (callobj *CallObj) GetType() string {
+	return callobj.call.GetType()
+}
+
+// GetEvent TODO DESCRIPTION
+func (callobj *CallObj) GetEvent() *json.RawMessage {
+	return callobj.call.GetEventPayload()
+}
+
+// GetEventName this is expensive
+func (callobj *CallObj) GetEventName() string {
+	return callobj.call.GetEventName()
 }

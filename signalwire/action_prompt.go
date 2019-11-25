@@ -2,9 +2,11 @@ package signalwire
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"sync"
+	"time"
 )
 
 // CollectResultType keeps the result type of a Collect action
@@ -32,6 +34,7 @@ type CollectResult struct {
 	Result     string
 	ResultType CollectResultType
 	Continue   CollectContinue
+	Event      json.RawMessage
 }
 
 // PromptResult TODO DESCRIPTION
@@ -52,7 +55,10 @@ type PromptAction struct {
 	ControlID string
 	Completed bool
 	Result    CollectResult
+	State     PlayState
+	Payload   *json.RawMessage
 	err       error
+	done      chan bool
 	sync.RWMutex
 }
 
@@ -62,6 +68,8 @@ type IPromptAction interface {
 	Stop()
 	GetCompleted() bool
 	GetResult() PlayResult
+	Volume(vol float64) (*PlayVolumeResult, error)
+	GetEvent() *json.RawMessage
 }
 
 // Prompt TODO DESCRIPTION
@@ -78,13 +86,13 @@ func (callobj *CallObj) Prompt(playlist *[]PlayStruct, collect *CollectStruct) (
 
 	ctrlID, _ := GenUUIDv4()
 
-	err := callobj.Calling.Relay.RelayPlayAndCollect(callobj.Calling.Ctx, callobj.call, ctrlID, playlist, collect)
+	err := callobj.Calling.Relay.RelayPlayAndCollect(callobj.Calling.Ctx, callobj.call, ctrlID, playlist, collect, nil)
 
 	if err != nil {
 		return &a.Result, err
 	}
 
-	callobj.callbacksRunPlayAndCollect(callobj.Calling.Ctx, ctrlID, a)
+	callobj.callbacksRunPlayAndCollect(callobj.Calling.Ctx, ctrlID, a, true)
 
 	return &a.Result, nil
 }
@@ -99,18 +107,93 @@ func (callobj *CallObj) PromptStop(ctrlID *string) error {
 		return errors.New("nil Relay object")
 	}
 
-	return callobj.Calling.Relay.RelayPlayAndCollectStop(callobj.Calling.Ctx, callobj.call, ctrlID)
+	return callobj.Calling.Relay.RelayPlayAndCollectStop(callobj.Calling.Ctx, callobj.call, ctrlID, nil)
 }
 
 // callbacksRunPlayAndCollect TODO DESCRIPTION
-func (callobj *CallObj) callbacksRunPlayAndCollect(_ context.Context, ctrlID string, res *PromptAction) {
-	var cont bool
-
+func (callobj *CallObj) callbacksRunPlayAndCollect(ctx context.Context, ctrlID string, res *PromptAction, norunCB bool) {
 	var out bool
+
+	timer := time.NewTimer(BroadcastEventTimeout * time.Second)
+
+	resPlay := new(PlayAction)
 
 	for {
 		select {
+		case playstate := <-callobj.call.CallPlayChans[ctrlID]:
+			resPlay.RLock()
+
+			prevstate := res.State
+
+			resPlay.RUnlock()
+
+			switch playstate {
+			case PlayFinished:
+				resPlay.Lock()
+
+				resPlay.State = playstate
+
+				resPlay.Unlock()
+
+				Log.Debug("Play (prompt)  finished. ctrlID: %s res [%p] Completed [%v] Successful [%v]\n", ctrlID, res, res.Completed, res.Result.Successful)
+
+				if callobj.OnPlayFinished != nil && !norunCB {
+					callobj.OnPlayFinished(resPlay)
+				}
+
+			case PlayPlaying:
+				timer.Reset(MaxCallDuration * time.Second)
+				resPlay.Lock()
+
+				resPlay.State = playstate
+
+				resPlay.Unlock()
+
+				Log.Debug("Playing. ctrlID: %s\n", ctrlID)
+
+				if callobj.OnPlayPlaying != nil && !norunCB {
+					callobj.OnPlayPlaying(resPlay)
+				}
+			case PlayError:
+				Log.Debug("Play (prompt) error. ctrlID: %s\n", ctrlID)
+
+				resPlay.Lock()
+
+				resPlay.State = playstate
+
+				resPlay.Unlock()
+
+				if callobj.OnPlayError != nil && !norunCB {
+					callobj.OnPlayError(resPlay)
+				}
+			case PlayPaused:
+				timer.Reset(MaxCallDuration * time.Second)
+				resPlay.Lock()
+
+				resPlay.State = playstate
+
+				resPlay.Unlock()
+
+				Log.Debug("Play paused. ctrlID: %s\n", ctrlID)
+
+				if callobj.OnPlayPaused != nil && !norunCB {
+					callobj.OnPlayPaused(resPlay)
+				}
+			default:
+				Log.Debug("Unknown state. ctrlID: %s\n", ctrlID)
+			}
+
+			if prevstate != playstate && callobj.OnPlayStateChange != nil && !norunCB {
+				callobj.OnPlayStateChange(resPlay)
+			}
+		case rawEvent := <-callobj.call.CallPlayRawEventChans[ctrlID]:
+			resPlay.Lock()
+			resPlay.Result.Event = *rawEvent
+			resPlay.Unlock()
+
 		case resType := <-callobj.call.CallPlayAndCollectChans[ctrlID]:
+			Log.Debug("Got Prompt result type: %s", resType.String())
+
 			switch resType {
 			case CollectResultError:
 				fallthrough
@@ -136,10 +219,7 @@ func (callobj *CallObj) callbacksRunPlayAndCollect(_ context.Context, ctrlID str
 
 				res.Result.ResultType = resType
 				res.Result.Successful = true
-
-				if !cont {
-					res.Completed = true
-				}
+				res.Completed = true
 
 				res.Unlock()
 
@@ -147,7 +227,7 @@ func (callobj *CallObj) callbacksRunPlayAndCollect(_ context.Context, ctrlID str
 
 				out = true
 
-				if callobj.OnPrompt != nil {
+				if callobj.OnPrompt != nil && !norunCB {
 					callobj.OnPrompt(res)
 				}
 
@@ -202,14 +282,22 @@ func (callobj *CallObj) callbacksRunPlayAndCollect(_ context.Context, ctrlID str
 			}
 
 			res.Unlock()
-
-			callobj.call.CallPlayAndCollectReadyChans[ctrlID] <- struct{}{}
+		case rawEvent := <-callobj.call.CallPlayAndCollectRawEventChans[ctrlID]:
+			res.Lock()
+			res.Result.Event = *rawEvent
+			res.Unlock()
 
 		case <-callobj.call.Hangup:
+			out = true
+		case <-ctx.Done():
 			out = true
 		}
 
 		if out {
+			if !norunCB {
+				res.done <- res.Result.Successful
+			}
+
 			break
 		}
 	}
@@ -233,18 +321,22 @@ func (callobj *CallObj) PromptAsync(playlist *[]PlayStruct, collect *CollectStru
 
 	go func() {
 		go func() {
+			res.done = make(chan bool, 2)
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallPlayAndCollectControlID
 
-			callobj.callbacksRunPlayAndCollect(callobj.Calling.Ctx, ctrlID, res)
+			callobj.callbacksRunPlayAndCollect(callobj.Calling.Ctx, ctrlID, res, false)
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
+
 		res.Lock()
+
 		res.ControlID = newCtrlID
+
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelayPlayAndCollect(callobj.Calling.Ctx, callobj.call, newCtrlID, playlist, collect)
+		err := callobj.Calling.Relay.RelayPlayAndCollect(callobj.Calling.Ctx, callobj.call, newCtrlID, playlist, collect, &res.Payload)
 
 		if err != nil {
 			res.Lock()
@@ -296,12 +388,19 @@ func (action *PromptAction) playAndCollectAsyncStop() error {
 
 	call := action.CallObj.call
 
-	return action.CallObj.Calling.Relay.RelayPlayAndCollectStop(action.CallObj.Calling.Ctx, call, &c)
+	return action.CallObj.Calling.Relay.RelayPlayAndCollectStop(action.CallObj.Calling.Ctx, call, &c, &action.Payload)
 }
 
 // Stop TODO DESCRIPTION
-func (action *PromptAction) Stop() {
+func (action *PromptAction) Stop() StopResult {
+	res := new(StopResult)
 	action.err = action.playAndCollectAsyncStop()
+
+	if action.err == nil {
+		waitStop(res, action.done)
+	}
+
+	return *res
 }
 
 // GetCompleted TODO DESCRIPTION
@@ -370,8 +469,8 @@ func (action *PromptAction) GetResultType() CollectResultType {
 	return ret
 }
 
-// PromptVolume TODO DESCRIPTION
-func (action *PromptAction) PromptVolume(vol float64) (*PlayVolumeResult, error) {
+// Volume TODO DESCRIPTION
+func (action *PromptAction) Volume(vol float64) (*PlayVolumeResult, error) {
 	res := new(PlayVolumeResult)
 
 	if action.CallObj.Calling == nil {
@@ -389,7 +488,7 @@ func (action *PromptAction) PromptVolume(vol float64) (*PlayVolumeResult, error)
 
 	call := action.CallObj.call
 
-	err = action.CallObj.Calling.Relay.RelayPlayAndCollectVolume(action.CallObj.Calling.Ctx, call, &c, vol)
+	err = action.CallObj.Calling.Relay.RelayPlayAndCollectVolume(action.CallObj.Calling.Ctx, call, &c, vol, &action.Payload)
 
 	if err != nil {
 		return res, err
@@ -398,4 +497,37 @@ func (action *PromptAction) PromptVolume(vol float64) (*PlayVolumeResult, error)
 	res.Successful = true
 
 	return res, nil
+}
+
+// GetEvent TODO DESCRIPTION
+func (action *PromptAction) GetEvent() *json.RawMessage {
+	action.RLock()
+
+	ret := &action.Result.Event
+
+	action.RUnlock()
+
+	return ret
+}
+
+// GetPayload TODO DESCRIPTION
+func (action *PromptAction) GetPayload() *json.RawMessage {
+	action.RLock()
+
+	ret := action.Payload
+
+	action.RUnlock()
+
+	return ret
+}
+
+// GetControlID TODO DESCRIPTION
+func (action *PromptAction) GetControlID() string {
+	action.RLock()
+
+	ret := action.ControlID
+
+	action.RUnlock()
+
+	return ret
 }

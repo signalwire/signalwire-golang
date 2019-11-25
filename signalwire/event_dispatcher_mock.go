@@ -6,6 +6,7 @@ package signalwire
 
 import (
 	context "context"
+	json "encoding/json"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -31,20 +32,6 @@ func NewMockIEventCalling(ctrl *gomock.Controller) *MockIEventCalling {
 // EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockIEventCalling) EXPECT() *MockIEventCallingMockRecorder {
 	return m.recorder
-}
-
-// callingNotif mocks base method
-func (m *MockIEventCalling) callingNotif(ctx context.Context, b NotifParamsBladeBroadcast) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "callingNotif", ctx, b)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// callingNotif indicates an expected call of callingNotif
-func (mr *MockIEventCallingMockRecorder) callingNotif(ctx, b interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "callingNotif", reflect.TypeOf((*MockIEventCalling)(nil).callingNotif), ctx, b)
 }
 
 // callConnectStateFromStr mocks base method
@@ -137,6 +124,81 @@ func (mr *MockIEventCallingMockRecorder) callFaxEventFromStr(t interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "callFaxEventFromStr", reflect.TypeOf((*MockIEventCalling)(nil).callFaxEventFromStr), t)
 }
 
+// callDisconnectReasonFromStr mocks base method
+func (m *MockIEventCalling) callDisconnectReasonFromStr(r string) (CallDisconnectReason, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "callDisconnectReasonFromStr", r)
+	ret0, _ := ret[0].(CallDisconnectReason)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// callDisconnectReasonFromStr indicates an expected call of callDisconnectReasonFromStr
+func (mr *MockIEventCallingMockRecorder) callDisconnectReasonFromStr(r interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "callDisconnectReasonFromStr", reflect.TypeOf((*MockIEventCalling)(nil).callDisconnectReasonFromStr), r)
+}
+
+// callTapStateFromStr mocks base method
+func (m *MockIEventCalling) callTapStateFromStr(s string) (TapState, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "callTapStateFromStr", s)
+	ret0, _ := ret[0].(TapState)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// callTapStateFromStr indicates an expected call of callTapStateFromStr
+func (mr *MockIEventCallingMockRecorder) callTapStateFromStr(s interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "callTapStateFromStr", reflect.TypeOf((*MockIEventCalling)(nil).callTapStateFromStr), s)
+}
+
+// callSendDigitsStateFromStr mocks base method
+func (m *MockIEventCalling) callSendDigitsStateFromStr(s string) (SendDigitsState, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "callSendDigitsStateFromStr", s)
+	ret0, _ := ret[0].(SendDigitsState)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// callSendDigitsStateFromStr indicates an expected call of callSendDigitsStateFromStr
+func (mr *MockIEventCallingMockRecorder) callSendDigitsStateFromStr(s interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "callSendDigitsStateFromStr", reflect.TypeOf((*MockIEventCalling)(nil).callSendDigitsStateFromStr), s)
+}
+
+// callDirectionFromStr mocks base method
+func (m *MockIEventCalling) callDirectionFromStr(s string) (CallDirection, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "callDirectionFromStr", s)
+	ret0, _ := ret[0].(CallDirection)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// callDirectionFromStr indicates an expected call of callDirectionFromStr
+func (mr *MockIEventCallingMockRecorder) callDirectionFromStr(s interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "callDirectionFromStr", reflect.TypeOf((*MockIEventCalling)(nil).callDirectionFromStr), s)
+}
+
+// callPlayAndCollectStateFromStr mocks base method
+func (m *MockIEventCalling) callPlayAndCollectStateFromStr(s string) (CollectResultType, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "callPlayAndCollectStateFromStr", s)
+	ret0, _ := ret[0].(CollectResultType)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// callPlayAndCollectStateFromStr indicates an expected call of callPlayAndCollectStateFromStr
+func (mr *MockIEventCallingMockRecorder) callPlayAndCollectStateFromStr(s interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "callPlayAndCollectStateFromStr", reflect.TypeOf((*MockIEventCalling)(nil).callPlayAndCollectStateFromStr), s)
+}
+
 // dispatchStateNotif mocks base method
 func (m *MockIEventCalling) dispatchStateNotif(ctx context.Context, callParams CallParams) error {
 	m.ctrl.T.Helper()
@@ -152,45 +214,45 @@ func (mr *MockIEventCallingMockRecorder) dispatchStateNotif(ctx, callParams inte
 }
 
 // dispatchConnectStateNotif mocks base method
-func (m *MockIEventCalling) dispatchConnectStateNotif(ctx context.Context, callParams CallParams, peer PeerDeviceStruct, ccstate CallConnectState) error {
+func (m *MockIEventCalling) dispatchConnectStateNotif(ctx context.Context, callParams CallParams, peer PeerDeviceStruct, ccstate CallConnectState, rawEvent *json.RawMessage) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "dispatchConnectStateNotif", ctx, callParams, peer, ccstate)
+	ret := m.ctrl.Call(m, "dispatchConnectStateNotif", ctx, callParams, peer, ccstate, rawEvent)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // dispatchConnectStateNotif indicates an expected call of dispatchConnectStateNotif
-func (mr *MockIEventCallingMockRecorder) dispatchConnectStateNotif(ctx, callParams, peer, ccstate interface{}) *gomock.Call {
+func (mr *MockIEventCallingMockRecorder) dispatchConnectStateNotif(ctx, callParams, peer, ccstate, rawEvent interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "dispatchConnectStateNotif", reflect.TypeOf((*MockIEventCalling)(nil).dispatchConnectStateNotif), ctx, callParams, peer, ccstate)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "dispatchConnectStateNotif", reflect.TypeOf((*MockIEventCalling)(nil).dispatchConnectStateNotif), ctx, callParams, peer, ccstate, rawEvent)
 }
 
 // dispatchPlayState mocks base method
-func (m *MockIEventCalling) dispatchPlayState(ctx context.Context, callID, ctrlID string, playState PlayState) error {
+func (m *MockIEventCalling) dispatchPlayState(ctx context.Context, callID, ctrlID string, playState PlayState, rawEvent *json.RawMessage) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "dispatchPlayState", ctx, callID, ctrlID, playState)
+	ret := m.ctrl.Call(m, "dispatchPlayState", ctx, callID, ctrlID, playState, rawEvent)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // dispatchPlayState indicates an expected call of dispatchPlayState
-func (mr *MockIEventCallingMockRecorder) dispatchPlayState(ctx, callID, ctrlID, playState interface{}) *gomock.Call {
+func (mr *MockIEventCallingMockRecorder) dispatchPlayState(ctx, callID, ctrlID, playState, rawEvent interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "dispatchPlayState", reflect.TypeOf((*MockIEventCalling)(nil).dispatchPlayState), ctx, callID, ctrlID, playState)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "dispatchPlayState", reflect.TypeOf((*MockIEventCalling)(nil).dispatchPlayState), ctx, callID, ctrlID, playState, rawEvent)
 }
 
 // dispatchRecordState mocks base method
-func (m *MockIEventCalling) dispatchRecordState(ctx context.Context, callID, ctrlID string, recordState RecordState) error {
+func (m *MockIEventCalling) dispatchRecordState(ctx context.Context, callID, ctrlID string, recordState RecordState, rawEvent *json.RawMessage) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "dispatchRecordState", ctx, callID, ctrlID, recordState)
+	ret := m.ctrl.Call(m, "dispatchRecordState", ctx, callID, ctrlID, recordState, rawEvent)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // dispatchRecordState indicates an expected call of dispatchRecordState
-func (mr *MockIEventCallingMockRecorder) dispatchRecordState(ctx, callID, ctrlID, recordState interface{}) *gomock.Call {
+func (mr *MockIEventCallingMockRecorder) dispatchRecordState(ctx, callID, ctrlID, recordState, rawEvent interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "dispatchRecordState", reflect.TypeOf((*MockIEventCalling)(nil).dispatchRecordState), ctx, callID, ctrlID, recordState)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "dispatchRecordState", reflect.TypeOf((*MockIEventCalling)(nil).dispatchRecordState), ctx, callID, ctrlID, recordState, rawEvent)
 }
 
 // dispatchRecordEventParams mocks base method
@@ -208,31 +270,31 @@ func (mr *MockIEventCallingMockRecorder) dispatchRecordEventParams(ctx, callID, 
 }
 
 // dispatchDetect mocks base method
-func (m *MockIEventCalling) dispatchDetect(ctx context.Context, callID, ctrlID string, v interface{}) error {
+func (m *MockIEventCalling) dispatchDetect(ctx context.Context, callID, ctrlID string, v interface{}, rawEvent *json.RawMessage) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "dispatchDetect", ctx, callID, ctrlID, v)
+	ret := m.ctrl.Call(m, "dispatchDetect", ctx, callID, ctrlID, v, rawEvent)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // dispatchDetect indicates an expected call of dispatchDetect
-func (mr *MockIEventCallingMockRecorder) dispatchDetect(ctx, callID, ctrlID, v interface{}) *gomock.Call {
+func (mr *MockIEventCallingMockRecorder) dispatchDetect(ctx, callID, ctrlID, v, rawEvent interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "dispatchDetect", reflect.TypeOf((*MockIEventCalling)(nil).dispatchDetect), ctx, callID, ctrlID, v)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "dispatchDetect", reflect.TypeOf((*MockIEventCalling)(nil).dispatchDetect), ctx, callID, ctrlID, v, rawEvent)
 }
 
 // dispatchFax mocks base method
-func (m *MockIEventCalling) dispatchFax(ctx context.Context, callID, ctrlID string, faxType FaxEventType) error {
+func (m *MockIEventCalling) dispatchFax(ctx context.Context, callID, ctrlID string, faxType FaxEventType, rawEvent *json.RawMessage) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "dispatchFax", ctx, callID, ctrlID, faxType)
+	ret := m.ctrl.Call(m, "dispatchFax", ctx, callID, ctrlID, faxType, rawEvent)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // dispatchFax indicates an expected call of dispatchFax
-func (mr *MockIEventCallingMockRecorder) dispatchFax(ctx, callID, ctrlID, faxType interface{}) *gomock.Call {
+func (mr *MockIEventCallingMockRecorder) dispatchFax(ctx, callID, ctrlID, faxType, rawEvent interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "dispatchFax", reflect.TypeOf((*MockIEventCalling)(nil).dispatchFax), ctx, callID, ctrlID, faxType)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "dispatchFax", reflect.TypeOf((*MockIEventCalling)(nil).dispatchFax), ctx, callID, ctrlID, faxType, rawEvent)
 }
 
 // dispatchFaxEventParams mocks base method
@@ -247,6 +309,76 @@ func (m *MockIEventCalling) dispatchFaxEventParams(ctx context.Context, callID, 
 func (mr *MockIEventCallingMockRecorder) dispatchFaxEventParams(ctx, callID, ctrlID, params interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "dispatchFaxEventParams", reflect.TypeOf((*MockIEventCalling)(nil).dispatchFaxEventParams), ctx, callID, ctrlID, params)
+}
+
+// dispatchTapEventParams mocks base method
+func (m *MockIEventCalling) dispatchTapEventParams(ctx context.Context, callID, ctrlID string, params ParamsEventCallingCallTap) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "dispatchTapEventParams", ctx, callID, ctrlID, params)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// dispatchTapEventParams indicates an expected call of dispatchTapEventParams
+func (mr *MockIEventCallingMockRecorder) dispatchTapEventParams(ctx, callID, ctrlID, params interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "dispatchTapEventParams", reflect.TypeOf((*MockIEventCalling)(nil).dispatchTapEventParams), ctx, callID, ctrlID, params)
+}
+
+// dispatchTapState mocks base method
+func (m *MockIEventCalling) dispatchTapState(ctx context.Context, callID, ctrlID string, tapState TapState, rawEvent *json.RawMessage) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "dispatchTapState", ctx, callID, ctrlID, tapState, rawEvent)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// dispatchTapState indicates an expected call of dispatchTapState
+func (mr *MockIEventCallingMockRecorder) dispatchTapState(ctx, callID, ctrlID, tapState, rawEvent interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "dispatchTapState", reflect.TypeOf((*MockIEventCalling)(nil).dispatchTapState), ctx, callID, ctrlID, tapState, rawEvent)
+}
+
+// dispatchSendDigitsState mocks base method
+func (m *MockIEventCalling) dispatchSendDigitsState(ctx context.Context, callID, ctrlID string, sendDigitsState SendDigitsState, rawEvent *json.RawMessage) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "dispatchSendDigitsState", ctx, callID, ctrlID, sendDigitsState, rawEvent)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// dispatchSendDigitsState indicates an expected call of dispatchSendDigitsState
+func (mr *MockIEventCallingMockRecorder) dispatchSendDigitsState(ctx, callID, ctrlID, sendDigitsState, rawEvent interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "dispatchSendDigitsState", reflect.TypeOf((*MockIEventCalling)(nil).dispatchSendDigitsState), ctx, callID, ctrlID, sendDigitsState, rawEvent)
+}
+
+// dispatchPlayAndCollectEventParams mocks base method
+func (m *MockIEventCalling) dispatchPlayAndCollectEventParams(ctx context.Context, callID, ctrlID string, params ParamsEventCallingCallPlayAndCollect) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "dispatchPlayAndCollectEventParams", ctx, callID, ctrlID, params)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// dispatchPlayAndCollectEventParams indicates an expected call of dispatchPlayAndCollectEventParams
+func (mr *MockIEventCallingMockRecorder) dispatchPlayAndCollectEventParams(ctx, callID, ctrlID, params interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "dispatchPlayAndCollectEventParams", reflect.TypeOf((*MockIEventCalling)(nil).dispatchPlayAndCollectEventParams), ctx, callID, ctrlID, params)
+}
+
+// dispatchPlayAndCollectResType mocks base method
+func (m *MockIEventCalling) dispatchPlayAndCollectResType(ctx context.Context, callID, ctrlID string, resType CollectResultType, rawEvent *json.RawMessage) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "dispatchPlayAndCollectResType", ctx, callID, ctrlID, resType, rawEvent)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// dispatchPlayAndCollectResType indicates an expected call of dispatchPlayAndCollectResType
+func (mr *MockIEventCallingMockRecorder) dispatchPlayAndCollectResType(ctx, callID, ctrlID, resType, rawEvent interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "dispatchPlayAndCollectResType", reflect.TypeOf((*MockIEventCalling)(nil).dispatchPlayAndCollectResType), ctx, callID, ctrlID, resType, rawEvent)
 }
 
 // getCall mocks base method
@@ -279,17 +411,17 @@ func (mr *MockIEventCallingMockRecorder) getBroadcastParams(ctx, in, out interfa
 }
 
 // onCallingEventConnect mocks base method
-func (m *MockIEventCalling) onCallingEventConnect(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+func (m *MockIEventCalling) onCallingEventConnect(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "onCallingEventConnect", ctx, broadcast)
+	ret := m.ctrl.Call(m, "onCallingEventConnect", ctx, broadcast, rawEvent)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // onCallingEventConnect indicates an expected call of onCallingEventConnect
-func (mr *MockIEventCallingMockRecorder) onCallingEventConnect(ctx, broadcast interface{}) *gomock.Call {
+func (mr *MockIEventCallingMockRecorder) onCallingEventConnect(ctx, broadcast, rawEvent interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "onCallingEventConnect", reflect.TypeOf((*MockIEventCalling)(nil).onCallingEventConnect), ctx, broadcast)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "onCallingEventConnect", reflect.TypeOf((*MockIEventCalling)(nil).onCallingEventConnect), ctx, broadcast, rawEvent)
 }
 
 // onCallingEventReceive mocks base method
@@ -321,99 +453,232 @@ func (mr *MockIEventCallingMockRecorder) onCallingEventState(ctx, broadcast inte
 }
 
 // onCallingEventPlay mocks base method
-func (m *MockIEventCalling) onCallingEventPlay(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+func (m *MockIEventCalling) onCallingEventPlay(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "onCallingEventPlay", ctx, broadcast)
+	ret := m.ctrl.Call(m, "onCallingEventPlay", ctx, broadcast, rawEvent)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // onCallingEventPlay indicates an expected call of onCallingEventPlay
-func (mr *MockIEventCallingMockRecorder) onCallingEventPlay(ctx, broadcast interface{}) *gomock.Call {
+func (mr *MockIEventCallingMockRecorder) onCallingEventPlay(ctx, broadcast, rawEvent interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "onCallingEventPlay", reflect.TypeOf((*MockIEventCalling)(nil).onCallingEventPlay), ctx, broadcast)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "onCallingEventPlay", reflect.TypeOf((*MockIEventCalling)(nil).onCallingEventPlay), ctx, broadcast, rawEvent)
 }
 
 // onCallingEventCollect mocks base method
-func (m *MockIEventCalling) onCallingEventCollect(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+func (m *MockIEventCalling) onCallingEventCollect(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "onCallingEventCollect", ctx, broadcast)
+	ret := m.ctrl.Call(m, "onCallingEventCollect", ctx, broadcast, rawEvent)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // onCallingEventCollect indicates an expected call of onCallingEventCollect
-func (mr *MockIEventCallingMockRecorder) onCallingEventCollect(ctx, broadcast interface{}) *gomock.Call {
+func (mr *MockIEventCallingMockRecorder) onCallingEventCollect(ctx, broadcast, rawEvent interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "onCallingEventCollect", reflect.TypeOf((*MockIEventCalling)(nil).onCallingEventCollect), ctx, broadcast)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "onCallingEventCollect", reflect.TypeOf((*MockIEventCalling)(nil).onCallingEventCollect), ctx, broadcast, rawEvent)
 }
 
 // onCallingEventRecord mocks base method
-func (m *MockIEventCalling) onCallingEventRecord(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+func (m *MockIEventCalling) onCallingEventRecord(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "onCallingEventRecord", ctx, broadcast)
+	ret := m.ctrl.Call(m, "onCallingEventRecord", ctx, broadcast, rawEvent)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // onCallingEventRecord indicates an expected call of onCallingEventRecord
-func (mr *MockIEventCallingMockRecorder) onCallingEventRecord(ctx, broadcast interface{}) *gomock.Call {
+func (mr *MockIEventCallingMockRecorder) onCallingEventRecord(ctx, broadcast, rawEvent interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "onCallingEventRecord", reflect.TypeOf((*MockIEventCalling)(nil).onCallingEventRecord), ctx, broadcast)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "onCallingEventRecord", reflect.TypeOf((*MockIEventCalling)(nil).onCallingEventRecord), ctx, broadcast, rawEvent)
 }
 
 // onCallingEventTap mocks base method
-func (m *MockIEventCalling) onCallingEventTap(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+func (m *MockIEventCalling) onCallingEventTap(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "onCallingEventTap", ctx, broadcast)
+	ret := m.ctrl.Call(m, "onCallingEventTap", ctx, broadcast, rawEvent)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // onCallingEventTap indicates an expected call of onCallingEventTap
-func (mr *MockIEventCallingMockRecorder) onCallingEventTap(ctx, broadcast interface{}) *gomock.Call {
+func (mr *MockIEventCallingMockRecorder) onCallingEventTap(ctx, broadcast, rawEvent interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "onCallingEventTap", reflect.TypeOf((*MockIEventCalling)(nil).onCallingEventTap), ctx, broadcast)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "onCallingEventTap", reflect.TypeOf((*MockIEventCalling)(nil).onCallingEventTap), ctx, broadcast, rawEvent)
 }
 
 // onCallingEventDetect mocks base method
-func (m *MockIEventCalling) onCallingEventDetect(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+func (m *MockIEventCalling) onCallingEventDetect(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "onCallingEventDetect", ctx, broadcast)
+	ret := m.ctrl.Call(m, "onCallingEventDetect", ctx, broadcast, rawEvent)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // onCallingEventDetect indicates an expected call of onCallingEventDetect
-func (mr *MockIEventCallingMockRecorder) onCallingEventDetect(ctx, broadcast interface{}) *gomock.Call {
+func (mr *MockIEventCallingMockRecorder) onCallingEventDetect(ctx, broadcast, rawEvent interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "onCallingEventDetect", reflect.TypeOf((*MockIEventCalling)(nil).onCallingEventDetect), ctx, broadcast)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "onCallingEventDetect", reflect.TypeOf((*MockIEventCalling)(nil).onCallingEventDetect), ctx, broadcast, rawEvent)
 }
 
 // onCallingEventFax mocks base method
-func (m *MockIEventCalling) onCallingEventFax(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+func (m *MockIEventCalling) onCallingEventFax(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "onCallingEventFax", ctx, broadcast)
+	ret := m.ctrl.Call(m, "onCallingEventFax", ctx, broadcast, rawEvent)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // onCallingEventFax indicates an expected call of onCallingEventFax
-func (mr *MockIEventCallingMockRecorder) onCallingEventFax(ctx, broadcast interface{}) *gomock.Call {
+func (mr *MockIEventCallingMockRecorder) onCallingEventFax(ctx, broadcast, rawEvent interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "onCallingEventFax", reflect.TypeOf((*MockIEventCalling)(nil).onCallingEventFax), ctx, broadcast)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "onCallingEventFax", reflect.TypeOf((*MockIEventCalling)(nil).onCallingEventFax), ctx, broadcast, rawEvent)
 }
 
 // onCallingEventSendDigits mocks base method
-func (m *MockIEventCalling) onCallingEventSendDigits(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+func (m *MockIEventCalling) onCallingEventSendDigits(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "onCallingEventSendDigits", ctx, broadcast)
+	ret := m.ctrl.Call(m, "onCallingEventSendDigits", ctx, broadcast, rawEvent)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // onCallingEventSendDigits indicates an expected call of onCallingEventSendDigits
-func (mr *MockIEventCallingMockRecorder) onCallingEventSendDigits(ctx, broadcast interface{}) *gomock.Call {
+func (mr *MockIEventCallingMockRecorder) onCallingEventSendDigits(ctx, broadcast, rawEvent interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "onCallingEventSendDigits", reflect.TypeOf((*MockIEventCalling)(nil).onCallingEventSendDigits), ctx, broadcast)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "onCallingEventSendDigits", reflect.TypeOf((*MockIEventCalling)(nil).onCallingEventSendDigits), ctx, broadcast, rawEvent)
+}
+
+// MockIEventMessaging is a mock of IEventMessaging interface
+type MockIEventMessaging struct {
+	ctrl     *gomock.Controller
+	recorder *MockIEventMessagingMockRecorder
+}
+
+// MockIEventMessagingMockRecorder is the mock recorder for MockIEventMessaging
+type MockIEventMessagingMockRecorder struct {
+	mock *MockIEventMessaging
+}
+
+// NewMockIEventMessaging creates a new mock instance
+func NewMockIEventMessaging(ctrl *gomock.Controller) *MockIEventMessaging {
+	mock := &MockIEventMessaging{ctrl: ctrl}
+	mock.recorder = &MockIEventMessagingMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockIEventMessaging) EXPECT() *MockIEventMessagingMockRecorder {
+	return m.recorder
+}
+
+// onMessagingEventState mocks base method
+func (m *MockIEventMessaging) onMessagingEventState(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "onMessagingEventState", ctx, broadcast)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// onMessagingEventState indicates an expected call of onMessagingEventState
+func (mr *MockIEventMessagingMockRecorder) onMessagingEventState(ctx, broadcast interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "onMessagingEventState", reflect.TypeOf((*MockIEventMessaging)(nil).onMessagingEventState), ctx, broadcast)
+}
+
+// dispatchMsgStateNotif mocks base method
+func (m *MockIEventMessaging) dispatchMsgStateNotif(ctx context.Context, msgParams MsgParams) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "dispatchMsgStateNotif", ctx, msgParams)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// dispatchMsgStateNotif indicates an expected call of dispatchMsgStateNotif
+func (mr *MockIEventMessagingMockRecorder) dispatchMsgStateNotif(ctx, msgParams interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "dispatchMsgStateNotif", reflect.TypeOf((*MockIEventMessaging)(nil).dispatchMsgStateNotif), ctx, msgParams)
+}
+
+// msgStateFromStr mocks base method
+func (m *MockIEventMessaging) msgStateFromStr(s string) (MsgState, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "msgStateFromStr", s)
+	ret0, _ := ret[0].(MsgState)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// msgStateFromStr indicates an expected call of msgStateFromStr
+func (mr *MockIEventMessagingMockRecorder) msgStateFromStr(s interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "msgStateFromStr", reflect.TypeOf((*MockIEventMessaging)(nil).msgStateFromStr), s)
+}
+
+// msgDirectionFromStr mocks base method
+func (m *MockIEventMessaging) msgDirectionFromStr(s string) (MsgDirection, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "msgDirectionFromStr", s)
+	ret0, _ := ret[0].(MsgDirection)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// msgDirectionFromStr indicates an expected call of msgDirectionFromStr
+func (mr *MockIEventMessagingMockRecorder) msgDirectionFromStr(s interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "msgDirectionFromStr", reflect.TypeOf((*MockIEventMessaging)(nil).msgDirectionFromStr), s)
+}
+
+// getMsg mocks base method
+func (m *MockIEventMessaging) getMsg(ctx context.Context, msgID string) (*MsgSession, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "getMsg", ctx, msgID)
+	ret0, _ := ret[0].(*MsgSession)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// getMsg indicates an expected call of getMsg
+func (mr *MockIEventMessagingMockRecorder) getMsg(ctx, msgID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "getMsg", reflect.TypeOf((*MockIEventMessaging)(nil).getMsg), ctx, msgID)
+}
+
+// MockIEventTasking is a mock of IEventTasking interface
+type MockIEventTasking struct {
+	ctrl     *gomock.Controller
+	recorder *MockIEventTaskingMockRecorder
+}
+
+// MockIEventTaskingMockRecorder is the mock recorder for MockIEventTasking
+type MockIEventTaskingMockRecorder struct {
+	mock *MockIEventTasking
+}
+
+// NewMockIEventTasking creates a new mock instance
+func NewMockIEventTasking(ctrl *gomock.Controller) *MockIEventTasking {
+	mock := &MockIEventTasking{ctrl: ctrl}
+	mock.recorder = &MockIEventTaskingMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockIEventTasking) EXPECT() *MockIEventTaskingMockRecorder {
+	return m.recorder
+}
+
+// onTaskingEvent mocks base method
+func (m *MockIEventTasking) onTaskingEvent(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "onTaskingEvent", ctx, broadcast)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// onTaskingEvent indicates an expected call of onTaskingEvent
+func (mr *MockIEventTaskingMockRecorder) onTaskingEvent(ctx, broadcast interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "onTaskingEvent", reflect.TypeOf((*MockIEventTasking)(nil).onTaskingEvent), ctx, broadcast)
 }

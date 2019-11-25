@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	okCode = "200"
+	okCode       = "200"
+	debugJSONRPC = true // show jsonrpc2 command, replies and notifications
 )
 
 // BladeAuth holds auth data for the WS connection
@@ -93,7 +94,7 @@ type IBlade interface {
 	handleBladeDisconnect(ctx context.Context, c *jsonrpc2.Request) error
 	handleInboundCall(ctx context.Context, callID string) bool
 	handleInboundMessage(ctx context.Context, callID string) bool
-	eventNotif(ctx context.Context, broadcast NotifParamsBladeBroadcast) error
+	eventNotif(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error
 }
 
 // ISessionControl TODO DESCRIPTION
@@ -341,6 +342,7 @@ func (blade *BladeSession) BladeConnect(ctx context.Context, bladeAuth *BladeAut
 				Project: bladeAuth.ProjectID,
 				Token:   bladeAuth.TokenID,
 			},
+			Agent: fmt.Sprintf("%s/%s", UserAgent, SDKVersion),
 		},
 		&ReplyConnectDecode, blade.jOpts...,
 	); err != nil {
@@ -401,8 +403,6 @@ func (blade *BladeSession) BladeSetup(ctx context.Context) error {
 		Params:   ParamsSignalwireSetupStruct{},
 	}
 
-	Log.Debug("blade.BladeExecute: %p\n", blade.BladeExecute)
-
 	reply, err := blade.I.BladeExecute(ctx, &v, &ReplySetupDecode)
 	if err != nil {
 		return err
@@ -462,6 +462,12 @@ func (blade *BladeSession) BladeAddSubscription(ctx context.Context, signalwireC
 	return nil
 }
 
+type placeHolderCmd struct {
+	Protocol string          `json:"protocol"`
+	Method   string          `json:"method"`
+	Params   json.RawMessage `json:"params"`
+}
+
 // BladeExecute TODO DESCRIPTION
 func (blade *BladeSession) BladeExecute(ctx context.Context, v interface{}, res interface{}) (interface{}, error) {
 	if blade == nil {
@@ -481,6 +487,27 @@ func (blade *BladeSession) BladeExecute(ctx context.Context, v interface{}, res 
 
 	blade.jOpts = nil
 	blade.jOpts = append(blade.jOpts, jsonrpc2.PickID(id))
+
+	if debugJSONRPC {
+		placeholder := new(placeHolderCmd)
+
+		b, err := json.Marshal(v)
+		if err != nil {
+			Log.Error("payload: cannot marshal")
+		}
+
+		err = json.Unmarshal(b, placeholder)
+		if err != nil {
+			Log.Error("payload: cannot unmarshal to RawMessage")
+		}
+
+		bp, err := json.MarshalIndent(&placeholder, "", "\t")
+		if err != nil {
+			Log.Error("error:", err)
+		}
+
+		Log.Debug("blade.execute params: %s\n", bp)
+	}
 
 	if err := blade.conn.Call(ctx, "blade.execute", v, res, blade.jOpts...); err != nil {
 		blade.LastError = err
@@ -547,7 +574,7 @@ func (blade *BladeSession) handleBladeBroadcast(ctx context.Context, req *jsonrp
 	Log.Debug("broadcast.Params.EventType: %v\n", broadcast.Params.EventType)
 	Log.Debug("broadcast.Params.Params: %v\n", broadcast.Params.Params)
 
-	return blade.eventNotif(ctx, broadcast)
+	return blade.eventNotif(ctx, broadcast, req.Params)
 }
 
 // HandleBladeNetcast TODO DESCRIPTION
@@ -698,7 +725,9 @@ func (ReqHandler) Handle(ctx context.Context, c *jsonrpc2.Conn, req *jsonrpc2.Re
 		}
 	}
 
-	Log.Debug("%s: %s\n", req.ID, *req.Params)
+	if debugJSONRPC {
+		Log.Debug("%s: %s\n", req.ID, *req.Params)
+	}
 }
 
 // BladeWaitDisconnect TODO DESCRIPTION
@@ -783,7 +812,7 @@ func (blade *BladeSession) BladeWaitInboundCall(ctx context.Context) (*CallSessi
 }
 
 // eventNotif TODO DESCRIPTION
-func (blade *BladeSession) eventNotif(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+func (blade *BladeSession) eventNotif(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
 	calling := blade.EventCalling
 	messaging := blade.EventMessaging
 	tasking := blade.EventTasking
@@ -792,43 +821,43 @@ func (blade *BladeSession) eventNotif(ctx context.Context, broadcast NotifParams
 	case "queuing.relay.events":
 		switch broadcast.Params.EventType {
 		case "calling.call.connect":
-			if err := calling.onCallingEventConnect(ctx, broadcast); err != nil {
+			if err := calling.onCallingEventConnect(ctx, broadcast, rawEvent); err != nil {
 				return err
 			}
 		case "calling.call.state":
-			if err := calling.onCallingEventState(ctx, broadcast); err != nil {
+			if err := calling.onCallingEventState(ctx, broadcast, rawEvent); err != nil {
 				return err
 			}
 		case "calling.call.receive":
-			if err := calling.onCallingEventReceive(ctx, broadcast); err != nil {
+			if err := calling.onCallingEventReceive(ctx, broadcast, rawEvent); err != nil {
 				return err
 			}
 		case "calling.call.play":
-			if err := calling.onCallingEventPlay(ctx, broadcast); err != nil {
+			if err := calling.onCallingEventPlay(ctx, broadcast, rawEvent); err != nil {
 				return err
 			}
 		case "calling.call.collect":
-			if err := calling.onCallingEventCollect(ctx, broadcast); err != nil {
+			if err := calling.onCallingEventCollect(ctx, broadcast, rawEvent); err != nil {
 				return err
 			}
 		case "calling.call.record":
-			if err := calling.onCallingEventRecord(ctx, broadcast); err != nil {
+			if err := calling.onCallingEventRecord(ctx, broadcast, rawEvent); err != nil {
 				return err
 			}
 		case "calling.call.tap":
-			if err := calling.onCallingEventTap(ctx, broadcast); err != nil {
+			if err := calling.onCallingEventTap(ctx, broadcast, rawEvent); err != nil {
 				return err
 			}
 		case "calling.call.detect":
-			if err := calling.onCallingEventDetect(ctx, broadcast); err != nil {
+			if err := calling.onCallingEventDetect(ctx, broadcast, rawEvent); err != nil {
 				return err
 			}
 		case "calling.call.fax":
-			if err := calling.onCallingEventFax(ctx, broadcast); err != nil {
+			if err := calling.onCallingEventFax(ctx, broadcast, rawEvent); err != nil {
 				return err
 			}
 		case "calling.call.send_digits":
-			if err := calling.onCallingEventSendDigits(ctx, broadcast); err != nil {
+			if err := calling.onCallingEventSendDigits(ctx, broadcast, rawEvent); err != nil {
 				return err
 			}
 		default:

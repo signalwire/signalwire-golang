@@ -19,9 +19,6 @@ var (
 	DefaultContext = os.Getenv("DefaultContext")
 )
 
-// Contexts not needed for only outbound calls
-var Contexts = []string{DefaultContext}
-
 // PProjectID passed from command-line
 var PProjectID string
 
@@ -41,33 +38,10 @@ func spinner(delay time.Duration) {
 	}
 }
 
-// MyOnIncomingCall - gets executed when we receive an incoming call
-func MyOnIncomingCall(consumer *signalwire.Consumer, call *signalwire.CallObj) {
-	resultAnswer, _ := call.Answer()
-	if !resultAnswer.Successful {
-		if err := consumer.Stop(); err != nil {
-			signalwire.Log.Error("Error occurred while trying to stop Consumer\n")
-		}
-
-		return
-	}
-
-	// do something here
-	go spinner(100 * time.Millisecond)
-
-	faxResult, err := call.ReceiveFax()
-	if err != nil {
-		signalwire.Log.Error("Error occurred while trying to receive fax\n")
-	}
-
-	signalwire.Log.Info("Download Document from %s\n Pages #%d\n", faxResult.Document, faxResult.Pages)
-
-	if _, err := call.Hangup(); err != nil {
-		signalwire.Log.Error("Error occurred while trying to hangup call. Err: %v\n", err)
-	}
-
-	if err := consumer.Stop(); err != nil {
-		signalwire.Log.Error("Error occurred while trying to stop Consumer. Err: %v\n", err)
+// MyOnReady - gets executed when Blade (Client) is successfully setup (after signalwire.receive)
+func MyOnReady(client *signalwire.ClientSession) {
+	if err := client.Disconnect(); err != nil {
+		signalwire.Log.Error("Error occurred while trying to stop Client\n")
 	}
 }
 
@@ -81,7 +55,6 @@ func main() {
 	flag.StringVar(&PProjectID, "p", ProjectID, " ProjectID ")
 	flag.StringVar(&PTokenID, "t", TokenID, " TokenID ")
 	flag.BoolVar(&verbose, "d", false, " Enable debug mode ")
-
 	flag.Parse()
 
 	if printVersion {
@@ -107,21 +80,47 @@ func main() {
 			case syscall.SIGTERM:
 				fallthrough
 			case syscall.SIGINT:
-				signalwire.Log.Info("Exit")
+				signalwire.Log.Info("Exit\n")
 				os.Exit(0)
 			}
 		}
 	}()
 
-	consumer := new(signalwire.Consumer)
-	// setup the Client
-	consumer.Setup(PProjectID, PTokenID, Contexts)
-	// register callback
-	consumer.OnIncomingCall = MyOnIncomingCall
+	go spinner(100 * time.Millisecond)
 
-	signalwire.Log.Info("Wait incoming call..")
-	// start
-	if err := consumer.Run(); err != nil {
-		signalwire.Log.Error("Error occurred while starting Signalwire Consumer\n")
+	var counter int
+
+	var max = 100
+
+	var maxroutines = 10
+
+	var i int
+
+	for i = 0; i < maxroutines; i++ {
+		go func() {
+			for {
+				// connect/disconnect stress
+				counter++
+
+				signalwireContexts := []string{DefaultContext}
+
+				client := signalwire.Client(PProjectID, PTokenID, "" /*host, empty for default*/, signalwireContexts)
+				// register callback
+				client.OnReady = MyOnReady
+				// start
+				err := client.Connect()
+
+				if err != nil {
+					signalwire.Log.Error("Error occurred while starting Signalwire Client\n")
+				}
+
+				if counter == max {
+					break
+				}
+			}
+		}()
 	}
+
+	/*keep the program running*/
+	<-make(chan struct{})
 }

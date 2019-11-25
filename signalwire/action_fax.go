@@ -2,6 +2,7 @@ package signalwire
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sync"
 )
@@ -41,6 +42,7 @@ type FaxResult struct {
 	Direction      FaxDirection
 	Pages          uint16
 	Successful     bool
+	Event          json.RawMessage
 }
 
 // FaxAction TODO DESCRIPTION
@@ -49,8 +51,10 @@ type FaxAction struct {
 	ControlID string
 	Completed bool
 	Result    FaxResult
+	Payload   *json.RawMessage
 	eventType FaxEventType
 	err       error
+	done      chan bool
 	sync.RWMutex
 }
 
@@ -67,6 +71,13 @@ const (
 	StrError = "error"
 )
 
+// FaxParamsInternal TODO DESCRIPTION
+type FaxParamsInternal struct {
+	doc        string
+	id         string
+	headerInfo string
+}
+
 // ReceiveFax TODO DESCRIPTION
 func (callobj *CallObj) ReceiveFax() (*FaxResult, error) {
 	a := new(FaxAction)
@@ -80,13 +91,13 @@ func (callobj *CallObj) ReceiveFax() (*FaxResult, error) {
 	}
 
 	ctrlID, _ := GenUUIDv4()
-	err := callobj.Calling.Relay.RelayReceiveFax(callobj.Calling.Ctx, callobj.call, &ctrlID)
+	err := callobj.Calling.Relay.RelayReceiveFax(callobj.Calling.Ctx, callobj.call, &ctrlID, nil)
 
 	if err != nil {
 		return &a.Result, err
 	}
 
-	callobj.callbacksRunFax(callobj.Calling.Ctx, ctrlID, a)
+	callobj.callbacksRunFax(callobj.Calling.Ctx, ctrlID, a, true)
 
 	return &a.Result, nil
 }
@@ -104,13 +115,20 @@ func (callobj *CallObj) SendFax(doc, id, headerInfo string) (*FaxResult, error) 
 	}
 
 	ctrlID, _ := GenUUIDv4()
-	err := callobj.Calling.Relay.RelaySendFax(callobj.Calling.Ctx, callobj.call, &ctrlID, doc, id, headerInfo)
+
+	var fax FaxParamsInternal
+
+	fax.doc = doc
+	fax.id = id
+	fax.headerInfo = headerInfo
+
+	err := callobj.Calling.Relay.RelaySendFax(callobj.Calling.Ctx, callobj.call, &ctrlID, &fax, nil)
 
 	if err != nil {
 		return &a.Result, err
 	}
 
-	callobj.callbacksRunFax(callobj.Calling.Ctx, ctrlID, a)
+	callobj.callbacksRunFax(callobj.Calling.Ctx, ctrlID, a, true)
 
 	return &a.Result, nil
 }
@@ -125,10 +143,10 @@ func (callobj *CallObj) SendFaxStop(ctrlID *string) error {
 		return errors.New("nil Relay object")
 	}
 
-	return callobj.Calling.Relay.RelaySendFaxStop(callobj.Calling.Ctx, callobj.call, ctrlID)
+	return callobj.Calling.Relay.RelaySendFaxStop(callobj.Calling.Ctx, callobj.call, ctrlID, nil)
 }
 
-func (callobj *CallObj) callbacksRunFax(_ context.Context, ctrlID string, res *FaxAction) {
+func (callobj *CallObj) callbacksRunFax(ctx context.Context, ctrlID string, res *FaxAction, norunCB bool) {
 	for {
 		var out bool
 
@@ -150,7 +168,7 @@ func (callobj *CallObj) callbacksRunFax(_ context.Context, ctrlID string, res *F
 
 				Log.Debug("Fax finished. ctrlID: %s res [%p] Completed [%v] Successful [%v]\n", ctrlID, res, res.Completed, res.Result.Successful)
 
-				if callobj.OnFaxFinished != nil {
+				if callobj.OnFaxFinished != nil && !norunCB {
 					callobj.OnFaxFinished(res)
 				}
 			case FaxPage:
@@ -162,7 +180,7 @@ func (callobj *CallObj) callbacksRunFax(_ context.Context, ctrlID string, res *F
 
 				Log.Debug("Page event. ctrlID: %s\n", ctrlID)
 
-				if callobj.OnFaxPage != nil {
+				if callobj.OnFaxPage != nil && !norunCB {
 					callobj.OnFaxPage(res)
 				}
 			case FaxError:
@@ -175,7 +193,7 @@ func (callobj *CallObj) callbacksRunFax(_ context.Context, ctrlID string, res *F
 
 				res.Unlock()
 
-				if callobj.OnFaxError != nil {
+				if callobj.OnFaxError != nil && !norunCB {
 					callobj.OnFaxError(res)
 				}
 			default:
@@ -248,11 +266,20 @@ func (callobj *CallObj) callbacksRunFax(_ context.Context, ctrlID string, res *F
 			}
 
 			callobj.call.CallFaxReadyChan <- struct{}{}
+		case rawEvent := <-callobj.call.CallFaxRawEventChan:
+			res.Lock()
+			res.Result.Event = *rawEvent
+			res.Unlock()
+
+			callobj.call.CallFaxReadyChan <- struct{}{}
 		case <-callobj.call.Hangup:
+			out = true
+		case <-ctx.Done():
 			out = true
 		}
 
 		if out {
+			res.done <- res.Result.Successful
 			break
 		}
 	}
@@ -275,18 +302,22 @@ func (callobj *CallObj) ReceiveFaxAsync() (*FaxAction, error) {
 
 	go func() {
 		go func() {
+			res.done = make(chan bool, 2)
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallFaxControlID
 
-			callobj.callbacksRunFax(callobj.Calling.Ctx, ctrlID, res)
+			callobj.callbacksRunFax(callobj.Calling.Ctx, ctrlID, res, false)
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
+
 		res.Lock()
+
 		res.ControlID = newCtrlID
+
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelayReceiveFax(callobj.Calling.Ctx, callobj.call, &newCtrlID)
+		err := callobj.Calling.Relay.RelayReceiveFax(callobj.Calling.Ctx, callobj.call, &newCtrlID, &res.Payload)
 
 		if err != nil {
 			res.Lock()
@@ -322,18 +353,27 @@ func (callobj *CallObj) SendFaxAsync(doc, id, headerInfo string) (*FaxAction, er
 
 	go func() {
 		go func() {
+			res.done = make(chan bool, 2)
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallFaxControlID
 
-			callobj.callbacksRunFax(callobj.Calling.Ctx, ctrlID, res)
+			callobj.callbacksRunFax(callobj.Calling.Ctx, ctrlID, res, false)
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
+
 		res.Lock()
+
 		res.ControlID = newCtrlID
+
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelaySendFax(callobj.Calling.Ctx, callobj.call, &newCtrlID, doc, id, headerInfo)
+		var fax FaxParamsInternal
+
+		fax.doc = doc
+		fax.id = id
+		fax.headerInfo = headerInfo
+		err := callobj.Calling.Relay.RelaySendFax(callobj.Calling.Ctx, callobj.call, &newCtrlID, &fax, &res.Payload)
 
 		if err != nil {
 			res.Lock()
@@ -353,119 +393,159 @@ func (callobj *CallObj) SendFaxAsync(doc, id, headerInfo string) (*FaxAction, er
 }
 
 // ctrlIDCopy TODO DESCRIPTION
-func (sendfaxaction *FaxAction) ctrlIDCopy() (string, error) {
-	sendfaxaction.RLock()
+func (action *FaxAction) ctrlIDCopy() (string, error) {
+	action.RLock()
 
-	if len(sendfaxaction.ControlID) == 0 {
-		sendfaxaction.RUnlock()
+	if len(action.ControlID) == 0 {
+		action.RUnlock()
 		return "", errors.New("no controlID")
 	}
 
-	c := sendfaxaction.ControlID
+	c := action.ControlID
 
-	sendfaxaction.RUnlock()
+	action.RUnlock()
 
 	return c, nil
 }
 
 // sendfaxAsyncStop TODO DESCRIPTION
-func (sendfaxaction *FaxAction) faxAsyncStop() error {
-	if sendfaxaction.CallObj.Calling == nil {
+func (action *FaxAction) faxAsyncStop() error {
+	if action.CallObj.Calling == nil {
 		return errors.New("nil Calling object")
 	}
 
-	if sendfaxaction.CallObj.Calling.Relay == nil {
+	if action.CallObj.Calling.Relay == nil {
 		return errors.New("nil Relay object")
 	}
 
-	c, err := sendfaxaction.ctrlIDCopy()
+	c, err := action.ctrlIDCopy()
 	if err != nil {
 		return err
 	}
 
-	call := sendfaxaction.CallObj.call
+	call := action.CallObj.call
 
-	return sendfaxaction.CallObj.Calling.Relay.RelaySendFaxStop(sendfaxaction.CallObj.Calling.Ctx, call, &c)
+	return action.CallObj.Calling.Relay.RelaySendFaxStop(action.CallObj.Calling.Ctx, call, &c, &action.Payload)
 }
 
 // Stop TODO DESCRIPTION
-func (sendfaxaction *FaxAction) Stop() {
-	sendfaxaction.err = sendfaxaction.faxAsyncStop()
+func (action *FaxAction) Stop() StopResult {
+	res := new(StopResult)
+	action.err = action.faxAsyncStop()
+
+	if action.err == nil {
+		waitStop(res, action.done)
+	}
+
+	return *res
 }
 
 // GetCompleted TODO DESCRIPTION
-func (sendfaxaction *FaxAction) GetCompleted() bool {
-	sendfaxaction.RLock()
+func (action *FaxAction) GetCompleted() bool {
+	action.RLock()
 
-	ret := sendfaxaction.Completed
+	ret := action.Completed
 
-	sendfaxaction.RUnlock()
+	action.RUnlock()
 
 	return ret
 }
 
 // GetResult TODO DESCRIPTION
-func (sendfaxaction *FaxAction) GetResult() FaxResult {
-	sendfaxaction.RLock()
+func (action *FaxAction) GetResult() FaxResult {
+	action.RLock()
 
-	ret := sendfaxaction.Result
+	ret := action.Result
 
-	sendfaxaction.RUnlock()
+	action.RUnlock()
 
 	return ret
 }
 
 // GetSuccessful TODO DESCRIPTION
-func (sendfaxaction *FaxAction) GetSuccessful() bool {
-	sendfaxaction.RLock()
+func (action *FaxAction) GetSuccessful() bool {
+	action.RLock()
 
-	ret := sendfaxaction.Result.Successful
+	ret := action.Result.Successful
 
-	sendfaxaction.RUnlock()
+	action.RUnlock()
 
 	return ret
 }
 
 // GetDocument TODO DESCRIPTION
-func (sendfaxaction *FaxAction) GetDocument() string {
-	sendfaxaction.RLock()
+func (action *FaxAction) GetDocument() string {
+	action.RLock()
 
-	ret := sendfaxaction.Result.Document
+	ret := action.Result.Document
 
-	sendfaxaction.RUnlock()
+	action.RUnlock()
 
 	return ret
 }
 
 // GetPages TODO DESCRIPTION
-func (sendfaxaction *FaxAction) GetPages() uint16 {
-	sendfaxaction.RLock()
+func (action *FaxAction) GetPages() uint16 {
+	action.RLock()
 
-	ret := sendfaxaction.Result.Pages
+	ret := action.Result.Pages
 
-	sendfaxaction.RUnlock()
+	action.RUnlock()
 
 	return ret
 }
 
 // GetIdentity TODO DESCRIPTION
-func (sendfaxaction *FaxAction) GetIdentity() string {
-	sendfaxaction.RLock()
+func (action *FaxAction) GetIdentity() string {
+	action.RLock()
 
-	ret := sendfaxaction.Result.Identity
+	ret := action.Result.Identity
 
-	sendfaxaction.RUnlock()
+	action.RUnlock()
 
 	return ret
 }
 
 // GetRemoteIdentity  TODO DESCRIPTION
-func (sendfaxaction *FaxAction) GetRemoteIdentity() string {
-	sendfaxaction.RLock()
+func (action *FaxAction) GetRemoteIdentity() string {
+	action.RLock()
 
-	ret := sendfaxaction.Result.RemoteIdentity
+	ret := action.Result.RemoteIdentity
 
-	sendfaxaction.RUnlock()
+	action.RUnlock()
+
+	return ret
+}
+
+// GetPayload TODO DESCRIPTION
+func (action *FaxAction) GetPayload() *json.RawMessage {
+	action.RLock()
+
+	ret := action.Payload
+
+	action.RUnlock()
+
+	return ret
+}
+
+// GetEvent TODO DESCRIPTION
+func (action *FaxAction) GetEvent() *json.RawMessage {
+	action.RLock()
+
+	ret := &action.Result.Event
+
+	action.RUnlock()
+
+	return ret
+}
+
+// GetControlID TODO DESCRIPTION
+func (action *FaxAction) GetControlID() string {
+	action.RLock()
+
+	ret := action.ControlID
+
+	action.RUnlock()
 
 	return ret
 }

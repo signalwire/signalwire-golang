@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -18,6 +17,7 @@ var (
 	ProjectID      = os.Getenv("ProjectID")
 	TokenID        = os.Getenv("TokenID")
 	DefaultContext = os.Getenv("DefaultContext")
+	Host           = os.Getenv("Host") // optional, host to connect to, defaults to Signalwire platform
 )
 
 // Contexts not needed for only outbound calls
@@ -29,9 +29,6 @@ var PProjectID string
 // PTokenID passed from command-line
 var PTokenID string
 
-// PContext passed from command line (just one being passed, although we support many)
-var PContext string
-
 /*gopl.io spinner*/
 func spinner(delay time.Duration) {
 	for {
@@ -42,10 +39,45 @@ func spinner(delay time.Duration) {
 	}
 }
 
-// PassToTask example of type of Message for Task
-type PassToTask struct {
-	Foo uint   `json:"foo"`
-	Bar string `json:"bar"`
+var done chan struct{}
+
+// MyOnIncomingCall - gets executed when we receive an incoming call
+func MyOnIncomingCall(consumer *signalwire.Consumer, call *signalwire.CallObj) {
+	resultAnswer, _ := call.Answer()
+	if !resultAnswer.Successful {
+		if err := consumer.Stop(); err != nil {
+			signalwire.Log.Error("Error occurred while trying to stop Consumer\n")
+		}
+
+		return
+	}
+
+	done = make(chan struct{})
+
+	call.OnFaxFinished = func(faxAction *signalwire.FaxAction) {
+		faxResult := faxAction.GetResult()
+		signalwire.Log.Info("Download Document from %s\n Pages #%d\n", faxResult.Document, faxResult.Pages)
+		done <- struct{}{}
+	}
+
+	// do something here
+	go spinner(100 * time.Millisecond)
+
+	_, err := call.ReceiveFaxAsync()
+	if err != nil {
+		signalwire.Log.Error("Error occurred while trying to receive fax\n")
+	}
+
+	// you can do something else here, we just wait until the fax is received
+	<-done
+
+	if _, err := call.Hangup(); err != nil {
+		signalwire.Log.Error("Error occurred while trying to hangup call. Err: %v\n", err)
+	}
+
+	if err := consumer.Stop(); err != nil {
+		signalwire.Log.Error("Error occurred while trying to stop Consumer. Err: %v\n", err)
+	}
 }
 
 func main() {
@@ -56,8 +88,8 @@ func main() {
 	flag.BoolVar(&printVersion, "v", false, " Show version ")
 	flag.StringVar(&PProjectID, "p", ProjectID, " ProjectID ")
 	flag.StringVar(&PTokenID, "t", TokenID, " TokenID ")
-	flag.StringVar(&PContext, "c", DefaultContext, " Context ")
 	flag.BoolVar(&verbose, "d", false, " Enable debug mode ")
+
 	flag.Parse()
 
 	if printVersion {
@@ -83,58 +115,21 @@ func main() {
 			case syscall.SIGTERM:
 				fallthrough
 			case syscall.SIGINT:
-				signalwire.Log.Info("Exit\n")
+				signalwire.Log.Info("Exit")
 				os.Exit(0)
 			}
 		}
 	}()
 
-	Contexts = append(Contexts, PContext)
 	consumer := new(signalwire.Consumer)
+
+	signalwire.GlobalOverwriteHost = Host
 	// setup the Client
 	consumer.Setup(PProjectID, PTokenID, Contexts)
 	// register callback
-	consumer.Ready = func(consumer *signalwire.Consumer) {
-		go spinner(100 * time.Millisecond)
+	consumer.OnIncomingCall = MyOnIncomingCall
 
-		done := make(chan struct{}, 1)
-
-		consumer.OnTask = func(_ *signalwire.Consumer, ev signalwire.ParamsEventTaskingTask) {
-			signalwire.Log.Info("Task Delivered. %v\n", ev)
-
-			go func() {
-				done <- struct{}{}
-			}()
-		}
-
-		taskMsg := PassToTask{
-			Foo: 123,
-			Bar: "baz",
-		}
-
-		byteArray, err := json.MarshalIndent(taskMsg, "", "  ")
-		if err != nil {
-			signalwire.Log.Error("%v", err)
-			return
-		}
-
-		signalwire.Log.Info(string(byteArray))
-
-		if result := consumer.Client.Tasking.Deliver(DefaultContext, byteArray); !result {
-			signalwire.Log.Error("Could not deliver task\n")
-
-			go func() {
-				done <- struct{}{}
-			}()
-		}
-
-		// stop when task has been delivered or on error
-		<-done
-
-		if err := consumer.Stop(); err != nil {
-			signalwire.Log.Error("Error occurred while stopping Signalwire Consumer\n")
-		}
-	}
+	signalwire.Log.Info("Wait incoming call..")
 	// start
 	if err := consumer.Run(); err != nil {
 		signalwire.Log.Error("Error occurred while starting Signalwire Consumer\n")

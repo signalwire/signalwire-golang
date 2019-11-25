@@ -33,31 +33,31 @@ type IEventCalling interface {
 	callSendDigitsStateFromStr(s string) (SendDigitsState, error)
 	callDirectionFromStr(s string) (CallDirection, error)
 	callPlayAndCollectStateFromStr(s string) (CollectResultType, error)
-	dispatchStateNotif(ctx context.Context, callParams CallParams) error
-	dispatchConnectStateNotif(ctx context.Context, callParams CallParams, peer PeerDeviceStruct, ccstate CallConnectState) error
-	dispatchPlayState(ctx context.Context, callID, ctrlID string, playState PlayState) error
-	dispatchRecordState(ctx context.Context, callID, ctrlID string, recordState RecordState) error
+	dispatchStateNotif(ctx context.Context, callParams CallParams, rawEvent *json.RawMessage) error
+	dispatchConnectStateNotif(ctx context.Context, callParams CallParams, peer PeerDeviceStruct, ccstate CallConnectState, rawEvent *json.RawMessage) error
+	dispatchPlayState(ctx context.Context, callID, ctrlID string, playState PlayState, rawEvent *json.RawMessage) error
+	dispatchRecordState(ctx context.Context, callID, ctrlID string, recordState RecordState, rawEvent *json.RawMessage) error
 	dispatchRecordEventParams(ctx context.Context, callID, ctrlID string, params ParamsEventCallingCallRecord) error
-	dispatchDetect(ctx context.Context, callID, ctrlID string, v interface{}) error
-	dispatchFax(ctx context.Context, callID, ctrlID string, faxType FaxEventType) error
+	dispatchDetect(ctx context.Context, callID, ctrlID string, v interface{}, rawEvent *json.RawMessage) error
+	dispatchFax(ctx context.Context, callID, ctrlID string, faxType FaxEventType, rawEvent *json.RawMessage) error
 	dispatchFaxEventParams(ctx context.Context, callID, ctrlID string, params ParamsEventCallingFax) error
 	dispatchTapEventParams(ctx context.Context, callID, ctrlID string, params ParamsEventCallingCallTap) error
-	dispatchTapState(ctx context.Context, callID, ctrlID string, tapState TapState) error
-	dispatchSendDigitsState(ctx context.Context, callID, ctrlID string, sendDigitsState SendDigitsState) error
+	dispatchTapState(ctx context.Context, callID, ctrlID string, tapState TapState, rawEvent *json.RawMessage) error
+	dispatchSendDigitsState(ctx context.Context, callID, ctrlID string, sendDigitsState SendDigitsState, rawEvent *json.RawMessage) error
 	dispatchPlayAndCollectEventParams(ctx context.Context, callID, ctrlID string, params ParamsEventCallingCallPlayAndCollect) error
-	dispatchPlayAndCollectResType(ctx context.Context, callID, ctrlID string, resType CollectResultType) error
+	dispatchPlayAndCollectResType(ctx context.Context, callID, ctrlID string, resType CollectResultType, rawEvent *json.RawMessage) error
 	getCall(ctx context.Context, tag, callID string) (*CallSession, error)
 	getBroadcastParams(ctx context.Context, in, out interface{}) error
-	onCallingEventConnect(ctx context.Context, broadcast NotifParamsBladeBroadcast) error
-	onCallingEventReceive(ctx context.Context, broadcast NotifParamsBladeBroadcast) error
-	onCallingEventState(ctx context.Context, broadcast NotifParamsBladeBroadcast) error
-	onCallingEventPlay(ctx context.Context, broadcast NotifParamsBladeBroadcast) error
-	onCallingEventCollect(ctx context.Context, broadcast NotifParamsBladeBroadcast) error
-	onCallingEventRecord(ctx context.Context, broadcast NotifParamsBladeBroadcast) error
-	onCallingEventTap(ctx context.Context, broadcast NotifParamsBladeBroadcast) error
-	onCallingEventDetect(ctx context.Context, broadcast NotifParamsBladeBroadcast) error
-	onCallingEventFax(ctx context.Context, broadcast NotifParamsBladeBroadcast) error
-	onCallingEventSendDigits(ctx context.Context, broadcast NotifParamsBladeBroadcast) error
+	onCallingEventConnect(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error
+	onCallingEventReceive(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error
+	onCallingEventState(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error
+	onCallingEventPlay(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error
+	onCallingEventCollect(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error
+	onCallingEventRecord(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error
+	onCallingEventTap(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error
+	onCallingEventDetect(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error
+	onCallingEventFax(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error
+	onCallingEventSendDigits(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error
 }
 
 // EventMessaging  TODO DESCRIPTION
@@ -465,7 +465,7 @@ func (*EventTasking) getBroadcastParams(ctx context.Context, in, out interface{}
 	return getBroadcastGeneric(ctx, in, out)
 }
 
-func (calling *EventCalling) onCallingEventConnect(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+func (calling *EventCalling) onCallingEventConnect(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
 	var params ParamsEventCallingCallConnect
 
 	if err := calling.getBroadcastParams(ctx, broadcast.Params.Params, &params); err != nil {
@@ -493,10 +493,11 @@ func (calling *EventCalling) onCallingEventConnect(ctx context.Context, broadcas
 		callParams,
 		params.Peer,
 		state,
+		rawEvent,
 	)
 }
 
-func (calling *EventCalling) onCallingEventState(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+func (calling *EventCalling) onCallingEventState(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
 	var params ParamsEventCallingCallState
 
 	if err := calling.getBroadcastParams(ctx, broadcast.Params.Params, &params); err != nil {
@@ -519,11 +520,11 @@ func (calling *EventCalling) onCallingEventState(ctx context.Context, broadcast 
 	callParams.CallState = state
 	callParams.EndReason = params.EndReason
 
-	return calling.I.dispatchStateNotif(ctx, callParams)
+	return calling.I.dispatchStateNotif(ctx, callParams, rawEvent)
 }
 
 // onCallingEvent_Receive  this is almost the same as onCallingEvent_State
-func (calling *EventCalling) onCallingEventReceive(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+func (calling *EventCalling) onCallingEventReceive(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
 	var params ParamsEventCallingCallReceive
 
 	if err := calling.getBroadcastParams(ctx, broadcast.Params.Params, &params); err != nil {
@@ -547,10 +548,10 @@ func (calling *EventCalling) onCallingEventReceive(ctx context.Context, broadcas
 	callParams.Context = params.Context
 
 	// only state Created
-	return calling.I.dispatchStateNotif(ctx, callParams)
+	return calling.I.dispatchStateNotif(ctx, callParams, rawEvent)
 }
 
-func (calling *EventCalling) onCallingEventPlay(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+func (calling *EventCalling) onCallingEventPlay(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
 	Log.Debug("ctx: %p calling %p %v\n", ctx, calling, broadcast)
 
 	var params ParamsEventCallingCallPlay
@@ -569,10 +570,11 @@ func (calling *EventCalling) onCallingEventPlay(ctx context.Context, broadcast N
 		params.CallID,
 		params.ControlID,
 		state,
+		rawEvent,
 	)
 }
 
-func (calling *EventCalling) onCallingEventCollect(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+func (calling *EventCalling) onCallingEventCollect(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
 	Log.Debug("ctx: %p calling %p %v\n", ctx, calling, broadcast)
 
 	var params ParamsEventCallingCallPlayAndCollect
@@ -595,10 +597,11 @@ func (calling *EventCalling) onCallingEventCollect(ctx context.Context, broadcas
 		params.CallID,
 		params.ControlID,
 		state,
+		rawEvent,
 	)
 }
 
-func (calling *EventCalling) onCallingEventRecord(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+func (calling *EventCalling) onCallingEventRecord(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
 	Log.Debug("ctx: %p calling %p %v\n", ctx, calling, broadcast)
 
 	var params ParamsEventCallingCallRecord
@@ -621,10 +624,11 @@ func (calling *EventCalling) onCallingEventRecord(ctx context.Context, broadcast
 		params.CallID,
 		params.ControlID,
 		state,
+		rawEvent,
 	)
 }
 
-func (calling *EventCalling) onCallingEventTap(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+func (calling *EventCalling) onCallingEventTap(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
 	Log.Debug("ctx: %p calling %p %v\n", ctx, calling, broadcast)
 
 	var params ParamsEventCallingCallTap
@@ -647,10 +651,11 @@ func (calling *EventCalling) onCallingEventTap(ctx context.Context, broadcast No
 		params.CallID,
 		params.ControlID,
 		state,
+		rawEvent,
 	)
 }
 
-func (calling *EventCalling) onCallingEventDetect(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+func (calling *EventCalling) onCallingEventDetect(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
 	Log.Debug("ctx: %p calling %p %v\n", ctx, calling, broadcast)
 
 	var params ParamsEventCallingCallDetect
@@ -669,10 +674,11 @@ func (calling *EventCalling) onCallingEventDetect(ctx context.Context, broadcast
 		params.CallID,
 		params.ControlID,
 		event,
+		rawEvent,
 	)
 }
 
-func (calling *EventCalling) onCallingEventFax(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+func (calling *EventCalling) onCallingEventFax(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
 	Log.Debug("ctx: %p calling %p %v\n", ctx, calling, broadcast)
 
 	var params ParamsEventCallingFax
@@ -695,10 +701,11 @@ func (calling *EventCalling) onCallingEventFax(ctx context.Context, broadcast No
 		params.CallID,
 		params.ControlID,
 		event,
+		rawEvent,
 	)
 }
 
-func (calling *EventCalling) onCallingEventSendDigits(ctx context.Context, broadcast NotifParamsBladeBroadcast) error {
+func (calling *EventCalling) onCallingEventSendDigits(ctx context.Context, broadcast NotifParamsBladeBroadcast, rawEvent *json.RawMessage) error {
 	Log.Debug("ctx: %p calling %p %v\n", ctx, calling, broadcast)
 
 	var params ParamsEventCallingCallSendDigits
@@ -717,6 +724,7 @@ func (calling *EventCalling) onCallingEventSendDigits(ctx context.Context, broad
 		params.CallID,
 		params.ControlID,
 		state,
+		rawEvent,
 	)
 }
 
@@ -789,6 +797,8 @@ func (calling *EventCalling) getCall(ctx context.Context, tag, callID string) (*
 		}
 
 		call.CallInit(ctx)
+		// default to "phone" for now
+		call.SetType(CallTypePhone)
 
 		Log.Debug("new inbound call: [%p]\n", call)
 	}
@@ -841,7 +851,7 @@ func (tasking *EventTasking) onTaskingEvent(ctx context.Context, broadcast Notif
 	return nil
 }
 
-func (calling *EventCalling) dispatchStateNotif(ctx context.Context, callParams CallParams) error {
+func (calling *EventCalling) dispatchStateNotif(ctx context.Context, callParams CallParams, rawEvent *json.RawMessage) error {
 	Log.Debug("tag [%s] callstate [%s] blade [%p] direction: %s\n", callParams.TagID, callParams.CallState.String(), calling.blade, callParams.Direction)
 	Log.Debug("direction : %v\n", callParams.Direction)
 
@@ -863,6 +873,8 @@ func (calling *EventCalling) dispatchStateNotif(ctx context.Context, callParams 
 
 	call.Blade = calling.blade
 
+	call.Event = rawEvent
+
 	if (callParams.CallState == Created) && (callParams.Direction == InboundStr) {
 		calling.blade.I.handleInboundCall(ctx, callParams.CallID)
 	}
@@ -875,6 +887,10 @@ func (calling *EventCalling) dispatchStateNotif(ctx context.Context, callParams 
 			return err
 		}
 
+		if err := calling.Cache.DeleteCallCache(call.CallID); err != nil {
+			return errors.New("cannot remove the call from cache")
+		}
+
 		call.SetDisconnectReason(disconnectReason)
 	}
 	select {
@@ -884,10 +900,21 @@ func (calling *EventCalling) dispatchStateNotif(ctx context.Context, callParams 
 		Log.Debug("no callstate sent\n")
 	}
 
+	select {
+	case call.cbStateChan <- callParams.CallState:
+		Log.Debug("sent callstate / CB signal\n")
+	default:
+		Log.Debug("no callstate / CB signal sent\n")
+	}
+
+	if callParams.CallState == Ended {
+		close(call.Hangup)
+	}
+
 	return nil
 }
 
-func (calling *EventCalling) dispatchConnectStateNotif(ctx context.Context, callParams CallParams, peer PeerDeviceStruct, ccstate CallConnectState) error {
+func (calling *EventCalling) dispatchConnectStateNotif(ctx context.Context, callParams CallParams, peer PeerDeviceStruct, ccstate CallConnectState, rawEvent *json.RawMessage) error {
 	Log.Debug("tag [%s] [%s] [%p]\n", callParams.TagID, ccstate.String(), calling.blade)
 
 	call, _ := calling.I.getCall(ctx, callParams.TagID, callParams.CallID)
@@ -904,6 +931,13 @@ func (calling *EventCalling) dispatchConnectStateNotif(ctx context.Context, call
 	}
 
 	select {
+	case call.CallConnectRawEventChan <- rawEvent:
+		Log.Debug("sent raw event\n")
+	default:
+		Log.Debug("no raw event sent\n")
+	}
+
+	select {
 	case call.CallConnectStateChan <- ccstate:
 		Log.Debug("sent connstate\n")
 	default:
@@ -913,7 +947,7 @@ func (calling *EventCalling) dispatchConnectStateNotif(ctx context.Context, call
 	return nil
 }
 
-func (calling *EventCalling) dispatchPlayState(ctx context.Context, callID, ctrlID string, playState PlayState) error {
+func (calling *EventCalling) dispatchPlayState(ctx context.Context, callID, ctrlID string, playState PlayState, rawEvent *json.RawMessage) error {
 	Log.Debug("callid [%s] playstate [%s] blade [%p] ctrlID: %s\n", callID, playState, calling.blade, ctrlID)
 
 	call, _ := calling.I.getCall(ctx, "", callID)
@@ -922,6 +956,13 @@ func (calling *EventCalling) dispatchPlayState(ctx context.Context, callID, ctrl
 	}
 
 	Log.Debug("call [%p]\n", call)
+
+	select {
+	case call.CallPlayRawEventChans[ctrlID] <- rawEvent:
+		Log.Debug("sent raw event\n")
+	default:
+		Log.Debug("no raw event sent\n")
+	}
 
 	select {
 	case call.CallPlayChans[ctrlID] <- playState:
@@ -933,7 +974,7 @@ func (calling *EventCalling) dispatchPlayState(ctx context.Context, callID, ctrl
 	return nil
 }
 
-func (calling *EventCalling) dispatchRecordState(ctx context.Context, callID, ctrlID string, recordState RecordState) error {
+func (calling *EventCalling) dispatchRecordState(ctx context.Context, callID, ctrlID string, recordState RecordState, rawEvent *json.RawMessage) error {
 	Log.Debug("callid [%s] recordstate [%s] blade [%p] ctrlID: %s\n", callID, recordState.String(), calling.blade, ctrlID)
 
 	call, _ := calling.I.getCall(ctx, "", callID)
@@ -947,6 +988,14 @@ func (calling *EventCalling) dispatchRecordState(ctx context.Context, callID, ct
 	if call.GetActionState(ctrlID) == "" {
 		return fmt.Errorf("error, unknown control ID: %s", ctrlID)
 	}*/
+
+	<-call.CallRecordReadyChans[ctrlID]
+	select {
+	case call.CallRecordRawEventChans[ctrlID] <- rawEvent:
+		Log.Debug("sent raw event\n")
+	default:
+		Log.Debug("no raw event sent\n")
+	}
 	<-call.CallRecordReadyChans[ctrlID]
 	select {
 	case call.CallRecordChans[ctrlID] <- recordState:
@@ -978,7 +1027,7 @@ func (calling *EventCalling) dispatchRecordEventParams(ctx context.Context, call
 	return nil
 }
 
-func (calling *EventCalling) dispatchDetect(ctx context.Context, callID, ctrlID string, v interface{}) error {
+func (calling *EventCalling) dispatchDetect(ctx context.Context, callID, ctrlID string, v interface{}, rawEvent *json.RawMessage) error {
 	Log.Debug("callid [%s] detectevent [%v] blade [%p] ctrlID: %s\n", callID, v, calling.blade, ctrlID)
 
 	call, _ := calling.I.getCall(ctx, "", callID)
@@ -987,6 +1036,13 @@ func (calling *EventCalling) dispatchDetect(ctx context.Context, callID, ctrlID 
 	}
 
 	Log.Debug("call [%p]\n", call)
+
+	select {
+	case call.CallDetectRawEventChans[ctrlID] <- rawEvent:
+		Log.Debug("sent raw event\n")
+	default:
+		Log.Debug("no raw event sent\n")
+	}
 
 	detectEventMachine, ok1 := v.(DetectMachineEvent)
 	if ok1 {
@@ -1029,7 +1085,6 @@ func (calling *EventCalling) dispatchDetect(ctx context.Context, callID, ctrlID 
 	return nil
 }
 
-// todo : Event in the action
 func (calling *EventCalling) dispatchDetectEventParams(ctx context.Context, callID, ctrlID string, params ParamsEventCallingCallDetect) error {
 	Log.Debug("callid [%s] blade [%p] ctrlID: %s\n", callID, calling.blade, ctrlID)
 
@@ -1050,7 +1105,7 @@ func (calling *EventCalling) dispatchDetectEventParams(ctx context.Context, call
 	return nil
 }
 
-func (calling *EventCalling) dispatchFax(ctx context.Context, callID, ctrlID string, faxType FaxEventType) error {
+func (calling *EventCalling) dispatchFax(ctx context.Context, callID, ctrlID string, faxType FaxEventType, rawEvent *json.RawMessage) error {
 	Log.Debug("callid [%s] faxtype [%s] blade [%p] ctrlID: %s\n", callID, faxType.String(), calling.blade, ctrlID)
 
 	call, _ := calling.I.getCall(ctx, "", callID)
@@ -1059,6 +1114,14 @@ func (calling *EventCalling) dispatchFax(ctx context.Context, callID, ctrlID str
 	}
 
 	Log.Debug("call [%p]\n", call)
+
+	<-call.CallFaxReadyChan
+	select {
+	case call.CallFaxRawEventChan <- rawEvent:
+		Log.Debug("sent raw event \n")
+	default:
+		Log.Debug("no raw event sent\n")
+	}
 
 	<-call.CallFaxReadyChan
 	select {
@@ -1111,7 +1174,7 @@ func (calling *EventCalling) dispatchTapEventParams(ctx context.Context, callID,
 	return nil
 }
 
-func (calling *EventCalling) dispatchTapState(ctx context.Context, callID, ctrlID string, tapState TapState) error {
+func (calling *EventCalling) dispatchTapState(ctx context.Context, callID, ctrlID string, tapState TapState, rawEvent *json.RawMessage) error {
 	Log.Debug("callid [%s] tapstate [%s] blade [%p] ctrlID: %s\n", callID, tapState.String(), calling.blade, ctrlID)
 
 	call, _ := calling.I.getCall(ctx, "", callID)
@@ -1123,16 +1186,24 @@ func (calling *EventCalling) dispatchTapState(ctx context.Context, callID, ctrlI
 
 	<-call.CallTapReadyChans[ctrlID]
 	select {
-	case call.CallTapChans[ctrlID] <- tapState:
-		Log.Debug("sent recordstate\n")
+	case call.CallTapRawEventChans[ctrlID] <- rawEvent:
+		Log.Debug("sent raw event\n")
 	default:
-		Log.Debug("no recordstate sent\n")
+		Log.Debug("no raw event sent\n")
+	}
+
+	<-call.CallTapReadyChans[ctrlID]
+	select {
+	case call.CallTapChans[ctrlID] <- tapState:
+		Log.Debug("sent tapstate\n")
+	default:
+		Log.Debug("no tapstate sent\n")
 	}
 
 	return nil
 }
 
-func (calling *EventCalling) dispatchSendDigitsState(ctx context.Context, callID, ctrlID string, sendDigitsState SendDigitsState) error {
+func (calling *EventCalling) dispatchSendDigitsState(ctx context.Context, callID, ctrlID string, sendDigitsState SendDigitsState, rawEvent *json.RawMessage) error {
 	Log.Debug("callid [%s] sendDigitsState [%s] blade [%p] ctrlID: %s\n", callID, sendDigitsState.String(), calling.blade, ctrlID)
 
 	call, _ := calling.I.getCall(ctx, "", callID)
@@ -1143,16 +1214,24 @@ func (calling *EventCalling) dispatchSendDigitsState(ctx context.Context, callID
 	Log.Debug("call [%p]\n", call)
 
 	select {
-	case call.CallSendDigitsChans[ctrlID] <- sendDigitsState:
-		Log.Debug("sent recordstate\n")
+	case call.CallSendDigitsRawEventChans[ctrlID] <- rawEvent:
+		Log.Debug("sent raw event\n")
 	default:
-		Log.Debug("no recordstate sent\n")
+		Log.Debug("no raw event sent\n")
+	}
+
+	<-call.CallSendDigitsReadyChans[ctrlID]
+	select {
+	case call.CallSendDigitsChans[ctrlID] <- sendDigitsState:
+		Log.Debug("sent senddigits state\n")
+	default:
+		Log.Debug("no senddigits state sent\n")
 	}
 
 	return nil
 }
 
-func (calling *EventCalling) dispatchPlayAndCollectResType(ctx context.Context, callID, ctrlID string, resType CollectResultType) error {
+func (calling *EventCalling) dispatchPlayAndCollectResType(ctx context.Context, callID, ctrlID string, resType CollectResultType, rawEvent *json.RawMessage) error {
 	Log.Debug("callid [%s] resType [%s] blade [%p] ctrlID: %s\n", callID, resType.String(), calling.blade, ctrlID)
 
 	call, _ := calling.I.getCall(ctx, "", callID)
@@ -1162,7 +1241,13 @@ func (calling *EventCalling) dispatchPlayAndCollectResType(ctx context.Context, 
 
 	Log.Debug("call [%p]\n", call)
 
-	<-call.CallPlayAndCollectReadyChans[ctrlID]
+	select {
+	case call.CallPlayAndCollectRawEventChans[ctrlID] <- rawEvent:
+		Log.Debug("sent raw event\n")
+	default:
+		Log.Debug("no raw event sent\n")
+	}
+
 	select {
 	case call.CallPlayAndCollectChans[ctrlID] <- resType:
 		Log.Debug("sent collect resType\n")

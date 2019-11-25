@@ -97,7 +97,9 @@ func main() {
 
 	go func() {
 		interrupt := make(chan os.Signal, 1)
+
 		signal.Notify(interrupt, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1)
+
 		for {
 			s := <-interrupt
 
@@ -211,18 +213,18 @@ func main() {
 			call1B, err1B = Relay.RelayOnInboundAnswer(ctx)
 		}()
 
-		if err := Relay.RelayPhoneDial(ctx, call, fromNumber, toNumber, 10); err != nil {
+		if err := Relay.RelayPhoneDial(ctx, call, fromNumber, toNumber, 10, nil); err != nil {
 			signalwire.Log.Fatal("cannot dial phone number: %v\n", err)
 		}
 
 		// wait for "Answered"
 		signalwire.Log.Info("wait for 'Answered' on originated call tag [%s]...\n", call.TagID)
 
-		if ret := call.WaitCallStateInternal(ctx, signalwire.Answered); !ret {
+		if ret := call.WaitCallStateInternal(ctx, signalwire.Answered, 3); !ret {
 			signalwire.Log.Fatal("did not get Answered state\n")
 		}
 
-		if err := Relay.RelayPhoneConnect(ctx, call, fromNumber, toNumber); err != nil {
+		if err := Relay.RelayPhoneConnect(ctx, call, fromNumber, toNumber, nil); err != nil {
 			signalwire.Log.Fatal("call.connect error: %v\n", err)
 		}
 
@@ -242,11 +244,11 @@ func main() {
 			signalwire.Log.Fatal("did not get CallConnected state\n")
 		}
 
-		if err := Relay.RelayCallEnd(ctx, call); err != nil {
+		if err := Relay.RelayCallEnd(ctx, call, nil); err != nil {
 			signalwire.Log.Fatal("call.end error: %v\n", err)
 		}
 
-		if ret := call.WaitCallStateInternal(ctx, signalwire.Ended); !ret {
+		if ret := call.WaitCallStateInternal(ctx, signalwire.Ended, 3); !ret {
 			signalwire.Log.Fatal("did not get Ended state\n")
 		}
 
@@ -260,11 +262,11 @@ func main() {
 		signalwire.Log.Info("peercall CallID: [%s]\n", peercall.CallID)
 
 		if peercall.CallState != signalwire.Ended && peercall.CallState != signalwire.Ending {
-			if err := Relay.RelayCallEnd(ctx, peercall); err != nil {
+			if err := Relay.RelayCallEnd(ctx, peercall, nil); err != nil {
 				signalwire.Log.Fatal("call.end error: %v\n", err)
 			}
 
-			if ret := peercall.WaitCallStateInternal(ctx, signalwire.Ended); !ret {
+			if ret := peercall.WaitCallStateInternal(ctx, signalwire.Ended, 3); !ret {
 				signalwire.Log.Fatal("did not get Ended state\n")
 			}
 		}

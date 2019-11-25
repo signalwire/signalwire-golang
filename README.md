@@ -2,6 +2,7 @@
 
 
 [![Build Status](https://ci.signalwire.com/api/badges/signalwire/signalwire-golang/status.svg)](https://ci.signalwire.com/signalwire/signalwire-go)
+<a href="https://goreportcard.com/badge/github.com/signalwire/signalwire-golang/tree/master/signalwire/goreportcard?style=flat-square"><img src="https://goreportcard.com/badge/github.com/signalwire/signalwire-golang/tree/master/signalwire/goreportcard?style=flat-square" alt="Go Report Card"></a>
 
 The Relay SDK for Go enables Go Lang developers to connect and use SignalWire's Relay APIs within their own Go code. Our Relay SDK allows developers to build or add robust and innovative communication services to their applications.
 
@@ -22,9 +23,9 @@ If you'd like to contribute, feel free to visit our [Slack channel](https://sign
 The Go SDK is a Go Lang package [signalwire-golang](https://github.com/signalwire/signalwire-golang). To setup the dev environment follow these steps:
 
 1. Install Go Lang (https://golang.org/doc/install)
-2. "go get github.com/signalwire/signalwire-golang"
+2. "go get github.com/signalwire/signalwire-golang/signalwire"
 3. Create a new branch from `master` for your changes.
-4. Make changes and test them via example apps!
+4. Make changes and test them via example apps! You can start developing starting from the examples in RelayExamples/
 
 
 ## License

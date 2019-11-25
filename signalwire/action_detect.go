@@ -2,9 +2,24 @@ package signalwire
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sync"
 )
+
+// DetectorType type of running detector
+type DetectorType int
+
+// TODO DESCRIPTION
+const (
+	MachineDetector DetectorType = iota
+	FaxDetector
+	DigitDetector
+)
+
+func (s DetectorType) String() string {
+	return [...]string{"Machine", "Fax", "Digit"}[s]
+}
 
 // DetectMachineEvent keeps the event of a detect action
 type DetectMachineEvent int
@@ -45,17 +60,23 @@ func (s DetectResultType) String() string {
 type DetectResult struct {
 	Successful bool
 	Type       DetectResultType
+	Result     string
+	Event      json.RawMessage
 }
 
-// DetectMachineAction TODO DESCRIPTION
-type DetectMachineAction struct {
-	CallObj   *CallObj
-	ControlID string
-	Completed bool
-	Result    DetectResult
-	Event     DetectMachineEvent
-	err       error
+// DetectAction TODO DESCRIPTION
+type DetectAction struct {
+	CallObj      *CallObj
+	ControlID    string
+	Result       DetectResult
+	detEvent     interface{}
+	DetectorType DetectorType
+	Payload      *json.RawMessage
+	err          error
+	done         chan bool
 	sync.RWMutex
+	waitForBeep bool
+	Completed   bool
 }
 
 // DetectDigitEvent TODO DESCRIPTION
@@ -97,49 +118,34 @@ func (s DetectFaxEvent) String() string {
 	return [...]string{"", "CED", "CNG", "Finished"}[s]
 }
 
-// DetectDigitAction TODO DESCRIPTION
-type DetectDigitAction struct {
-	CallObj   *CallObj
-	ControlID string
-	Completed bool
-	Result    DetectResult
-	Event     DetectDigitEvent
-	err       error
-	sync.RWMutex
-}
-
-// DetectFaxAction TODO DESCRIPTION
-type DetectFaxAction struct {
-	CallObj   *CallObj
-	ControlID string
-	Completed bool
-	Result    DetectResult
-	Event     DetectFaxEvent
-	err       error
-	sync.RWMutex
-}
-
-// IDetectMachineAction TODO DESCRIPTION
-type IDetectMachineAction interface {
+// IDetectAction TODO DESCRIPTION
+type IDetectAction interface {
 	detectAsyncStop() error
 	Stop()
 }
 
-// IDetectDigitAction TODO DESCRIPTION
-type IDetectDigitAction interface {
-	detectAsyncStop() error
-	Stop()
+// DetectMachineParams TODO DESCRIPTION
+type DetectMachineParams struct {
+	InitialTimeout        float64
+	EndSilenceTimeout     float64
+	MachineVoiceThreshold float64
+	MachineWordsThreshold float64
+	WaitForBeep           bool // special param that does not get sent
 }
 
-// IDetectFaxAction TODO DESCRIPTION
-type IDetectFaxAction interface {
-	detectAsyncStop() error
-	Stop()
+// AMD TODO DESCRIPTION
+func (callobj *CallObj) AMD(det *DetectMachineParams) (*DetectResult, error) {
+	return callobj.DetectMachine(det)
+}
+
+// AMDAsync TODO DESCRIPTION
+func (callobj *CallObj) AMDAsync(det *DetectMachineParams) (*DetectAction, error) {
+	return callobj.DetectMachineAsync(det)
 }
 
 // DetectMachine TODO DESCRIPTION
 func (callobj *CallObj) DetectMachine(det *DetectMachineParams) (*DetectResult, error) {
-	a := new(DetectMachineAction)
+	a := new(DetectAction)
 
 	if callobj.Calling == nil {
 		return &a.Result, errors.New("nil Calling object")
@@ -151,12 +157,19 @@ func (callobj *CallObj) DetectMachine(det *DetectMachineParams) (*DetectResult, 
 
 	ctrlID, _ := GenUUIDv4()
 
-	err := callobj.Calling.Relay.RelayDetectMachine(callobj.Calling.Ctx, callobj.call, ctrlID, det)
+	var detInternal DetectMachineParamsInternal
+	detInternal.InitialTimeout = det.InitialTimeout
+	detInternal.EndSilenceTimeout = det.EndSilenceTimeout
+	detInternal.MachineVoiceThreshold = det.MachineVoiceThreshold
+	detInternal.MachineWordsThreshold = det.MachineWordsThreshold
+
+	err := callobj.Calling.Relay.RelayDetectMachine(callobj.Calling.Ctx, callobj.call, ctrlID, &detInternal, nil)
 
 	if err != nil {
 		return &a.Result, err
 	}
 
+	a.waitForBeep = det.WaitForBeep
 	callobj.callbacksRunDetectMachine(callobj.Calling.Ctx, ctrlID, a)
 
 	return &a.Result, nil
@@ -164,7 +177,7 @@ func (callobj *CallObj) DetectMachine(det *DetectMachineParams) (*DetectResult, 
 
 // DetectFax TODO DESCRIPTION
 func (callobj *CallObj) DetectFax(det *DetectFaxParams) (*DetectResult, error) {
-	a := new(DetectFaxAction)
+	a := new(DetectAction)
 
 	if callobj.Calling == nil {
 		return &a.Result, errors.New("nil Calling object")
@@ -176,7 +189,7 @@ func (callobj *CallObj) DetectFax(det *DetectFaxParams) (*DetectResult, error) {
 
 	ctrlID, _ := GenUUIDv4()
 
-	err := callobj.Calling.Relay.RelayDetectFax(callobj.Calling.Ctx, callobj.call, ctrlID, det.Tone)
+	err := callobj.Calling.Relay.RelayDetectFax(callobj.Calling.Ctx, callobj.call, ctrlID, det.Tone, nil)
 
 	if err != nil {
 		return &a.Result, err
@@ -189,7 +202,7 @@ func (callobj *CallObj) DetectFax(det *DetectFaxParams) (*DetectResult, error) {
 
 // DetectDigit TODO DESCRIPTION
 func (callobj *CallObj) DetectDigit(det *DetectDigitParams) (*DetectResult, error) {
-	a := new(DetectDigitAction)
+	a := new(DetectAction)
 
 	if callobj.Calling == nil {
 		return &a.Result, errors.New("nil Calling object")
@@ -201,7 +214,7 @@ func (callobj *CallObj) DetectDigit(det *DetectDigitParams) (*DetectResult, erro
 
 	ctrlID, _ := GenUUIDv4()
 
-	err := callobj.Calling.Relay.RelayDetectDigit(callobj.Calling.Ctx, callobj.call, ctrlID, det.Digits)
+	err := callobj.Calling.Relay.RelayDetectDigit(callobj.Calling.Ctx, callobj.call, ctrlID, det.Digits, nil)
 
 	if err != nil {
 		return &a.Result, err
@@ -222,11 +235,11 @@ func (callobj *CallObj) DetectStop(ctrlID *string) error {
 		return errors.New("nil Relay object")
 	}
 
-	return callobj.Calling.Relay.RelayDetectStop(callobj.Calling.Ctx, callobj.call, ctrlID)
+	return callobj.Calling.Relay.RelayDetectStop(callobj.Calling.Ctx, callobj.call, ctrlID, nil)
 }
 
 // callbacksRunDetectMachine TODO DESCRIPTION
-func (callobj *CallObj) callbacksRunDetectMachine(_ context.Context, ctrlID string, res *DetectMachineAction) {
+func (callobj *CallObj) callbacksRunDetectMachine(ctx context.Context, ctrlID string, res *DetectAction) {
 	for {
 		var out bool
 
@@ -239,7 +252,7 @@ func (callobj *CallObj) callbacksRunDetectMachine(_ context.Context, ctrlID stri
 
 			res.RLock()
 
-			prevevent := res.Event
+			prevevent := res.detEvent
 
 			res.RUnlock()
 
@@ -260,19 +273,94 @@ func (callobj *CallObj) callbacksRunDetectMachine(_ context.Context, ctrlID stri
 					callobj.OnDetectFinished(res)
 				}
 			case DetectMachineMachine:
-				res.Result.Type = DetectorMachine
-				fallthrough
+				if !res.waitForBeep {
+					res.Lock()
+
+					res.detEvent = detectevent
+					res.Result.Result = detectevent.String()
+					res.Result.Type = DetectorMachine
+
+					res.Result.Successful = true
+					res.Completed = true
+
+					res.Unlock()
+
+					res.Stop()
+
+					out = true
+
+					if callobj.OnDetectFinished != nil {
+						callobj.OnDetectFinished(res)
+					}
+				}
+
 			case DetectMachineHuman:
+				res.Lock()
+
+				res.detEvent = detectevent
+				res.Result.Result = detectevent.String()
 				res.Result.Type = DetectorHuman
-				fallthrough
+
+				res.Result.Successful = true
+				res.Completed = true
+
+				res.Unlock()
+
+				res.Stop()
+
+				out = true
+
+				if callobj.OnDetectFinished != nil {
+					callobj.OnDetectFinished(res)
+				}
+
 			case DetectMachineUnknown:
-				fallthrough
+				res.Lock()
+
+				res.detEvent = detectevent
+				res.Result.Result = detectevent.String()
+				res.Result.Type = DetectorUnknown
+
+				res.Result.Successful = true
+				res.Completed = true
+
+				res.Unlock()
+
+				res.Stop()
+
+				out = true
+
+				if callobj.OnDetectFinished != nil {
+					callobj.OnDetectFinished(res)
+				}
+
 			case DetectMachineReady:
-				fallthrough
+				if res.waitForBeep {
+					res.Lock()
+
+					res.detEvent = detectevent
+					res.Result.Result = detectevent.String()
+					res.Result.Type = DetectorUnknown
+
+					res.Result.Successful = true
+					res.Completed = true
+
+					res.Unlock()
+
+					res.Stop()
+
+					out = true
+
+					if callobj.OnDetectFinished != nil {
+						callobj.OnDetectFinished(res)
+					}
+				}
+
 			case DetectMachineNotReady:
 				res.Lock()
 
-				res.Event = detectevent
+				res.detEvent = detectevent
+				res.Result.Result = detectevent.String()
 
 				res.Unlock()
 			}
@@ -280,20 +368,25 @@ func (callobj *CallObj) callbacksRunDetectMachine(_ context.Context, ctrlID stri
 			if prevevent != detectevent && callobj.OnDetectUpdate != nil {
 				callobj.OnDetectUpdate(res)
 			}
+		case rawEvent := <-callobj.call.CallDetectRawEventChans[ctrlID]:
+			res.Lock()
+			res.Result.Event = *rawEvent
+			res.Unlock()
 		case <-callobj.call.Hangup:
+			out = true
+		case <-ctx.Done():
 			out = true
 		}
 
 		if out {
-			Log.Debug("OUT\n")
-
+			res.done <- res.Result.Successful
 			break
 		}
 	}
 }
 
 // callbacksRunDetectFax TODO DESCRIPTION
-func (callobj *CallObj) callbacksRunDetectFax(_ context.Context, ctrlID string, res *DetectFaxAction) {
+func (callobj *CallObj) callbacksRunDetectFax(ctx context.Context, ctrlID string, res *DetectAction) {
 	for {
 		var out bool
 
@@ -306,7 +399,7 @@ func (callobj *CallObj) callbacksRunDetectFax(_ context.Context, ctrlID string, 
 
 			res.RLock()
 
-			prevevent := res.Event
+			prevevent := res.detEvent
 
 			res.RUnlock()
 
@@ -331,8 +424,9 @@ func (callobj *CallObj) callbacksRunDetectFax(_ context.Context, ctrlID string, 
 			case DetectFaxCNG:
 				res.Lock()
 
-				res.Event = detectevent
+				res.detEvent = detectevent
 				res.Result.Type = DetectorFax
+				res.Result.Result = detectevent.String()
 
 				res.Unlock()
 			}
@@ -340,18 +434,25 @@ func (callobj *CallObj) callbacksRunDetectFax(_ context.Context, ctrlID string, 
 			if prevevent != detectevent && callobj.OnDetectUpdate != nil {
 				callobj.OnDetectUpdate(res)
 			}
+		case rawEvent := <-callobj.call.CallDetectRawEventChans[ctrlID]:
+			res.Lock()
+			res.Result.Event = *rawEvent
+			res.Unlock()
 		case <-callobj.call.Hangup:
+			out = true
+		case <-ctx.Done():
 			out = true
 		}
 
 		if out {
+			res.done <- res.Result.Successful
 			break
 		}
 	}
 }
 
 // callbacksRunDetectDigit TODO DESCRIPTION
-func (callobj *CallObj) callbacksRunDetectDigit(_ context.Context, ctrlID string, res *DetectDigitAction) {
+func (callobj *CallObj) callbacksRunDetectDigit(ctx context.Context, ctrlID string, res *DetectAction) {
 	for {
 		var out bool
 
@@ -364,7 +465,7 @@ func (callobj *CallObj) callbacksRunDetectDigit(_ context.Context, ctrlID string
 
 			res.RLock()
 
-			prevevent := res.Event
+			prevevent := res.detEvent
 
 			res.RUnlock()
 
@@ -409,7 +510,9 @@ func (callobj *CallObj) callbacksRunDetectDigit(_ context.Context, ctrlID string
 			case DetectDigitStar:
 				res.Lock()
 
-				res.Event = detectevent
+				res.detEvent = detectevent
+				res.Result.Result = detectevent.String()
+				res.Result.Type = DetectorDTMF
 
 				res.Unlock()
 			}
@@ -417,19 +520,26 @@ func (callobj *CallObj) callbacksRunDetectDigit(_ context.Context, ctrlID string
 			if prevevent != detectevent && callobj.OnDetectUpdate != nil {
 				callobj.OnDetectUpdate(res)
 			}
+		case rawEvent := <-callobj.call.CallDetectRawEventChans[ctrlID]:
+			res.Lock()
+			res.Result.Event = *rawEvent
+			res.Unlock()
 		case <-callobj.call.Hangup:
+			out = true
+		case <-ctx.Done():
 			out = true
 		}
 
 		if out {
+			res.done <- res.Result.Successful
 			break
 		}
 	}
 }
 
 // DetectMachineAsync TODO DESCRIPTION
-func (callobj *CallObj) DetectMachineAsync(det *DetectMachineParams) (*DetectMachineAction, error) {
-	res := new(DetectMachineAction)
+func (callobj *CallObj) DetectMachineAsync(det *DetectMachineParams) (*DetectAction, error) {
+	res := new(DetectAction)
 
 	if callobj.Calling == nil {
 		return res, errors.New("nil Calling object")
@@ -439,11 +549,13 @@ func (callobj *CallObj) DetectMachineAsync(det *DetectMachineParams) (*DetectMac
 		return res, errors.New("nil Relay object")
 	}
 
+	res.DetectorType = MachineDetector
 	res.CallObj = callobj
 	done := make(chan struct{}, 1)
 
 	go func() {
 		go func() {
+			res.done = make(chan bool, 2)
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallDetectMachineControlID
 
@@ -451,11 +563,20 @@ func (callobj *CallObj) DetectMachineAsync(det *DetectMachineParams) (*DetectMac
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
+
 		res.Lock()
+
 		res.ControlID = newCtrlID
+
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelayDetectMachine(callobj.Calling.Ctx, callobj.call, newCtrlID, det)
+		var detInternal DetectMachineParamsInternal
+		detInternal.InitialTimeout = det.InitialTimeout
+		detInternal.EndSilenceTimeout = det.EndSilenceTimeout
+		detInternal.MachineVoiceThreshold = det.MachineVoiceThreshold
+		detInternal.MachineWordsThreshold = det.MachineWordsThreshold
+
+		err := callobj.Calling.Relay.RelayDetectMachine(callobj.Calling.Ctx, callobj.call, newCtrlID, &detInternal, &res.Payload)
 		if err != nil {
 			res.Lock()
 			res.err = err
@@ -471,8 +592,8 @@ func (callobj *CallObj) DetectMachineAsync(det *DetectMachineParams) (*DetectMac
 }
 
 // DetectDigitAsync TODO DESCRIPTION
-func (callobj *CallObj) DetectDigitAsync(det *DetectDigitParams) (*DetectDigitAction, error) {
-	res := new(DetectDigitAction)
+func (callobj *CallObj) DetectDigitAsync(det *DetectDigitParams) (*DetectAction, error) {
+	res := new(DetectAction)
 	res.Result.Type = DetectorDTMF
 
 	if callobj.Calling == nil {
@@ -484,10 +605,12 @@ func (callobj *CallObj) DetectDigitAsync(det *DetectDigitParams) (*DetectDigitAc
 	}
 
 	res.CallObj = callobj
+	res.DetectorType = DigitDetector
 	done := make(chan struct{}, 1)
 
 	go func() {
 		go func() {
+			res.done = make(chan bool, 2)
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallDetectDigitControlID
 
@@ -495,11 +618,14 @@ func (callobj *CallObj) DetectDigitAsync(det *DetectDigitParams) (*DetectDigitAc
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
+
 		res.Lock()
+
 		res.ControlID = newCtrlID
+
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelayDetectDigit(callobj.Calling.Ctx, callobj.call, newCtrlID, det.Digits)
+		err := callobj.Calling.Relay.RelayDetectDigit(callobj.Calling.Ctx, callobj.call, newCtrlID, det.Digits, &res.Payload)
 		if err != nil {
 			res.Lock()
 			res.err = err
@@ -515,8 +641,8 @@ func (callobj *CallObj) DetectDigitAsync(det *DetectDigitParams) (*DetectDigitAc
 }
 
 // DetectFaxAsync TODO DESCRIPTION
-func (callobj *CallObj) DetectFaxAsync(det *DetectFaxParams) (*DetectFaxAction, error) {
-	res := new(DetectFaxAction)
+func (callobj *CallObj) DetectFaxAsync(det *DetectFaxParams) (*DetectAction, error) {
+	res := new(DetectAction)
 	res.Result.Type = DetectorFax
 
 	if callobj.Calling == nil {
@@ -528,10 +654,12 @@ func (callobj *CallObj) DetectFaxAsync(det *DetectFaxParams) (*DetectFaxAction, 
 	}
 
 	res.CallObj = callobj
+	res.DetectorType = FaxDetector
 	done := make(chan struct{}, 1)
 
 	go func() {
 		go func() {
+			res.done = make(chan bool, 2)
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallDetectFaxControlID
 
@@ -539,11 +667,14 @@ func (callobj *CallObj) DetectFaxAsync(det *DetectFaxParams) (*DetectFaxAction, 
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
+
 		res.Lock()
+
 		res.ControlID = newCtrlID
+
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelayDetectFax(callobj.Calling.Ctx, callobj.call, newCtrlID, det.Tone)
+		err := callobj.Calling.Relay.RelayDetectFax(callobj.Calling.Ctx, callobj.call, newCtrlID, det.Tone, &res.Payload)
 		if err != nil {
 			res.Lock()
 			res.err = err
@@ -558,13 +689,8 @@ func (callobj *CallObj) DetectFaxAsync(det *DetectFaxParams) (*DetectFaxAction, 
 	return res, res.err
 }
 
-// DetectAction TODO DESCRIPTION
-type DetectAction interface{}
-
 func detectInternalStop(v interface{}) error {
-	m, ok := v.(*DetectMachineAction)
-	d, ok1 := v.(*DetectDigitAction)
-	f, ok2 := v.(*DetectFaxAction)
+	m, ok := v.(*DetectAction)
 
 	var call *CallSession
 
@@ -594,100 +720,32 @@ func detectInternalStop(v interface{}) error {
 
 		call = m.CallObj.call
 
-		return m.CallObj.Calling.Relay.RelayDetectStop(m.CallObj.Calling.Ctx, call, &ctrlID)
-	}
-
-	if ok1 {
-		if d.CallObj.Calling == nil {
-			return errors.New("nil Calling object")
-		}
-
-		if d.CallObj.Calling.Relay == nil {
-			return errors.New("nil Relay object")
-		}
-
-		d.RLock()
-
-		if len(d.ControlID) == 0 {
-			d.RUnlock()
-
-			Log.Error("no controlID\n")
-
-			return errors.New("no controlID")
-		}
-
-		ctrlID = d.ControlID
-
-		d.RUnlock()
-
-		call = d.CallObj.call
-
-		return d.CallObj.Calling.Relay.RelayDetectStop(d.CallObj.Calling.Ctx, call, &ctrlID)
-	}
-
-	if ok2 {
-		if f.CallObj.Calling == nil {
-			return errors.New("nil Calling object")
-		}
-
-		if f.CallObj.Calling.Relay == nil {
-			return errors.New("nil Relay object")
-		}
-
-		f.RLock()
-
-		if len(f.ControlID) == 0 {
-			f.RUnlock()
-
-			Log.Error("no controlID\n")
-
-			return errors.New("no controlID")
-		}
-
-		ctrlID = f.ControlID
-
-		f.RUnlock()
-
-		call = f.CallObj.call
-
-		return f.CallObj.Calling.Relay.RelayDetectStop(f.CallObj.Calling.Ctx, call, &ctrlID)
+		return m.CallObj.Calling.Relay.RelayDetectStop(m.CallObj.Calling.Ctx, call, &ctrlID, &m.Payload)
 	}
 
 	return errors.New("type assertion failed")
 }
 
 // detectAsyncStop TODO DESCRIPTION
-func (detectaction *DetectMachineAction) detectAsyncStop() error {
+func (detectaction *DetectAction) detectAsyncStop() error {
 	return detectInternalStop(detectaction)
 }
 
 // Stop TODO DESCRIPTION
-func (detectaction *DetectMachineAction) Stop() {
+func (detectaction *DetectAction) Stop() StopResult {
+	res := new(StopResult)
+
 	detectaction.err = detectaction.detectAsyncStop()
-}
 
-// detectAsyncStop TODO DESCRIPTION
-func (detectaction *DetectDigitAction) detectAsyncStop() error {
-	return detectInternalStop(detectaction)
-}
+	if detectaction.err == nil {
+		waitStop(res, detectaction.done)
+	}
 
-// Stop TODO DESCRIPTION
-func (detectaction *DetectDigitAction) Stop() {
-	detectaction.err = detectaction.detectAsyncStop()
-}
-
-// detectAsyncStop TODO DESCRIPTION
-func (detectaction *DetectFaxAction) detectAsyncStop() error {
-	return detectInternalStop(detectaction)
-}
-
-// Stop TODO DESCRIPTION
-func (detectaction *DetectFaxAction) Stop() {
-	detectaction.err = detectaction.detectAsyncStop()
+	return *res
 }
 
 // GetCompleted TODO DESCRIPTION
-func (detectaction *DetectMachineAction) GetCompleted() bool {
+func (detectaction *DetectAction) GetCompleted() bool {
 	detectaction.RLock()
 
 	ret := detectaction.Completed
@@ -698,7 +756,7 @@ func (detectaction *DetectMachineAction) GetCompleted() bool {
 }
 
 // GetResult TODO DESCRIPTION
-func (detectaction *DetectMachineAction) GetResult() DetectResult {
+func (detectaction *DetectAction) GetResult() DetectResult {
 	detectaction.RLock()
 
 	ret := detectaction.Result
@@ -709,76 +767,63 @@ func (detectaction *DetectMachineAction) GetResult() DetectResult {
 }
 
 // GetDetectorEvent TODO DESCRIPTION
-func (detectaction *DetectMachineAction) GetDetectorEvent() DetectMachineEvent {
+func (detectaction *DetectAction) GetDetectorEvent() interface{} {
+	var ret interface{}
+
+	var ok bool
+
 	detectaction.RLock()
 
-	ret := detectaction.Event
+	switch detectaction.DetectorType {
+	case MachineDetector:
+		ret, ok = detectaction.detEvent.(DetectMachineEvent)
+		if !ok {
+			Log.Error("type assertion failed")
+		}
+	case FaxDetector:
+		ret, ok = detectaction.detEvent.(DetectFaxEvent)
+		if !ok {
+			Log.Error("type assertion failed")
+		}
+	case DigitDetector:
+		ret, ok = detectaction.detEvent.(DetectDigitEvent)
+		if !ok {
+			Log.Error("type assertion failed")
+		}
+	}
 
 	detectaction.RUnlock()
 
 	return ret
 }
 
-// GetCompleted TODO DESCRIPTION
-func (detectaction *DetectDigitAction) GetCompleted() bool {
+// GetEvent TODO DESCRIPTION
+func (detectaction *DetectAction) GetEvent() *json.RawMessage {
 	detectaction.RLock()
 
-	ret := detectaction.Completed
+	ret := &detectaction.Result.Event
 
 	detectaction.RUnlock()
 
 	return ret
 }
 
-// GetResult TODO DESCRIPTION
-func (detectaction *DetectDigitAction) GetResult() DetectResult {
+// GetPayload TODO DESCRIPTION
+func (detectaction *DetectAction) GetPayload() *json.RawMessage {
 	detectaction.RLock()
 
-	ret := detectaction.Result
+	ret := detectaction.Payload
 
 	detectaction.RUnlock()
 
 	return ret
 }
 
-// GetDetectorEvent TODO DESCRIPTION
-func (detectaction *DetectDigitAction) GetDetectorEvent() DetectDigitEvent {
+// GetControlID TODO DESCRIPTION
+func (detectaction *DetectAction) GetControlID() string {
 	detectaction.RLock()
 
-	ret := detectaction.Event
-
-	detectaction.RUnlock()
-
-	return ret
-}
-
-// GetCompleted TODO DESCRIPTION
-func (detectaction *DetectFaxAction) GetCompleted() bool {
-	detectaction.RLock()
-
-	ret := detectaction.Completed
-
-	detectaction.RUnlock()
-
-	return ret
-}
-
-// GetResult TODO DESCRIPTION
-func (detectaction *DetectFaxAction) GetResult() DetectResult {
-	detectaction.RLock()
-
-	ret := detectaction.Result
-
-	detectaction.RUnlock()
-
-	return ret
-}
-
-// GetDetectorEvent TODO DESCRIPTION
-func (detectaction *DetectFaxAction) GetDetectorEvent() DetectFaxEvent {
-	detectaction.RLock()
-
-	ret := detectaction.Event
+	ret := detectaction.ControlID
 
 	detectaction.RUnlock()
 

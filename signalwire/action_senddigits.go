@@ -2,6 +2,7 @@ package signalwire
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"sync"
@@ -22,6 +23,7 @@ func (s SendDigitsState) String() string {
 // SendDigitsResult TODO DESCRIPTION
 type SendDigitsResult struct {
 	Successful bool
+	Event      json.RawMessage
 }
 
 // SendDigitsAction TODO DESCRIPTION
@@ -31,6 +33,7 @@ type SendDigitsAction struct {
 	Completed bool
 	Result    SendDigitsResult
 	State     SendDigitsState
+	Payload   *json.RawMessage
 	err       error
 	sync.RWMutex
 }
@@ -39,28 +42,6 @@ type SendDigitsAction struct {
 type ISendDigits interface {
 	GetCompleted() bool
 	GetResult() SendDigitsResult
-}
-
-func (callobj *CallObj) checkSendDigitsFinished(_ context.Context, ctrlID string, res *SendDigitsResult) (*SendDigitsResult, error) {
-	var out bool
-
-	for {
-		select {
-		case state := <-callobj.call.CallSendDigitsChans[ctrlID]:
-			if state == SendDigitsFinished {
-				out = true
-				res.Successful = true
-			}
-		case <-callobj.call.Hangup:
-			out = true
-		}
-
-		if out {
-			break
-		}
-	}
-
-	return res, nil
 }
 
 func checkDtmf(s string) bool {
@@ -81,28 +62,30 @@ func (callobj *CallObj) SendDigits(digits string) (*SendDigitsResult, error) {
 		return nil, errors.New("invalid DTMF")
 	}
 
-	res := new(SendDigitsResult)
+	a := new(SendDigitsAction)
 
 	if callobj.Calling == nil {
-		return res, errors.New("nil Calling object")
+		return &a.Result, errors.New("nil Calling object")
 	}
 
 	if callobj.Calling.Relay == nil {
-		return res, errors.New("nil Relay object")
+		return &a.Result, errors.New("nil Relay object")
 	}
 
 	ctrlID, _ := GenUUIDv4()
-	err := callobj.Calling.Relay.RelaySendDigits(callobj.Calling.Ctx, callobj.call, ctrlID, digits)
+	err := callobj.Calling.Relay.RelaySendDigits(callobj.Calling.Ctx, callobj.call, ctrlID, digits, nil)
 
 	if err != nil {
-		return res, err
+		return &a.Result, err
 	}
 
-	return callobj.checkSendDigitsFinished(callobj.Calling.Ctx, ctrlID, res)
+	callobj.callbacksRunSendDigits(callobj.Calling.Ctx, ctrlID, a, true)
+
+	return &a.Result, nil
 }
 
 // callbacksRunSendDigits TODO DESCRIPTION
-func (callobj *CallObj) callbacksRunSendDigits(_ context.Context, ctrlID string, res *SendDigitsAction) {
+func (callobj *CallObj) callbacksRunSendDigits(_ context.Context, ctrlID string, res *SendDigitsAction, norunCB bool) {
 	var out bool
 
 	for {
@@ -128,7 +111,7 @@ func (callobj *CallObj) callbacksRunSendDigits(_ context.Context, ctrlID string,
 
 				out = true
 
-				if callobj.OnSendDigitsFinished != nil {
+				if callobj.OnSendDigitsFinished != nil && !norunCB {
 					callobj.OnSendDigitsFinished(res)
 				}
 
@@ -136,10 +119,15 @@ func (callobj *CallObj) callbacksRunSendDigits(_ context.Context, ctrlID string,
 				Log.Debug("Unknown state. ctrlID: %s\n", ctrlID)
 			}
 
-			if prevstate != state && callobj.OnSendDigitsStateChange != nil {
+			if prevstate != state && callobj.OnSendDigitsStateChange != nil && !norunCB {
 				callobj.OnSendDigitsStateChange(res)
 			}
+		case rawEvent := <-callobj.call.CallSendDigitsRawEventChans[ctrlID]:
+			res.Lock()
+			res.Result.Event = *rawEvent
+			res.Unlock()
 
+			callobj.call.CallSendDigitsReadyChans[ctrlID] <- struct{}{}
 		case <-callobj.call.Hangup:
 			out = true
 		}
@@ -174,15 +162,18 @@ func (callobj *CallObj) SendDigitsAsync(digits string) (*SendDigitsAction, error
 			// wait to get control ID (buffered channel)
 			ctrlID := <-callobj.call.CallSendDigitsControlIDs
 
-			callobj.callbacksRunSendDigits(callobj.Calling.Ctx, ctrlID, res)
+			callobj.callbacksRunSendDigits(callobj.Calling.Ctx, ctrlID, res, false)
 		}()
 
 		newCtrlID, _ := GenUUIDv4()
+
 		res.Lock()
+
 		res.ControlID = newCtrlID
+
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelaySendDigits(callobj.Calling.Ctx, callobj.call, newCtrlID, digits)
+		err := callobj.Calling.Relay.RelaySendDigits(callobj.Calling.Ctx, callobj.call, newCtrlID, digits, &res.Payload)
 
 		if err != nil {
 			res.Lock()
@@ -228,6 +219,39 @@ func (action *SendDigitsAction) GetSuccessful() bool {
 	action.RLock()
 
 	ret := action.Result.Successful
+
+	action.RUnlock()
+
+	return ret
+}
+
+// GetEvent TODO DESCRIPTION
+func (action *SendDigitsAction) GetEvent() *json.RawMessage {
+	action.RLock()
+
+	ret := &action.Result.Event
+
+	action.RUnlock()
+
+	return ret
+}
+
+// GetPayload TODO DESCRIPTION
+func (action *SendDigitsAction) GetPayload() *json.RawMessage {
+	action.RLock()
+
+	ret := action.Payload
+
+	action.RUnlock()
+
+	return ret
+}
+
+// GetControlID TODO DESCRIPTION
+func (action *SendDigitsAction) GetControlID() string {
+	action.RLock()
+
+	ret := action.ControlID
 
 	action.RUnlock()
 

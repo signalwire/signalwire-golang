@@ -2,6 +2,7 @@ package signalwire
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 	"time"
 )
@@ -52,35 +53,55 @@ func (s CallDirection) String() string {
 	return [...]string{"Inbound", "Outbound"}[s]
 }
 
+// CallType keeps the type of a call
+type CallType int
+
+// Call state constants
+const (
+	CallTypePhone CallType = iota
+	CallTypeSIP
+	CallWebrtc
+	CallAgora
+)
+
+func (s CallType) String() string {
+	return [...]string{"phone", "sip", "webrtc", "agora"}[s]
+}
+
 // CallSession internal representation of a call
 type CallSession struct {
-	Active               bool
-	To                   string
-	From                 string
-	TagID                string
-	Timeout              uint // ring timeout
-	CallID               string
-	NodeID               string
-	ProjectID            string
-	SpaceID              string
-	Direction            CallDirection
-	Context              string
-	CallState            CallState
-	PrevCallState        CallState
-	CallDisconnectReason CallDisconnectReason
-	CallConnectState     CallConnectState
-	CallStateChan        chan CallState
-	CallConnectStateChan chan CallConnectState
+	Active                  bool
+	To                      string
+	From                    string
+	TagID                   string
+	Timeout                 uint // ring timeout
+	CallID                  string
+	NodeID                  string
+	ProjectID               string
+	SpaceID                 string
+	Direction               CallDirection
+	Context                 string
+	CallState               CallState
+	PrevCallState           CallState
+	CallType                CallType
+	CallDisconnectReason    CallDisconnectReason
+	CallConnectState        CallConnectState
+	CallStateChan           chan CallState
+	cbStateChan             chan CallState
+	CallConnectStateChan    chan CallConnectState
+	CallConnectRawEventChan chan *json.RawMessage
 
-	CallPlayChans      map[string](chan PlayState)
-	CallPlayControlIDs chan string
-	CallPlayEventChans map[string](chan ParamsEventCallingCallPlay)
-	CallPlayReadyChans map[string](chan struct{})
+	CallPlayChans         map[string](chan PlayState)
+	CallPlayControlIDs    chan string
+	CallPlayEventChans    map[string](chan ParamsEventCallingCallPlay)
+	CallPlayReadyChans    map[string](chan struct{})
+	CallPlayRawEventChans map[string](chan *json.RawMessage)
 
-	CallRecordChans      map[string](chan RecordState)
-	CallRecordControlIDs chan string
-	CallRecordEventChans map[string](chan ParamsEventCallingCallRecord)
-	CallRecordReadyChans map[string](chan struct{})
+	CallRecordChans         map[string](chan RecordState)
+	CallRecordControlIDs    chan string
+	CallRecordEventChans    map[string](chan ParamsEventCallingCallRecord)
+	CallRecordReadyChans    map[string](chan struct{})
+	CallRecordRawEventChans map[string](chan *json.RawMessage)
 
 	CallDetectMachineChans     map[string](chan DetectMachineEvent)
 	CallDetectDigitChans       map[string](chan DetectDigitEvent)
@@ -90,31 +111,38 @@ type CallSession struct {
 	CallDetectFaxControlID     chan string
 	CallDetectEventChans       map[string](chan ParamsEventCallingCallDetect)
 	CallDetectReadyChans       map[string](chan struct{})
+	CallDetectRawEventChans    map[string](chan *json.RawMessage)
 
-	CallFaxChan      chan FaxEventType
-	CallFaxControlID chan string
-	CallFaxEventChan chan FaxEventStruct
-	CallFaxReadyChan chan struct{}
+	CallFaxChan         chan FaxEventType
+	CallFaxControlID    chan string
+	CallFaxEventChan    chan FaxEventStruct
+	CallFaxReadyChan    chan struct{}
+	CallFaxRawEventChan chan *json.RawMessage
 
-	CallTapChans      map[string](chan TapState)
-	CallTapControlIDs chan string
-	CallTapEventChans map[string](chan ParamsEventCallingCallTap)
-	CallTapReadyChans map[string](chan struct{})
+	CallTapChans         map[string](chan TapState)
+	CallTapControlIDs    chan string
+	CallTapEventChans    map[string](chan ParamsEventCallingCallTap)
+	CallTapReadyChans    map[string](chan struct{})
+	CallTapRawEventChans map[string](chan *json.RawMessage)
 
-	CallSendDigitsChans      map[string](chan SendDigitsState)
-	CallSendDigitsControlIDs chan string
-	CallSenDigitsEventChans  map[string](chan ParamsEventCallingCallSendDigits)
+	CallSendDigitsChans         map[string](chan SendDigitsState)
+	CallSendDigitsControlIDs    chan string
+	CallSenDigitsEventChans     map[string](chan ParamsEventCallingCallSendDigits)
+	CallSendDigitsReadyChans    map[string](chan struct{})
+	CallSendDigitsRawEventChans map[string](chan *json.RawMessage)
 
-	CallPlayAndCollectChans      map[string](chan CollectResultType)
-	CallPlayAndCollectControlID  chan string
-	CallPlayAndCollectEventChans map[string](chan ParamsEventCallingCallPlayAndCollect)
-	CallPlayAndCollectReadyChans map[string](chan struct{})
+	CallPlayAndCollectChans         map[string](chan CollectResultType)
+	CallPlayAndCollectControlID     chan string
+	CallPlayAndCollectEventChans    map[string](chan ParamsEventCallingCallPlayAndCollect)
+	CallPlayAndCollectReadyChans    map[string](chan struct{})
+	CallPlayAndCollectRawEventChans map[string](chan *json.RawMessage)
 
 	Hangup   chan struct{}
 	CallPeer PeerDeviceStruct
 	Actions  Actions
 	Blade    *BladeSession
 	I        ICall
+	Event    *json.RawMessage
 	sync.RWMutex
 }
 
@@ -125,10 +153,8 @@ type ICall interface {
 	UpdateCallState(s CallState)
 	UpdateCallConnectState(s CallConnectState)
 	UpdateConnectPeer(p PeerDeviceStruct)
-	WaitCallStateInternal(ctx context.Context, want CallState) bool
+	WaitCallStateInternal(ctx context.Context, want CallState, timeoutSec uint) bool
 	WaitCallConnectState(ctx context.Context, want CallConnectState) bool
-	WaitPlayState(ctx context.Context, ctrlID string, want PlayState) bool
-	WaitRecordState(ctx context.Context, ctrlID string, want RecordState) bool
 	GetPeer(ctx context.Context) (*CallSession, error)
 }
 
@@ -151,16 +177,20 @@ func NewCallTagToCallID() *CallTagToCallID {
 func (c *CallSession) CallInit(_ context.Context) {
 	c.CallStateChan = make(chan CallState, EventQueue)
 	c.CallConnectStateChan = make(chan CallConnectState, EventQueue)
+	c.CallConnectRawEventChan = make(chan *json.RawMessage)
+	c.cbStateChan = make(chan CallState, EventQueue)
 
 	c.CallPlayChans = make(map[string](chan PlayState))
 	c.CallPlayControlIDs = make(chan string, SimActionsOfTheSameKind)
 	c.CallPlayEventChans = make(map[string](chan ParamsEventCallingCallPlay))
 	c.CallPlayReadyChans = make(map[string](chan struct{}))
+	c.CallPlayRawEventChans = make(map[string](chan *json.RawMessage))
 
 	c.CallRecordChans = make(map[string](chan RecordState))
 	c.CallRecordControlIDs = make(chan string, SimActionsOfTheSameKind)
 	c.CallRecordEventChans = make(map[string](chan ParamsEventCallingCallRecord))
 	c.CallRecordReadyChans = make(map[string](chan struct{}))
+	c.CallRecordRawEventChans = make(map[string](chan *json.RawMessage))
 
 	c.CallDetectMachineControlID = make(chan string, 1)
 	c.CallDetectDigitControlID = make(chan string, 1)
@@ -169,43 +199,48 @@ func (c *CallSession) CallInit(_ context.Context) {
 	c.CallDetectMachineChans = make(map[string](chan DetectMachineEvent))
 	c.CallDetectDigitChans = make(map[string](chan DetectDigitEvent))
 	c.CallDetectFaxChans = make(map[string](chan DetectFaxEvent))
+	c.CallDetectReadyChans = make(map[string](chan struct{}))
+	c.CallDetectRawEventChans = make(map[string](chan *json.RawMessage))
 
 	c.CallFaxChan = make(chan FaxEventType, EventQueue)
 	c.CallFaxControlID = make(chan string, 1)
 	c.CallFaxReadyChan = make(chan struct{})
 	c.CallFaxEventChan = make(chan FaxEventStruct)
+	c.CallFaxRawEventChan = make(chan *json.RawMessage)
 
 	c.CallTapChans = make(map[string](chan TapState))
 	c.CallTapControlIDs = make(chan string, 1)
 	c.CallTapEventChans = make(map[string](chan ParamsEventCallingCallTap))
 	c.CallTapReadyChans = make(map[string](chan struct{}))
+	c.CallTapRawEventChans = make(map[string](chan *json.RawMessage))
 
 	c.CallSendDigitsChans = make(map[string](chan SendDigitsState))
 	c.CallSendDigitsControlIDs = make(chan string, 1)
+	c.CallSendDigitsReadyChans = make(map[string](chan struct{}))
+	c.CallSendDigitsRawEventChans = make(map[string](chan *json.RawMessage))
 
 	c.CallPlayAndCollectChans = make(map[string](chan CollectResultType))
 	c.CallPlayAndCollectControlID = make(chan string, 1)
 	c.CallPlayAndCollectEventChans = make(map[string](chan ParamsEventCallingCallPlayAndCollect))
 	c.CallPlayAndCollectReadyChans = make(map[string](chan struct{}))
+	c.CallPlayAndCollectRawEventChans = make(map[string](chan *json.RawMessage))
 
 	c.Hangup = make(chan struct{})
 	c.Actions.m = make(map[string]string)
 }
 
 // CallCleanup close the channels, etc
+// app writer should set CallObj and/or c to nil to clean it up
 func (c *CallSession) CallCleanup(_ context.Context) {
 	close(c.CallStateChan)
 	close(c.CallConnectStateChan)
-	close(c.Hangup)
 
 	c.Actions.m = nil
-
-	c = nil /*let the garbage collector clean it up */
 }
 
 // WaitCallStateInternal wait for a certain call state and return true when it arrives.
 // return false if timeout.
-func (c *CallSession) WaitCallStateInternal(_ context.Context, want CallState) bool {
+func (c *CallSession) WaitCallStateInternal(ctx context.Context, want CallState, timeoutSec uint) bool {
 	var ret bool
 
 	for {
@@ -218,10 +253,12 @@ func (c *CallSession) WaitCallStateInternal(_ context.Context, want CallState) b
 				ret = true
 			} else if callstate == Ended {
 				out = true
-				// signal all Action go routines to finish
-				c.Hangup <- struct{}{}
 			}
-		case <-time.After(BroadcastEventTimeout * time.Second):
+		case <-time.After(time.Duration(timeoutSec) * time.Second):
+			out = true
+		case <-c.Hangup:
+			out = true
+		case <-ctx.Done():
 			out = true
 		}
 
@@ -249,140 +286,6 @@ func (c *CallSession) WaitCallConnectState(_ context.Context, want CallConnectSt
 			}
 		case <-time.After(BroadcastEventTimeout * time.Second):
 			out = true
-		case <-c.Hangup:
-			out = true
-		}
-
-		if out {
-			break
-		}
-	}
-
-	return ret
-}
-
-// WaitPlayState TODO DESCRIPTION
-func (c *CallSession) WaitPlayState(_ context.Context, ctrlID string, want PlayState) bool {
-	var ret bool
-
-	for {
-		var out bool
-
-		select {
-		case playstate := <-c.CallPlayChans[ctrlID]:
-			if playstate == want {
-				out = true
-				ret = true
-			}
-		case <-time.After(BroadcastEventTimeout * time.Second):
-			out = true
-		case <-c.Hangup:
-			out = true
-		}
-
-		if out {
-			break
-		}
-	}
-
-	return ret
-}
-
-// UpdatePlayState Never timeout while waiting for 'finished'
-func (c *CallSession) UpdatePlayState(_ context.Context, ctrlID string, res *PlayAction) bool {
-	var ret bool
-
-	for {
-		var out bool
-
-		select {
-		case playstate := <-c.CallPlayChans[ctrlID]:
-			if playstate == PlayFinished {
-				out = true
-				ret = true
-			}
-
-			res.State = playstate
-		case <-c.Hangup:
-			out = true
-		}
-
-		if out {
-			break
-		}
-	}
-
-	return ret
-}
-
-// WaitRecordState TODO DESCRIPTION
-func (c *CallSession) WaitRecordState(_ context.Context, ctrlID string, want RecordState) bool {
-	var ret bool
-
-	for {
-		var out bool
-
-		select {
-		case recordstate := <-c.CallRecordChans[ctrlID]:
-			if recordstate == want {
-				out = true
-				ret = true
-			}
-		case <-time.After(BroadcastEventTimeout * time.Second):
-			out = true
-		case <-c.Hangup:
-			out = true
-		}
-
-		if out {
-			break
-		}
-	}
-
-	return ret
-}
-
-// UpdateRecordState Never timeout while waiting for 'finished'
-func (c *CallSession) UpdateRecordState(_ context.Context, ctrlID string, res *RecordAction) bool {
-	var ret bool
-
-	for {
-		var out bool
-
-		select {
-		case state := <-c.CallRecordChans[ctrlID]:
-			if state == RecordFinished {
-				out = true
-				ret = true
-			}
-
-			res.State = state
-		case <-c.Hangup:
-			out = true
-		}
-
-		if out {
-			break
-		}
-	}
-
-	return ret
-}
-
-// WaitRecordStateFinished - wait for 'Finished', don't timeout.
-// return on Hangup if 'Finished' did not arrive
-func (c *CallSession) WaitRecordStateFinished(_ context.Context, ctrlID string) bool {
-	var ret bool
-
-	for {
-		var out bool
-
-		select {
-		case recordstate := <-c.CallRecordChans[ctrlID]:
-			if recordstate == RecordFinished {
-				out = true
-				ret = true
-			}
 		case <-c.Hangup:
 			out = true
 		}
@@ -493,6 +396,22 @@ func (c *CallSession) GetTimeout() uint {
 	return t
 }
 
+// GetType TODO DESCRIPTION
+func (c *CallSession) GetType() string {
+	c.RLock()
+	t := c.CallType.String()
+	c.RUnlock()
+
+	return t
+}
+
+// SetType TODO DESCRIPTION
+func (c *CallSession) SetType(t CallType) {
+	c.Lock()
+	c.CallType = t
+	c.Unlock()
+}
+
 // SetDisconnectReason TODO DESCRIPTION
 func (c *CallSession) SetDisconnectReason(reason CallDisconnectReason) {
 	c.Lock()
@@ -552,6 +471,60 @@ func (c *CallSession) GetTagID() string {
 	c.RUnlock()
 
 	return s
+}
+
+// GetEventPayload TODO DESCRIPTION
+func (c *CallSession) GetEventPayload() *json.RawMessage {
+	c.RLock()
+	e := c.Event
+	c.RUnlock()
+
+	return e
+}
+
+type innerParams struct {
+	EventType string `json:"event_type"`
+}
+
+type evParams struct {
+	Params innerParams `json:"params"`
+	Rest   json.RawMessage
+}
+
+type eventPlaceHolder struct {
+	Params evParams `json:"params"`
+	Rest   json.RawMessage
+}
+
+// GetEventName TODO DESCRIPTION
+func (c *CallSession) GetEventName() string {
+	c.RLock()
+	e := c.Event
+	c.RUnlock()
+
+	if e != nil {
+		placeholder := new(eventPlaceHolder)
+
+		ev := struct {
+			Params *json.RawMessage `json:"params"`
+		}{Params: e}
+
+		b, err := json.Marshal(ev)
+		if err != nil {
+			Log.Error("payload: cannot marshal")
+		}
+
+		err = json.Unmarshal(b, placeholder)
+		if err != nil {
+			Log.Error("payload: cannot unmarshal to RawMessage")
+		}
+
+		return placeholder.Params.Params.EventType
+	}
+
+	Log.Error("no Event!")
+
+	return ""
 }
 
 // Actions TODO DESCRIPTION
