@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2019-11-25
+- add RTP endpoint for Tap Example app. 
+- fix unit test (run "go test -race" in CI)
+
 ## [1.0.0-rc.1] - 2019-11-13
 - add Event Name and Event Payload properties per call, add getter for ControlID per Action
 - add AMD and AMDAsync Methods
