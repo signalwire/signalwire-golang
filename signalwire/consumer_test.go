@@ -30,6 +30,8 @@ func TestConsumer(t *testing.T) {
 			consumer.Client = c
 
 			Imock.EXPECT().connectInternal(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Do(func(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup) {
+				/*pretend we connected successfully */
+				consumer.Client.Operational <- struct{}{}
 				runWG.Done()
 			})
 			Imock.EXPECT().disconnectInternal().Return(nil).Times(1)
@@ -46,9 +48,6 @@ func TestConsumer(t *testing.T) {
 
 			go func() {
 				<-timer.C
-				/*pretend we connected successfully */
-				consumer.Client.Operational <- struct{}{}
-
 				/* this will call Disconnect() which is mocked*/
 				if errStop := consumer.Stop(); errStop != nil {
 					Log.Error("Error occurred while stopping Signalwire Consumer: %v\n", errStop)
