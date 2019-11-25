@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 )
 
 // GlobalOverwriteHost TODO DESCRIPTION
@@ -140,14 +141,16 @@ func (consumer *Consumer) Run() error {
 
 	go func() {
 		err = consumer.Client.I.connectInternal(ctx, cancel, &wg)
+		if err != nil {
+			Log.Error("Cannot setup Blade: %v\n", err)
+		}
 	}()
 
-	<-consumer.Client.Operational
-
-	if err != nil {
-		Log.Debug("cannot setup Blade: %v\n", err)
-
-		return errors.New("cannot setup Blade")
+	timer := time.NewTimer(WSTimeOut * time.Second)
+	select {
+	case <-consumer.Client.Operational:
+	case <-timer.C:
+		return errors.New("cannot setup Blade (timeout)")
 	}
 
 	Log.Debug("Blade Ready...\n")
@@ -173,7 +176,7 @@ func (consumer *Consumer) Run() error {
 
 	Log.Debug("consumer()/Run() stopped.\n")
 
-	return err
+	return nil
 }
 
 // Stop TODO DESCRIPTION
