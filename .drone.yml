@@ -9,6 +9,8 @@ steps:
 - name: test-go1.12
   image: golang:1.12
   commands:
+  - apt-get -qq update
+  - apt-get -y install build-essential pkg-config libopus-dev libopusfile-dev
   - make update
   - make linter-install
   - make test
@@ -18,6 +20,8 @@ steps:
 #  image: golang:1.11
 #  commands:
 #  - find -name go.mod -exec sed -i 's/go 1.12/go 1.11/g' {} \;
+#  - apt-get -qq update
+#  - apt-get -y install build-essential pkg-config libopus-dev libopusfile-dev
 #  - make update
 #  - make linter-install
 #  - make test
