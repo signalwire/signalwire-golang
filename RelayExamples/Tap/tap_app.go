@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/signal"
@@ -12,6 +14,7 @@ import (
 
 	"github.com/pion/rtp"
 	"github.com/signalwire/signalwire-golang/signalwire"
+	"github.com/zaf/g711"
 )
 
 // App environment settings
@@ -60,18 +63,35 @@ func rtpListen() {
 
 	defer conn.Close()
 
+	b := new(bytes.Buffer)
+	udec, _ := g711.NewUlawDecoder(b)
+	/* this file can be imported in Audacity, 8000 hz, 1 channel, Little-Endian, Signed 16 bit PCM */
+	out, err := os.Create("tapaudio.raw")
+	if err != nil {
+		signalwire.Log.Fatal("%v", err)
+	}
+
+	defer out.Close()
+
 	for {
 		buf := make([]byte, 1024)
 
-		_, _, err := conn.ReadFrom(buf)
+		n, _, err := conn.ReadFrom(buf)
 		if err != nil {
 			signalwire.Log.Warn("%v", err)
 			continue
 		}
 
-		_, err = depak(buf)
+		payload, err := depak(buf[:n])
 		if err != nil {
 			signalwire.Log.Fatal("%v", err)
+		}
+
+		b.Write(*payload)
+
+		_, err = io.Copy(out, udec)
+		if err != nil {
+			signalwire.Log.Fatal("Decoding failed: %v\n", err)
 		}
 	}
 }
