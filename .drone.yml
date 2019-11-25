@@ -9,6 +9,8 @@ steps:
 - name: test-go1.12
   image: golang:1.12
   commands:
+  - apt-get -qq update
+  - apt-get -y install apt-get build-essential pkg-config libopus-dev libopusfile-dev
   - make update
   - make linter-install
   - make test
