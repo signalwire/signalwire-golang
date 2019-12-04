@@ -534,13 +534,13 @@ type DetectMachineParamsInternal struct {
 	MachineWordsThreshold float64 `json:"machine_words_threshold,omitempty"`
 }
 
-// DetectFaxParams TODO DESCRIPTION
-type DetectFaxParams struct {
+// DetectFaxParamsInternal TODO DESCRIPTION
+type DetectFaxParamsInternal struct {
 	Tone string `json:"tone,omitempty"`
 }
 
-// DetectDigitParams TODO DESCRIPTION
-type DetectDigitParams struct {
+// DetectDigitParamsInternal TODO DESCRIPTION
+type DetectDigitParamsInternal struct {
 	Digits string `json:"digits,omitempty"`
 }
 

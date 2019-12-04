@@ -131,6 +131,19 @@ type DetectMachineParams struct {
 	MachineVoiceThreshold float64
 	MachineWordsThreshold float64
 	WaitForBeep           bool // special param that does not get sent
+	Timeout               float64
+}
+
+// DetectFaxParams TODO DESCRIPTION
+type DetectFaxParams struct {
+	Tone    string
+	Timeout float64
+}
+
+// DetectDigitParams TODO DESCRIPTION
+type DetectDigitParams struct {
+	Digits  string
+	Timeout float64
 }
 
 // AMD TODO DESCRIPTION
@@ -163,7 +176,7 @@ func (callobj *CallObj) DetectMachine(det *DetectMachineParams) (*DetectResult, 
 	detInternal.MachineVoiceThreshold = det.MachineVoiceThreshold
 	detInternal.MachineWordsThreshold = det.MachineWordsThreshold
 
-	err := callobj.Calling.Relay.RelayDetectMachine(callobj.Calling.Ctx, callobj.call, ctrlID, &detInternal, nil)
+	err := callobj.Calling.Relay.RelayDetectMachine(callobj.Calling.Ctx, callobj.call, ctrlID, &detInternal, det.Timeout, nil)
 
 	if err != nil {
 		return &a.Result, err
@@ -189,7 +202,7 @@ func (callobj *CallObj) DetectFax(det *DetectFaxParams) (*DetectResult, error) {
 
 	ctrlID, _ := GenUUIDv4()
 
-	err := callobj.Calling.Relay.RelayDetectFax(callobj.Calling.Ctx, callobj.call, ctrlID, det.Tone, nil)
+	err := callobj.Calling.Relay.RelayDetectFax(callobj.Calling.Ctx, callobj.call, ctrlID, det.Tone, det.Timeout, nil)
 
 	if err != nil {
 		return &a.Result, err
@@ -214,7 +227,7 @@ func (callobj *CallObj) DetectDigit(det *DetectDigitParams) (*DetectResult, erro
 
 	ctrlID, _ := GenUUIDv4()
 
-	err := callobj.Calling.Relay.RelayDetectDigit(callobj.Calling.Ctx, callobj.call, ctrlID, det.Digits, nil)
+	err := callobj.Calling.Relay.RelayDetectDigit(callobj.Calling.Ctx, callobj.call, ctrlID, det.Digits, det.Timeout, nil)
 
 	if err != nil {
 		return &a.Result, err
@@ -576,7 +589,7 @@ func (callobj *CallObj) DetectMachineAsync(det *DetectMachineParams) (*DetectAct
 		detInternal.MachineVoiceThreshold = det.MachineVoiceThreshold
 		detInternal.MachineWordsThreshold = det.MachineWordsThreshold
 
-		err := callobj.Calling.Relay.RelayDetectMachine(callobj.Calling.Ctx, callobj.call, newCtrlID, &detInternal, &res.Payload)
+		err := callobj.Calling.Relay.RelayDetectMachine(callobj.Calling.Ctx, callobj.call, newCtrlID, &detInternal, det.Timeout, &res.Payload)
 		if err != nil {
 			res.Lock()
 			res.err = err
@@ -625,7 +638,7 @@ func (callobj *CallObj) DetectDigitAsync(det *DetectDigitParams) (*DetectAction,
 
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelayDetectDigit(callobj.Calling.Ctx, callobj.call, newCtrlID, det.Digits, &res.Payload)
+		err := callobj.Calling.Relay.RelayDetectDigit(callobj.Calling.Ctx, callobj.call, newCtrlID, det.Digits, det.Timeout, &res.Payload)
 		if err != nil {
 			res.Lock()
 			res.err = err
@@ -674,7 +687,7 @@ func (callobj *CallObj) DetectFaxAsync(det *DetectFaxParams) (*DetectAction, err
 
 		res.Unlock()
 
-		err := callobj.Calling.Relay.RelayDetectFax(callobj.Calling.Ctx, callobj.call, newCtrlID, det.Tone, &res.Payload)
+		err := callobj.Calling.Relay.RelayDetectFax(callobj.Calling.Ctx, callobj.call, newCtrlID, det.Tone, det.Timeout, &res.Payload)
 		if err != nil {
 			res.Lock()
 			res.err = err

@@ -727,14 +727,14 @@ func (relay *RelaySession) RelayRecordAudioStop(ctx context.Context, call *CallS
 }
 
 // RelayDetectDigit TODO DESCRIPTION
-func (relay *RelaySession) RelayDetectDigit(ctx context.Context, call *CallSession, controlID string, digits string, payload **json.RawMessage) error {
+func (relay *RelaySession) RelayDetectDigit(ctx context.Context, call *CallSession, controlID string, digits string, timeout float64, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
 
-	detectDigitParams := DetectDigitParams{
+	detectDigitParams := DetectDigitParamsInternal{
 		Digits: digits,
 	}
 	detect := DetectStruct{
@@ -756,18 +756,18 @@ func (relay *RelaySession) RelayDetectDigit(ctx context.Context, call *CallSessi
 		Log.Debug("controlID was not sent to go routine\n")
 	}
 
-	return relay.RelayDetect(ctx, call, controlID, detect, payload)
+	return relay.RelayDetect(ctx, call, controlID, detect, timeout, payload)
 }
 
 // RelayDetectFax TODO DESCRIPTION
-func (relay *RelaySession) RelayDetectFax(ctx context.Context, call *CallSession, controlID string, faxtone string, payload **json.RawMessage) error {
+func (relay *RelaySession) RelayDetectFax(ctx context.Context, call *CallSession, controlID string, faxtone string, timeout float64, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
 		return fmt.Errorf("no CallID for call [%p]", call)
 	}
 
-	detectFaxParams := DetectFaxParams{
+	detectFaxParams := DetectFaxParamsInternal{
 		Tone: faxtone,
 	}
 	detect := DetectStruct{
@@ -789,11 +789,11 @@ func (relay *RelaySession) RelayDetectFax(ctx context.Context, call *CallSession
 		Log.Debug("controlID was not sent to go routine\n")
 	}
 
-	return relay.RelayDetect(ctx, call, controlID, detect, payload)
+	return relay.RelayDetect(ctx, call, controlID, detect, timeout, payload)
 }
 
 // RelayDetectMachine TODO DESCRIPTION
-func (relay *RelaySession) RelayDetectMachine(ctx context.Context, call *CallSession, controlID string, det *DetectMachineParamsInternal, payload **json.RawMessage) error {
+func (relay *RelaySession) RelayDetectMachine(ctx context.Context, call *CallSession, controlID string, det *DetectMachineParamsInternal, timeout float64, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -825,11 +825,11 @@ func (relay *RelaySession) RelayDetectMachine(ctx context.Context, call *CallSes
 		Log.Debug("controlID was not sent to go routine\n")
 	}
 
-	return relay.RelayDetect(ctx, call, controlID, detect, payload)
+	return relay.RelayDetect(ctx, call, controlID, detect, timeout, payload)
 }
 
 // RelayDetect TODO DESCRIPTION
-func (relay *RelaySession) RelayDetect(ctx context.Context, call *CallSession, controlID string, detect DetectStruct, payload **json.RawMessage) error {
+func (relay *RelaySession) RelayDetect(ctx context.Context, call *CallSession, controlID string, detect DetectStruct, timeout float64, payload **json.RawMessage) error {
 	if len(call.CallID) == 0 {
 		Log.Error("no CallID\n")
 
@@ -843,6 +843,14 @@ func (relay *RelaySession) RelayDetect(ctx context.Context, call *CallSession, c
 
 	call.Unlock()
 
+	var detTimeout float64
+
+	if timeout != 0 {
+		detTimeout = timeout
+	} else {
+		detTimeout = DefaultActionTimeout
+	}
+
 	v := ParamsBladeExecuteStruct{
 		Protocol: relay.Blade.Protocol,
 		Method:   "calling.detect",
@@ -851,7 +859,7 @@ func (relay *RelaySession) RelayDetect(ctx context.Context, call *CallSession, c
 			CallID:    call.CallID,
 			ControlID: controlID,
 			Detect:    detect,
-			Timeout:   DefaultActionTimeout,
+			Timeout:   detTimeout,
 		},
 	}
 

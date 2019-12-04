@@ -110,6 +110,7 @@ func MyReady(consumer *signalwire.Consumer) {
 
 	var det3 signalwire.DetectFaxParams
 	det3.Tone = "CED"
+	det3.Timeout = 10
 	detectFaxAction, err := resultDial.Call.DetectFaxAsync(&det3)
 
 	if err != nil {
