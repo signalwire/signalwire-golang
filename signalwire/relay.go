@@ -32,10 +32,10 @@ type IRelay interface {
 	RelayPlayResume(ctx context.Context, call *CallSession, ctrlID *string, payload **json.RawMessage) error
 	RelayPlayPause(ctx context.Context, call *CallSession, ctrlID *string, payload **json.RawMessage) error
 	RelayPlayStop(ctx context.Context, call *CallSession, ctrlID *string, payload **json.RawMessage) error
-	RelayDetectDigit(ctx context.Context, call *CallSession, controlID string, digits string, payload **json.RawMessage) error
-	RelayDetectFax(ctx context.Context, call *CallSession, controlID string, faxtone string, payload **json.RawMessage) error
-	RelayDetectMachine(ctx context.Context, call *CallSession, controlID string, det *DetectMachineParamsInternal, payload **json.RawMessage) error
-	RelayDetect(ctx context.Context, call *CallSession, controlID string, detect DetectStruct, payload **json.RawMessage) error
+	RelayDetectDigit(ctx context.Context, call *CallSession, controlID string, digits string, timeout float64, payload **json.RawMessage) error
+	RelayDetectFax(ctx context.Context, call *CallSession, controlID string, faxtone string, timeout float64, payload **json.RawMessage) error
+	RelayDetectMachine(ctx context.Context, call *CallSession, controlID string, det *DetectMachineParamsInternal, timeout float64, payload **json.RawMessage) error
+	RelayDetect(ctx context.Context, call *CallSession, controlID string, detect DetectStruct, timeout float64, payload **json.RawMessage) error
 	RelayDetectStop(ctx context.Context, call *CallSession, ctrlID *string, payload **json.RawMessage) error
 	RelaySendFax(ctx context.Context, call *CallSession, ctrlID *string, fax *FaxParamsInternal, payload **json.RawMessage) error
 	RelayReceiveFax(ctx context.Context, call *CallSession, ctrlID *string, payload **json.RawMessage) error
