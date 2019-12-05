@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+ - Pass Detect timeout from the app down to RELAY command (all three detectors).
+
 ## [1.0.0] - 2019-11-25
 - add RTP endpoint for Tap Example app. 
 - fix unit test (run "go test -race" in CI)
