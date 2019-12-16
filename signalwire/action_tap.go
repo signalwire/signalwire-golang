@@ -230,6 +230,8 @@ func (callobj *CallObj) callbacksRunTap(ctx context.Context, ctrlID string, res 
 			switch params.Device.Type {
 			case "rtp":
 				res.Result.Tap.TapDeviceType = TapRTP
+			case "ws":
+				res.Result.Tap.TapDeviceType = TapWS
 			default:
 				res.err = errors.New("invalid tap device type")
 				res.Completed = true

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
@@ -14,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/pion/rtp"
 	"github.com/signalwire/signalwire-golang/signalwire"
 	"github.com/zaf/g711"
@@ -42,6 +44,8 @@ var CallThisNumber string
 var listenAddress = "127.0.0.1" // replace this
 
 var listenPort = 1234
+
+var ws = false
 
 func depak(rawpacket []byte) (*[]byte, error) {
 	packet := new(rtp.Packet)
@@ -89,7 +93,7 @@ func rtpListen(codec string, ptime uint8, rate uint) {
 	}
 
 	/* this file can be imported in Audacity, 8000 hz, 1 channel, Little-Endian, Signed 16 bit PCM */
-	out, err := os.Create("tapaudio.raw")
+	out, err := os.Create("tapaudio_rtp_endpoint.raw")
 	if err != nil {
 		signalwire.Log.Fatal("%v", err)
 	}
@@ -145,6 +149,58 @@ func rtpListen(codec string, ptime uint8, rate uint) {
 	}
 }
 
+func wsListen() {
+	var addr = listenAddress + ":" + fmt.Sprintf("%d", listenPort)
+
+	var upgrader = websocket.Upgrader{
+		ReadBufferSize: 1024,
+	}
+
+	/* this file can be imported in Audacity, 8000 hz, 1 channel, Little-Endian, Signed 16 bit PCM */
+	out, err := os.Create("tapaudio_ws_endpoint.raw")
+	if err != nil {
+		signalwire.Log.Fatal("%v", err)
+	}
+
+	defer out.Close()
+
+	b := new(bytes.Buffer)
+
+	var g711dec *g711.Decoder
+
+	g711dec, _ = g711.NewUlawDecoder(b)
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			signalwire.Log.Error("%v", err)
+			return
+		}
+
+		for {
+			msgType, msg, err := conn.ReadMessage()
+			if err != nil {
+				signalwire.Log.Error("%v", err)
+				return
+			}
+			if msgType != websocket.BinaryMessage {
+				continue
+			}
+
+			b.Write(msg)
+
+			_, err = io.Copy(out, g711dec)
+			if err != nil {
+				signalwire.Log.Fatal("Decoding failed: %v\n", err)
+			}
+
+			signalwire.Log.Info("%s rcvd: %v bytes\n", conn.RemoteAddr(), len(msg))
+		}
+	})
+
+	signalwire.Log.Fatal("%v", http.ListenAndServe(addr, nil))
+}
+
 /*gopl.io spinner*/
 func spinner(delay time.Duration) {
 	for {
@@ -176,23 +232,38 @@ func MyReady(consumer *signalwire.Consumer) {
 		return
 	}
 
+	_, err := resultDial.Call.PlayAudioAsync("https://cdn.signalwire.com/default-music/welcome.mp3")
+	if err != nil {
+		signalwire.Log.Error("Error occurred while trying to play audio\n")
+	}
+
 	signalwire.Log.Info("Tap audio...\n")
 
 	go spinner(100 * time.Millisecond)
 
 	var tapdevice signalwire.TapDevice
-	tapdevice.Type = signalwire.TapRTP.String()
-	tapdevice.Params.Addr = listenAddress
-	tapdevice.Params.Port = uint16(listenPort)
+	if !ws {
+		tapdevice.Type = signalwire.TapRTP.String()
+		tapdevice.Params.Addr = listenAddress
+		tapdevice.Params.Port = uint16(listenPort)
+	} else {
+		tapdevice.Type = signalwire.TapWS.String()
+		tapdevice.Params.URI = "ws://" + listenAddress + ":" + fmt.Sprintf("%d", listenPort)
+	}
+
 	tapdevice.Params.Codec = "PCMU"
+
+	if !ws {
+		go rtpListen(tapdevice.Params.Codec, tapdevice.Params.Ptime, tapdevice.Params.Rate)
+	} else {
+		go wsListen()
+	}
 
 	tapAction, err := resultDial.Call.TapAudioAsync(signalwire.TapDirectionListen, &tapdevice)
 
 	if err != nil {
 		signalwire.Log.Fatal("Error occurred while trying to tap audio: %v\n", err)
 	}
-
-	go rtpListen(tapdevice.Params.Codec, tapdevice.Params.Ptime, tapdevice.Params.Rate)
 
 	time.Sleep(10 * time.Second)
 	tapAction.Stop()
@@ -220,6 +291,7 @@ func main() {
 	flag.StringVar(&PProjectID, "p", ProjectID, " ProjectID ")
 	flag.StringVar(&PTokenID, "t", TokenID, " TokenID ")
 	flag.BoolVar(&verbose, "d", false, " Enable debug mode ")
+	flag.BoolVar(&ws, "w", false, " Enable websocket tap ") // mutually exclusive with the RTP tap
 	flag.Parse()
 
 	if printVersion {
