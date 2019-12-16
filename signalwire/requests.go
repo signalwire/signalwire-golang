@@ -593,7 +593,7 @@ type TapDeviceParams struct {
 	Port  uint16 `json:"port,omitempty"`
 	Ptime uint8  `json:"ptime,omitempty"`
 	Rate  uint   `json:"rate,omitempty"`
-	URI string  `json:"uri,omitempty"` 
+	URI   string `json:"uri,omitempty"`
 }
 
 // TapDevice TODO DESCRIPTION
