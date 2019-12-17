@@ -5,7 +5,7 @@ const (
 	WSTimeOut         = 5
 	JSONRPCVer        = "2.0"
 	WssHost           = "relay.signalwire.com"
-	SDKVersion        = "1.0.0-beta.2"
+	SDKVersion        = "1.0.1"
 	BladeVersionMajor = 2
 	BladeVersionMinor = 3
 	BladeRevision     = 0
