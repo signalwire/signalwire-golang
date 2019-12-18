@@ -2,6 +2,7 @@ package signalwire
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -164,7 +165,14 @@ func (blade *BladeSession) BladeWSOpenConn(ctx context.Context, u url.URL) (*web
 
 	Log.Debug("connecting to %s\n", u.String())
 
-	c, _, err := websocket.DefaultDialer.DialContext(ctx, u.String(), nil)
+	dialer := websocket.DefaultDialer
+
+	dialer.TLSClientConfig = &tls.Config{
+		InsecureSkipVerify: false,
+	}
+
+	c, _, err := dialer.DialContext(ctx, u.String(), nil)
+
 	if err != nil {
 		return nil, err
 	}
