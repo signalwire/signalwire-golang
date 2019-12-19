@@ -47,6 +47,8 @@ var listenPort = 1234
 
 var ws = false
 
+var secure = false
+
 func depak(rawpacket []byte) (*[]byte, error) {
 	packet := new(rtp.Packet)
 	err := packet.Unmarshal(rawpacket)
@@ -198,7 +200,24 @@ func wsListen() {
 		}
 	})
 
-	signalwire.Log.Fatal("%v", http.ListenAndServe(addr, nil))
+	if !secure {
+		signalwire.Log.Fatal("%v", http.ListenAndServe(addr, nil))
+	} else {
+		// openssl genrsa -out tapserver.key 2048
+		// openssl ecparam -genkey -name secp384r1 -out tapserver.key
+		// don't forget to set FQDN (IP) !
+		// openssl req -new -x509 -sha256 -key tapserver.key -out tapserver.crt -days 3650
+		_, err := os.Stat("tapserver.key")
+		if os.IsNotExist(err) {
+			signalwire.Log.Fatal("%v", err)
+		}
+		_, err = os.Stat("tapserver.crt")
+		if os.IsNotExist(err) {
+			signalwire.Log.Fatal("%v", err)
+		}
+
+		signalwire.Log.Fatal("%v", http.ListenAndServeTLS(addr, "tapserver.crt", "tapserver.key", nil))
+	}
 }
 
 /*gopl.io spinner*/
@@ -248,7 +267,12 @@ func MyReady(consumer *signalwire.Consumer) {
 		tapdevice.Params.Port = uint16(listenPort)
 	} else {
 		tapdevice.Type = signalwire.TapWS.String()
-		tapdevice.Params.URI = "ws://" + listenAddress + ":" + fmt.Sprintf("%d", listenPort)
+		if !secure {
+			tapdevice.Params.URI = "ws://"
+		} else {
+			tapdevice.Params.URI = "wss://"
+		}
+		tapdevice.Params.URI = tapdevice.Params.URI + listenAddress + ":" + fmt.Sprintf("%d", listenPort)
 	}
 
 	tapdevice.Params.Codec = "PCMU"
@@ -291,7 +315,8 @@ func main() {
 	flag.StringVar(&PProjectID, "p", ProjectID, " ProjectID ")
 	flag.StringVar(&PTokenID, "t", TokenID, " TokenID ")
 	flag.BoolVar(&verbose, "d", false, " Enable debug mode ")
-	flag.BoolVar(&ws, "w", false, " Enable websocket tap ") // mutually exclusive with the RTP tap
+	flag.BoolVar(&ws, "w", false, " Enable websocket tap ")                     // mutually exclusive with the RTP tap
+	flag.BoolVar(&secure, "s", false, " Enable secure websocket tap (wss URI)") // has meaning only if "-w" is set
 	flag.Parse()
 
 	if printVersion {
