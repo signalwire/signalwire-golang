@@ -14,9 +14,15 @@ import (
 
 // App environment settings
 var (
-	ProjectID      = os.Getenv("ProjectID")
-	TokenID        = os.Getenv("TokenID")
+	// required
+	ProjectID = os.Getenv("ProjectID")
+	TokenID   = os.Getenv("TokenID")
+	// context required only from Inbound calls
 	DefaultContext = os.Getenv("DefaultContext")
+	FromNumber     = os.Getenv("FromNumber")
+	ToNumber       = os.Getenv("ToNumber")
+	// SDK will use default if not set
+	Host = os.Getenv("Host")
 )
 
 // Contexts not needed for only outbound calls
@@ -71,15 +77,19 @@ func MyOnPlayStateChange(playAction *signalwire.PlayAction) {
 func MyReady(consumer *signalwire.Consumer) {
 	signalwire.Log.Info("calling out...\n")
 
-	fromNumber := "+132XXXXXXXX"
-
-	var toNumber = "+166XXXXXXXX"
-
-	if len(CallThisNumber) > 0 {
-		toNumber = CallThisNumber
+	if len(FromNumber) == 0 {
+		FromNumber = "+132XXXXXXXX" // edit to set FromNumber if not set through env
 	}
 
-	resultDial := consumer.Client.Calling.DialPhone(fromNumber, toNumber)
+	if len(ToNumber) == 0 {
+		ToNumber = "+166XXXXXXXX" // edit to set ToNumber if not set through env
+	}
+
+	if len(CallThisNumber) > 0 {
+		ToNumber = CallThisNumber
+	}
+
+	resultDial := consumer.Client.Calling.DialPhone(FromNumber, ToNumber)
 	if !resultDial.Successful {
 		if err := consumer.Stop(); err != nil {
 			signalwire.Log.Error("Error occurred while trying to stop Consumer\n")
@@ -164,6 +174,7 @@ func main() {
 	}()
 
 	consumer := new(signalwire.Consumer)
+	signalwire.GlobalOverwriteHost = Host
 	// setup the Client
 	consumer.Setup(PProjectID, PTokenID, Contexts)
 	// register callback

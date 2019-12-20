@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -24,9 +25,18 @@ import (
 
 // App environment settings
 var (
-	ProjectID      = os.Getenv("ProjectID")
-	TokenID        = os.Getenv("TokenID")
+	// required
+	ProjectID = os.Getenv("ProjectID")
+	TokenID   = os.Getenv("TokenID")
+	// context required only for Inbound calls
 	DefaultContext = os.Getenv("DefaultContext")
+	// required
+	ListenAddress = os.Getenv("ListenAddress")
+	ListenPort    = os.Getenv("ListenPort")
+	FromNumber    = os.Getenv("FromNumber")
+	ToNumber      = os.Getenv("ToNumber")
+	// SDK will use default if not set
+	Host = os.Getenv("Host")
 )
 
 // Contexts not needed for only outbound calls
@@ -41,9 +51,13 @@ var PTokenID string
 // CallThisNumber get the callee phone number from command line
 var CallThisNumber string
 
-var listenAddress = "127.0.0.1" // replace this
+var defaultListenAddress = "127.0.0.1" // can be replaced through ENV var.
 
-var listenPort = 1234
+var defaultListenPort = 1234 // can be replaced through ENV var.
+
+var address string
+
+var port string
 
 var ws = false
 
@@ -63,7 +77,7 @@ func depak(rawpacket []byte) (*[]byte, error) {
 }
 
 func rtpListen(codec string, ptime uint8, rate uint) {
-	addrStr := fmt.Sprintf("%s:%d", listenAddress, listenPort)
+	addrStr := fmt.Sprintf("%s:%s", address, port)
 
 	conn, err := net.ListenPacket("udp", addrStr)
 	if err != nil {
@@ -152,7 +166,7 @@ func rtpListen(codec string, ptime uint8, rate uint) {
 }
 
 func wsListen() {
-	var addr = listenAddress + ":" + fmt.Sprintf("%d", listenPort)
+	var addr = address + ":" + port
 
 	var upgrader = websocket.Upgrader{
 		ReadBufferSize: 1024,
@@ -234,15 +248,23 @@ func spinner(delay time.Duration) {
 func MyReady(consumer *signalwire.Consumer) {
 	fmt.Printf("calling out...")
 
-	fromNumber := "+13XXXXXXXXX"
-
-	var toNumber = "+166XXXXXXXX"
-
-	if len(CallThisNumber) > 0 {
-		toNumber = CallThisNumber
+	if len(ListenAddress) > 0 {
+		address = ListenAddress // env
+	} else {
+		address = defaultListenAddress
 	}
 
-	resultDial := consumer.Client.Calling.DialPhone(fromNumber, toNumber)
+	if len(ListenPort) > 0 {
+		port = ListenPort // env
+	} else {
+		port = fmt.Sprintf("%d", defaultListenPort)
+	}
+
+	if len(CallThisNumber) > 0 {
+		FromNumber = CallThisNumber
+	}
+
+	resultDial := consumer.Client.Calling.DialPhone(FromNumber, ToNumber)
 	if !resultDial.Successful {
 		if err := consumer.Stop(); err != nil {
 			signalwire.Log.Error("Error occurred while trying to stop Consumer\n")
@@ -263,7 +285,13 @@ func MyReady(consumer *signalwire.Consumer) {
 	var tapdevice signalwire.TapDevice
 	if !ws {
 		tapdevice.Type = signalwire.TapRTP.String()
-		tapdevice.Params.Addr = listenAddress
+		tapdevice.Params.Addr = address
+
+		listenPort, errx := strconv.Atoi(port)
+		if errx != nil {
+			signalwire.Log.Fatal("invalid port.")
+		}
+
 		tapdevice.Params.Port = uint16(listenPort)
 	} else {
 		tapdevice.Type = signalwire.TapWS.String()
@@ -272,7 +300,7 @@ func MyReady(consumer *signalwire.Consumer) {
 		} else {
 			tapdevice.Params.URI = "wss://"
 		}
-		tapdevice.Params.URI = tapdevice.Params.URI + listenAddress + ":" + fmt.Sprintf("%d", listenPort)
+		tapdevice.Params.URI = tapdevice.Params.URI + address + ":" + port
 	}
 
 	tapdevice.Params.Codec = "PCMU"
@@ -349,6 +377,8 @@ func main() {
 	}()
 
 	consumer := new(signalwire.Consumer)
+
+	signalwire.GlobalOverwriteHost = Host
 	// setup the Client
 	consumer.Setup(PProjectID, PTokenID, Contexts)
 	// register callback

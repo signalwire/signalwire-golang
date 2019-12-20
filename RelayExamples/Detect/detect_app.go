@@ -14,12 +14,13 @@ import (
 
 // App environment settings
 var (
+	// required
 	ProjectID      = os.Getenv("ProjectID")
 	TokenID        = os.Getenv("TokenID")
 	DefaultContext = os.Getenv("DefaultContext")
 	FromNumber     = os.Getenv("FromNumber")
 	ToNumber       = os.Getenv("ToNumber")
-	Host           = os.Getenv("Host") // Then unset (no env) or set to empty string, default value is used
+	Host           = os.Getenv("Host") // When unset (no env) or set to empty string, default value is used (in SDK)
 )
 
 // Contexts not needed for only outbound calls

@@ -14,6 +14,7 @@ import (
 
 // App environment settings
 var (
+	// required
 	ProjectID      = os.Getenv("ProjectID")
 	TokenID        = os.Getenv("TokenID")
 	DefaultContext = os.Getenv("DefaultContext")
