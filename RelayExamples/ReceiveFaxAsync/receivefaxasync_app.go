@@ -14,10 +14,11 @@ import (
 
 // App environment settings
 var (
+	// required
 	ProjectID      = os.Getenv("ProjectID")
 	TokenID        = os.Getenv("TokenID")
 	DefaultContext = os.Getenv("DefaultContext")
-	Host           = os.Getenv("Host") // optional, host to connect to, defaults to Signalwire platform
+	Host           = os.Getenv("Host") // optional, host to connect to, defaults to Signalwire platform (in SDK)
 )
 
 // Contexts not needed for only outbound calls

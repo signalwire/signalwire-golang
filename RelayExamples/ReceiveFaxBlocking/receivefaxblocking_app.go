@@ -14,9 +14,12 @@ import (
 
 // App environment settings
 var (
+	// required
 	ProjectID      = os.Getenv("ProjectID")
 	TokenID        = os.Getenv("TokenID")
 	DefaultContext = os.Getenv("DefaultContext")
+	// SDK will use default if not set
+	Host = os.Getenv("Host")
 )
 
 // Contexts not needed for only outbound calls
@@ -132,6 +135,7 @@ func main() {
 	}()
 
 	consumer := new(signalwire.Consumer)
+	signalwire.GlobalOverwriteHost = Host
 	// setup the Client
 	consumer.Setup(PProjectID, PTokenID, Contexts)
 	// register callback

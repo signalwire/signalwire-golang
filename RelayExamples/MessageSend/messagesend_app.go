@@ -14,9 +14,14 @@ import (
 
 // App environment settings
 var (
+	// required
 	ProjectID      = os.Getenv("ProjectID")
 	TokenID        = os.Getenv("TokenID")
 	DefaultContext = os.Getenv("DefaultContext")
+	FromNumber     = os.Getenv("FromNumber")
+	ToNumber       = os.Getenv("ToNumber")
+	// SDK will use default if not set
+	Host = os.Getenv("Host")
 )
 
 // Contexts a list with Signalwire Contexts
@@ -84,6 +89,7 @@ func main() {
 
 	Contexts = append(Contexts, PContext)
 	consumer := new(signalwire.Consumer)
+	signalwire.GlobalOverwriteHost = Host
 	// setup the Client
 	consumer.Setup(PProjectID, PTokenID, Contexts)
 	// register callback
@@ -93,10 +99,16 @@ func main() {
 		/*prepare the msg first, then send*/
 		text := "Hello from Signalwire !"
 		context := DefaultContext
-		from := "+1XXXXXXXXXX"
-		to := "+15XXXXXXXXX"
 
-		message := consumer.Client.Messaging.NewMessage(context, from, to, text)
+		if len(FromNumber) == 0 {
+			FromNumber = "+132XXXXXXXX" // edit to set FromNumber if not set through env
+		}
+
+		if len(ToNumber) == 0 {
+			ToNumber = "+166XXXXXXXX" // edit to set ToNumber if not set through env
+		}
+
+		message := consumer.Client.Messaging.NewMessage(context, FromNumber, ToNumber, text)
 		message.OnMessageQueued = func(_ *signalwire.SendResult) {
 			signalwire.Log.Info("Message Queued.\n")
 		}
@@ -112,7 +124,7 @@ func main() {
 
 		/* now just send a message using Send() with params */
 
-		resultSend2 := consumer.Client.Messaging.Send(from, to, context, "Hello again from Signalwire !")
+		resultSend2 := consumer.Client.Messaging.Send(FromNumber, ToNumber, context, "Hello again from Signalwire !")
 		if !resultSend2.GetSuccessful() {
 			signalwire.Log.Error("Could not send message\n")
 		}
