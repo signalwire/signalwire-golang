@@ -42,10 +42,11 @@ type TapDirection int
 const (
 	TapDirectionListen TapDirection = iota
 	TapDirectionSpeak
+	TapDirectionBoth
 )
 
 func (s TapDirection) String() string {
-	return [...]string{"listen", "speak"}[s]
+	return [...]string{"listen", "speak", "both"}[s]
 }
 
 // TapType TODO DESCRIPTION
