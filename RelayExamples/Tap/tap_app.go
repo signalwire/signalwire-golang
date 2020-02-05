@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"io"
@@ -37,6 +38,12 @@ var (
 	ToNumber      = os.Getenv("ToNumber")
 	// SDK will use default if not set
 	Host = os.Getenv("Host")
+)
+
+const (
+	OPUS = "OPUS"
+	PCMA = "PCMA"
+	PCMU = "PCMU"
 )
 
 // Contexts not needed for only outbound calls
@@ -93,11 +100,11 @@ func rtpListen(codec string, ptime uint8, rate uint) {
 	b := new(bytes.Buffer)
 
 	switch strings.ToUpper(codec) {
-	case "PCMU":
+	case PCMU:
 		g711dec, _ = g711.NewUlawDecoder(b)
-	case "PCMA":
+	case PCMA:
 		g711dec, _ = g711.NewAlawDecoder(b)
-	case "OPUS":
+	case OPUS:
 		if rate == 0 {
 			rate = 48000
 		}
@@ -165,12 +172,16 @@ func rtpListen(codec string, ptime uint8, rate uint) {
 	}
 }
 
-func wsListen() {
+func wsListen(codec string) {
 	var addr = address + ":" + port
 
 	var upgrader = websocket.Upgrader{
 		ReadBufferSize: 1024,
 	}
+
+	var ptime = 20
+
+	var rate uint
 
 	/* this file can be imported in Audacity, 8000 hz, 1 channel, Little-Endian, Signed 16 bit PCM */
 	out, err := os.Create("tapaudio_ws_endpoint.raw")
@@ -186,11 +197,41 @@ func wsListen() {
 
 	g711dec, _ = g711.NewUlawDecoder(b)
 
+	var opusdec *opus.Decoder
+
+	switch strings.ToUpper(codec) {
+	case PCMU:
+		g711dec, _ = g711.NewUlawDecoder(b)
+	case PCMA:
+		g711dec, _ = g711.NewAlawDecoder(b)
+	case OPUS:
+		if rate == 0 {
+			rate = 48000
+		}
+
+		opusdec, _ = opus.NewDecoder(int(rate), 1)
+	default:
+		signalwire.Log.Warn("Unknown codec")
+		return
+	}
+
+	var pcm []int16
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			signalwire.Log.Error("%v", err)
 			return
+		}
+
+		if opusdec != nil {
+			if ptime == 0 {
+				ptime = 20
+			}
+
+			frameSize := uint(ptime) * rate / 1000
+
+			pcm = make([]int16, frameSize)
 		}
 
 		for {
@@ -199,17 +240,30 @@ func wsListen() {
 				signalwire.Log.Error("%v", err)
 				return
 			}
-			if msgType != websocket.BinaryMessage {
+			if msgType != websocket.BinaryMessage || len(msg) == 0 {
 				continue
 			}
 
-			b.Write(msg)
+			if g711dec != nil {
+				b.Write(msg)
 
-			_, err = io.Copy(out, g711dec)
-			if err != nil {
-				signalwire.Log.Fatal("Decoding failed: %v\n", err)
+				_, err = io.Copy(out, g711dec)
+				if err != nil {
+					signalwire.Log.Fatal("Decoding failed: %v\n", err)
+				}
+			} else {
+				signalwire.Log.Info("received Opus packet: %s\n", hex.Dump(msg))
+				n, err := opusdec.Decode(msg, pcm)
+				if err != nil {
+					signalwire.Log.Fatal("Decoding failed: %v\n", err)
+				}
+				err = binary.Write(b, binary.LittleEndian, pcm[:n])
+				if err != nil {
+					signalwire.Log.Fatal("binary.Write failed:", err)
+				}
+				_, _ = io.Copy(out, b)
+				signalwire.Log.Info("%s rcvd: %v bytes\n", conn.RemoteAddr(), len(msg))
 			}
-
 			signalwire.Log.Info("%s rcvd: %v bytes\n", conn.RemoteAddr(), len(msg))
 		}
 	})
@@ -303,14 +357,15 @@ func MyReady(consumer *signalwire.Consumer) {
 		tapdevice.Params.URI = tapdevice.Params.URI + address + ":" + port
 	}
 
-	tapdevice.Params.Codec = "PCMU"
+	tapdevice.Params.Codec = OPUS
 
 	if !ws {
 		go rtpListen(tapdevice.Params.Codec, tapdevice.Params.Ptime, tapdevice.Params.Rate)
 	} else {
-		go wsListen()
+		go wsListen(tapdevice.Params.Codec)
 	}
 
+	/* direction can be TapDirectionListen, TapDirectionSpeak or TapDirectionBoth */
 	tapAction, err := resultDial.Call.TapAudioAsync(signalwire.TapDirectionListen, &tapdevice)
 
 	if err != nil {
