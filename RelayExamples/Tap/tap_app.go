@@ -41,13 +41,13 @@ var (
 )
 
 const (
-	OPUS              = "OPUS"
-	OGGOPUS           = "OGGOPUS"
-	PCMA              = "PCMA"
-	PCMU              = "PCMU"
-	OGG_MAX_PAGE_SIZE = 65307
-	OGG_MIN_PAGE_SIZE = 2400 // this much data buffered before trying to open the incoming stream
-	OGG_DEBUG         = true
+	OPUS           = "OPUS"
+	OGGOPUS        = "OGGOPUS"
+	PCMA           = "PCMA"
+	PCMU           = "PCMU"
+	OGGMaxPageSize = 65307
+	OGGMinPageSize = 2400 // this much data buffered before trying to open the incoming stream
+	OGGDebug       = true
 )
 
 // Contexts not needed for only outbound calls
@@ -192,7 +192,7 @@ func wsListen(codec string) {
 
 	var isstream bool
 
-	var pageReader io.Reader
+	//	var pageReader io.Reader
 
 	var oggbuf *bytes.Buffer
 
@@ -214,6 +214,8 @@ func wsListen(codec string) {
 
 	var opusstream *opus.Stream
 
+	var p []byte
+
 	switch strings.ToUpper(codec) {
 	case PCMU:
 		g711dec, _ = g711.NewUlawDecoder(b)
@@ -231,10 +233,12 @@ func wsListen(codec string) {
 		}
 
 		upgrader = websocket.Upgrader{
-			ReadBufferSize: OGG_MAX_PAGE_SIZE,
+			ReadBufferSize: OGGMaxPageSize,
 		}
 
 		oggbuf = new(bytes.Buffer)
+
+		p = make([]byte, OGGMaxPageSize)
 
 		isstream = true
 	default:
@@ -261,8 +265,11 @@ func wsListen(codec string) {
 			pcm = make([]int16, frameSize)
 		}
 
+		rPipe, wPipe := io.Pipe()
+
 		for {
 			if isstream {
+				//				done := make(chan bool)
 				msgType, r, err := conn.NextReader()
 				if err != nil {
 					signalwire.Log.Error("%v", err)
@@ -277,29 +284,33 @@ func wsListen(codec string) {
 					n, _ := r.Read(p)
 					signalwire.Log.Info("received: %v\n", hex.Dump(p[:n]))
 					w := []byte("listening")
-					if err := conn.WriteMessage(websocket.TextMessage, w); err != nil {
-						signalwire.Log.Fatal("cannot write answer to websocket: %v\n", err)
+					if errw := conn.WriteMessage(websocket.TextMessage, w); errw != nil {
+						signalwire.Log.Fatal("cannot write answer to websocket: %v\n", errw)
 					}
 					continue
 				}
 
-				oggbuf.ReadFrom(r)
+				nr, _ := oggbuf.ReadFrom(r)
+				signalwire.Log.Info("wrote to oggbuf [%d]\n", nr)
 
-				if opusstream == nil && oggbuf.Len() < OGG_MIN_PAGE_SIZE {
+				if opusstream == nil && oggbuf.Len() < OGGMinPageSize {
 					continue
 				}
 
-				p := make([]byte, OGG_MAX_PAGE_SIZE)
 				n, _ := oggbuf.Read(p)
 
+				go func() {
+					pageReader := bytes.NewReader(p)
+					io.Copy(wPipe, pageReader)
+				}()
+
 				signalwire.Log.Info("received OGG Opus page size [%d]\n", n)
-				if OGG_DEBUG {
+				if OGGDebug {
 					signalwire.Log.Info("rcvd [%d] bytes: %s\n", n, hex.Dump(p[:n]))
 				}
 
 				if opusstream == nil {
-					pageReader = bytes.NewReader(p)
-					opusstream, err = opus.NewStream(pageReader)
+					opusstream, err = opus.NewStream(rPipe)
 				}
 
 				if opusstream == nil {
@@ -309,27 +320,30 @@ func wsListen(codec string) {
 
 				pcmbuf := make([]int16, 8192)
 
-				for {
-					n, err := opusstream.Read(pcmbuf)
-					switch err {
-					case io.EOF:
-						fallthrough
-					case nil:
-						break
-					default:
-						signalwire.Log.Fatal("Error while decoding opus stream: %v", err)
+				go func() {
+					for {
+						signalwire.Log.Info("read")
+						n, err := opusstream.Read(pcmbuf)
+						switch err {
+						case io.EOF:
+							fallthrough
+						case nil:
+							break
+						default:
+							signalwire.Log.Error("Error while decoding opus stream: %v", err)
+						}
+						if n == 0 {
+							signalwire.Log.Info("No data, buffering.")
+							break
+						}
+						signalwire.Log.Info("decoded OGG Opus [%v] bytes\n", n)
+						err = binary.Write(b, binary.LittleEndian, pcmbuf[:n])
+						if err != nil {
+							signalwire.Log.Fatal("binary.Write failed:", err)
+						}
+						_, _ = io.Copy(out, b)
 					}
-					if n == 0 {
-						signalwire.Log.Info("No data, buffering.")
-						break
-					}
-					signalwire.Log.Info("decoded OGG Opus [%v] bytes\n", n)
-					err = binary.Write(b, binary.LittleEndian, pcmbuf[:n])
-					if err != nil {
-						signalwire.Log.Fatal("binary.Write failed:", err)
-					}
-					_, _ = io.Copy(out, b)
-				}
+				}()
 			} else {
 				msgType, msg, err := conn.ReadMessage()
 				if err != nil {
@@ -529,7 +543,7 @@ func main() {
 		}
 	}()
 
-	if justlisten == false {
+	if !justlisten {
 		consumer := new(signalwire.Consumer)
 
 		signalwire.GlobalOverwriteHost = Host
