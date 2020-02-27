@@ -192,11 +192,10 @@ func wsListen(codec string) {
 
 	var isstream bool
 
-	//	var pageReader io.Reader
-
 	var oggbuf *bytes.Buffer
 
-	/* this file can be imported in Audacity, 8000 hz, 1 channel, Little-Endian, Signed 16 bit PCM */
+	/* this file can be imported in Audacity, 8000 hz, 1 channel, Little-Endian, Signed 16 bit PCM for */
+	/* import at rate 48000 for ogg/opus */
 	out, err := os.Create("tapaudio_ws_endpoint.raw")
 	if err != nil {
 		signalwire.Log.Fatal("%v", err)
@@ -269,12 +268,7 @@ func wsListen(codec string) {
 
 		for {
 			if isstream {
-				//				done := make(chan bool)
 				msgType, r, err := conn.NextReader()
-				if err != nil {
-					signalwire.Log.Error("%v", err)
-					return
-				}
 				if err != nil {
 					conn.Close()
 					signalwire.Log.Fatal("NextReader(): %v\n", err)
@@ -324,6 +318,7 @@ func wsListen(codec string) {
 					for {
 						if opusstream == nil {
 							time.Sleep(1 * time.Second)
+							continue
 						}
 
 						signalwire.Log.Info("read")
