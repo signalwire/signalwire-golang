@@ -280,9 +280,9 @@ func wsListen(codec string) {
 					signalwire.Log.Fatal("NextReader(): %v\n", err)
 				}
 				if msgType != websocket.BinaryMessage {
-					p := make([]byte, 1024)
-					n, _ := r.Read(p)
-					signalwire.Log.Info("received: %v\n", hex.Dump(p[:n]))
+					text := make([]byte, 1024)
+					n, _ := r.Read(text)
+					signalwire.Log.Info("received: %v\n", hex.Dump(text[:n]))
 					w := []byte("listening")
 					if errw := conn.WriteMessage(websocket.TextMessage, w); errw != nil {
 						signalwire.Log.Fatal("cannot write answer to websocket: %v\n", errw)
@@ -301,7 +301,7 @@ func wsListen(codec string) {
 
 				go func() {
 					pageReader := bytes.NewReader(p)
-					io.Copy(wPipe, pageReader)
+					_, _ = io.Copy(wPipe, pageReader)
 				}()
 
 				signalwire.Log.Info("received OGG Opus page size [%d]\n", n)
@@ -322,6 +322,10 @@ func wsListen(codec string) {
 
 				go func() {
 					for {
+						if opusstream == nil {
+							time.Sleep(1 * time.Second)
+						}
+
 						signalwire.Log.Info("read")
 						n, err := opusstream.Read(pcmbuf)
 						switch err {
@@ -336,7 +340,7 @@ func wsListen(codec string) {
 							signalwire.Log.Info("No data, buffering.")
 							break
 						}
-						signalwire.Log.Info("decoded OGG Opus [%v] bytes\n", n)
+						signalwire.Log.Info("decoded OGG Opus [%v] samples\n", n)
 						err = binary.Write(b, binary.LittleEndian, pcmbuf[:n])
 						if err != nil {
 							signalwire.Log.Fatal("binary.Write failed:", err)
