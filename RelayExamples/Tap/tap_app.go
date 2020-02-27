@@ -41,9 +41,13 @@ var (
 )
 
 const (
-	OPUS = "OPUS"
-	PCMA = "PCMA"
-	PCMU = "PCMU"
+	OPUS              = "OPUS"
+	OGGOPUS           = "OGGOPUS"
+	PCMA              = "PCMA"
+	PCMU              = "PCMU"
+	OGG_MAX_PAGE_SIZE = 65307
+	OGG_MIN_PAGE_SIZE = 2400 // this much data buffered before trying to open the incoming stream
+	OGG_DEBUG         = true
 )
 
 // Contexts not needed for only outbound calls
@@ -69,6 +73,8 @@ var port string
 var ws = false
 
 var secure = false
+
+var justlisten = false
 
 func depak(rawpacket []byte) (*[]byte, error) {
 	packet := new(rtp.Packet)
@@ -110,6 +116,7 @@ func rtpListen(codec string, ptime uint8, rate uint) {
 		}
 
 		opusdec, _ = opus.NewDecoder(int(rate), 1)
+
 	default:
 		signalwire.Log.Warn("Unknown codec")
 		return
@@ -183,6 +190,12 @@ func wsListen(codec string) {
 
 	var rate uint
 
+	var isstream bool
+
+	var pageReader io.Reader
+
+	var oggbuf *bytes.Buffer
+
 	/* this file can be imported in Audacity, 8000 hz, 1 channel, Little-Endian, Signed 16 bit PCM */
 	out, err := os.Create("tapaudio_ws_endpoint.raw")
 	if err != nil {
@@ -199,6 +212,8 @@ func wsListen(codec string) {
 
 	var opusdec *opus.Decoder
 
+	var opusstream *opus.Stream
+
 	switch strings.ToUpper(codec) {
 	case PCMU:
 		g711dec, _ = g711.NewUlawDecoder(b)
@@ -210,6 +225,18 @@ func wsListen(codec string) {
 		}
 
 		opusdec, _ = opus.NewDecoder(int(rate), 1)
+	case OGGOPUS:
+		if rate == 0 {
+			rate = 48000
+		}
+
+		upgrader = websocket.Upgrader{
+			ReadBufferSize: OGG_MAX_PAGE_SIZE,
+		}
+
+		oggbuf = new(bytes.Buffer)
+
+		isstream = true
 	default:
 		signalwire.Log.Warn("Unknown codec")
 		return
@@ -235,36 +262,106 @@ func wsListen(codec string) {
 		}
 
 		for {
-			msgType, msg, err := conn.ReadMessage()
-			if err != nil {
-				signalwire.Log.Error("%v", err)
-				return
-			}
-			if msgType != websocket.BinaryMessage || len(msg) == 0 {
-				continue
-			}
-
-			if g711dec != nil {
-				b.Write(msg)
-
-				_, err = io.Copy(out, g711dec)
+			if isstream {
+				msgType, r, err := conn.NextReader()
 				if err != nil {
-					signalwire.Log.Fatal("Decoding failed: %v\n", err)
+					signalwire.Log.Error("%v", err)
+					return
+				}
+				if err != nil {
+					conn.Close()
+					signalwire.Log.Fatal("NextReader(): %v\n", err)
+				}
+				if msgType != websocket.BinaryMessage {
+					p := make([]byte, 1024)
+					n, _ := r.Read(p)
+					signalwire.Log.Info("received: %v\n", hex.Dump(p[:n]))
+					w := []byte("listening")
+					if err := conn.WriteMessage(websocket.TextMessage, w); err != nil {
+						signalwire.Log.Fatal("cannot write answer to websocket: %v\n", err)
+					}
+					continue
+				}
+
+				oggbuf.ReadFrom(r)
+
+				if opusstream == nil && oggbuf.Len() < OGG_MIN_PAGE_SIZE {
+					continue
+				}
+
+				p := make([]byte, OGG_MAX_PAGE_SIZE)
+				n, _ := oggbuf.Read(p)
+
+				signalwire.Log.Info("received OGG Opus page size [%d]\n", n)
+				if OGG_DEBUG {
+					signalwire.Log.Info("rcvd [%d] bytes: %s\n", n, hex.Dump(p[:n]))
+				}
+
+				if opusstream == nil {
+					pageReader = bytes.NewReader(p)
+					opusstream, err = opus.NewStream(pageReader)
+				}
+
+				if opusstream == nil {
+					signalwire.Log.Error("stream error [%v]\n", err)
+					continue
+				}
+
+				pcmbuf := make([]int16, 8192)
+
+				for {
+					n, err := opusstream.Read(pcmbuf)
+					switch err {
+					case io.EOF:
+						fallthrough
+					case nil:
+						break
+					default:
+						signalwire.Log.Fatal("Error while decoding opus stream: %v", err)
+					}
+					if n == 0 {
+						signalwire.Log.Info("No data, buffering.")
+						break
+					}
+					signalwire.Log.Info("decoded OGG Opus [%v] bytes\n", n)
+					err = binary.Write(b, binary.LittleEndian, pcmbuf[:n])
+					if err != nil {
+						signalwire.Log.Fatal("binary.Write failed:", err)
+					}
+					_, _ = io.Copy(out, b)
 				}
 			} else {
-				signalwire.Log.Info("received Opus packet: %s\n", hex.Dump(msg))
-				n, err := opusdec.Decode(msg, pcm)
+				msgType, msg, err := conn.ReadMessage()
 				if err != nil {
-					signalwire.Log.Fatal("Decoding failed: %v\n", err)
+					signalwire.Log.Error("%v", err)
+					return
 				}
-				err = binary.Write(b, binary.LittleEndian, pcm[:n])
-				if err != nil {
-					signalwire.Log.Fatal("binary.Write failed:", err)
+				if msgType != websocket.BinaryMessage || len(msg) == 0 {
+					continue
 				}
-				_, _ = io.Copy(out, b)
+
+				if g711dec != nil {
+					b.Write(msg)
+
+					_, err = io.Copy(out, g711dec)
+					if err != nil {
+						signalwire.Log.Fatal("Decoding failed: %v\n", err)
+					}
+				} else {
+					signalwire.Log.Info("received Opus packet: %s\n", hex.Dump(msg))
+					n, err := opusdec.Decode(msg, pcm)
+					if err != nil {
+						signalwire.Log.Fatal("Decoding failed: %v\n", err)
+					}
+					err = binary.Write(b, binary.LittleEndian, pcm[:n])
+					if err != nil {
+						signalwire.Log.Fatal("binary.Write failed:", err)
+					}
+					_, _ = io.Copy(out, b)
+					signalwire.Log.Info("%s rcvd: %v bytes\n", conn.RemoteAddr(), len(msg))
+				}
 				signalwire.Log.Info("%s rcvd: %v bytes\n", conn.RemoteAddr(), len(msg))
 			}
-			signalwire.Log.Info("%s rcvd: %v bytes\n", conn.RemoteAddr(), len(msg))
 		}
 	})
 
@@ -400,6 +497,7 @@ func main() {
 	flag.BoolVar(&verbose, "d", false, " Enable debug mode ")
 	flag.BoolVar(&ws, "w", false, " Enable websocket tap ")                     // mutually exclusive with the RTP tap
 	flag.BoolVar(&secure, "s", false, " Enable secure websocket tap (wss URI)") // has meaning only if "-w" is set
+	flag.BoolVar(&justlisten, "j", false, " Just listen on port, don't make a call")
 	flag.Parse()
 
 	if printVersion {
@@ -431,15 +529,20 @@ func main() {
 		}
 	}()
 
-	consumer := new(signalwire.Consumer)
+	if justlisten == false {
+		consumer := new(signalwire.Consumer)
 
-	signalwire.GlobalOverwriteHost = Host
-	// setup the Client
-	consumer.Setup(PProjectID, PTokenID, Contexts)
-	// register callback
-	consumer.Ready = MyReady
-	// start
-	if err := consumer.Run(); err != nil {
-		signalwire.Log.Error("Error occurred while starting Signalwire Consumer\n")
+		signalwire.GlobalOverwriteHost = Host
+		// setup the Client
+		consumer.Setup(PProjectID, PTokenID, Contexts)
+		// register callback
+		consumer.Ready = MyReady
+		// start
+		if err := consumer.Run(); err != nil {
+			signalwire.Log.Error("Error occurred while starting Signalwire Consumer\n")
+		}
+	} else {
+		port = fmt.Sprintf("%d", defaultListenPort)
+		wsListen("OGGOPUS")
 	}
 }
