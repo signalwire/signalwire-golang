@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+ - Added ogg/opus decoding in the Tap example app.
+ - Handle network timeouts at connect time.
+
+## [1.0.1] 2019-12-20
  - all required settings retrieved through environment variables for the Example Apps.
  - support WSS (Secure Websocket) in the Tap example.
  - Add WebSocket Tap, extend Tap example app
