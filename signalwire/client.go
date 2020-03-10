@@ -3,7 +3,9 @@ package signalwire
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
+	"time"
 )
 
 // ClientSession TODO DESCRIPTION
@@ -37,7 +39,7 @@ func NewClientSession() *ClientSession {
 type IClientSession interface {
 	setAuth(project, token string)
 	setClient(host string, contexts []string)
-	connectInternal(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup) error
+	connectInternal(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup, t *time.Timer) error
 	disconnectInternal() error
 	setupInbound()
 	waitInbound(ctx context.Context) (*CallSession, error)
@@ -67,7 +69,7 @@ func (client *ClientSession) setAuth(project, token string) {
 }
 
 // connectInternal TODO DESCRIPTION
-func (client *ClientSession) connectInternal(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup) error {
+func (client *ClientSession) connectInternal(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup, t *time.Timer) error {
 	client.Ctx = ctx
 	client.Cancel = cancel
 	client.Calling.Ctx = client.Ctx
@@ -97,6 +99,9 @@ func (client *ClientSession) connectInternal(ctx context.Context, cancel context
 
 	client.Tasking.Consumer = client.Consumer
 
+	var count = BladeConnectionRetries
+
+again:
 	if err := blade.BladeInit(ctx, client.Host); err != nil {
 		Log.Debug("cannot init Blade: %v\n", err)
 
@@ -104,7 +109,25 @@ func (client *ClientSession) connectInternal(ctx context.Context, cancel context
 	}
 
 	if err := blade.BladeConnect(ctx, &blade.bladeAuth); err != nil {
-		Log.Debug("cannot connect to Blade Network: %v\n", err)
+		Log.Debug("cannot connect to Blade Network. Error Code: [%v] Message: [%v]\n", blade.LastJRPCError.Code, blade.LastJRPCError.Message)
+
+		if blade.LastJRPCError.Code == -32000 && strings.Contains(blade.LastJRPCError.Message, "Timeout") {
+			_ = client.disconnectInternal()
+
+			if t != nil {
+				t.Reset(GlobalConnectTimeout * time.Second)
+			}
+
+			if count != 0 {
+				time.Sleep(5 * time.Second)
+
+				if count != -1 {
+					count--
+				}
+
+				goto again
+			}
+		}
 
 		return err
 	}
@@ -294,7 +317,7 @@ func (client *ClientSession) Connect() error {
 	wg.Add(1)
 
 	go func() {
-		err = client.connectInternal(client.Ctx, client.Cancel, &wg)
+		err = client.connectInternal(client.Ctx, client.Cancel, &wg, nil)
 	}()
 
 	<-client.Operational

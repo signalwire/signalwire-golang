@@ -141,17 +141,6 @@ type ReqBladeSetup struct {
 	Params ParamsSignalwireStruct `json:"params"`
 }
 
-// ErrorStruct is RPC error object
-type ErrorStruct struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
-
-// ReplyError TODO DESCRIPTION
-type ReplyError struct {
-	Error ErrorStruct `json:"error"`
-}
-
 // ReplyAuthStruct TODO DESCRIPTION
 type ReplyAuthStruct struct {
 	Project   string   `json:"project"`
@@ -174,6 +163,12 @@ type ReplyResultConnect struct {
 	Authorizations       []string        `json:"authorizations"`
 	Accesses             []string        `json:"accesses"`
 	ProtocolsUncertified []string        `json:"protocols_uncertified"`
+}
+
+// JError TODO DESCRIPTION
+type JError struct {
+	Code    int64
+	Message string
 }
 
 // ReplyBladeConnect TODO DESCRIPTION

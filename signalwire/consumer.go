@@ -10,6 +10,8 @@ import (
 // GlobalOverwriteHost TODO DESCRIPTION
 var GlobalOverwriteHost string
 
+var GlobalConnectTimeout time.Duration
+
 // Consumer TODO DESCRIPTION
 type Consumer struct {
 	Project              string
@@ -139,14 +141,19 @@ func (consumer *Consumer) Run() error {
 
 	wg.Add(haveIncomingMsg + haveIncomingCalls + 1)
 
+	if GlobalConnectTimeout == 0 {
+		GlobalConnectTimeout = WSTimeOut + 1 // we'll want to try connect on network timeout too (not only Blade)
+	}
+
+	timer := time.NewTimer(GlobalConnectTimeout * time.Second)
+
 	go func() {
-		err = consumer.Client.I.connectInternal(ctx, cancel, &wg)
+		err = consumer.Client.I.connectInternal(ctx, cancel, &wg, timer)
 		if err != nil {
 			Log.Error("Cannot setup Blade: %v\n", err)
 		}
 	}()
 
-	timer := time.NewTimer(WSTimeOut * time.Second)
 	select {
 	case <-consumer.Client.Operational:
 	case <-timer.C:

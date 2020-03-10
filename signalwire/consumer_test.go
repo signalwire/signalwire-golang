@@ -28,8 +28,9 @@ func TestConsumer(t *testing.T) {
 			Imock := NewMockIClientSession(mockCtrl)
 			c := &ClientSession{I: Imock}
 			consumer.Client = c
+			//			t := time.NewTimer(1)
 
-			Imock.EXPECT().connectInternal(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Do(func(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup) {
+			Imock.EXPECT().connectInternal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Do(func(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup, t *time.Timer) {
 				/*pretend we connected successfully */
 				consumer.Client.Operational <- struct{}{}
 				runWG.Done()

@@ -9,6 +9,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 	sync "sync"
+	time "time"
 )
 
 // MockIClientSession is a mock of IClientSession interface
@@ -59,17 +60,17 @@ func (mr *MockIClientSessionMockRecorder) setClient(host, contexts interface{}) 
 }
 
 // connectInternal mocks base method
-func (m *MockIClientSession) connectInternal(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup) error {
+func (m *MockIClientSession) connectInternal(ctx context.Context, cancel context.CancelFunc, runWG *sync.WaitGroup, t *time.Timer) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "connectInternal", ctx, cancel, runWG)
+	ret := m.ctrl.Call(m, "connectInternal", ctx, cancel, runWG, t)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // connectInternal indicates an expected call of connectInternal
-func (mr *MockIClientSessionMockRecorder) connectInternal(ctx, cancel, runWG interface{}) *gomock.Call {
+func (mr *MockIClientSessionMockRecorder) connectInternal(ctx, cancel, runWG, t interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "connectInternal", reflect.TypeOf((*MockIClientSession)(nil).connectInternal), ctx, cancel, runWG)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "connectInternal", reflect.TypeOf((*MockIClientSession)(nil).connectInternal), ctx, cancel, runWG, t)
 }
 
 // disconnectInternal mocks base method

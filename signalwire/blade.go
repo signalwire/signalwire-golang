@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -53,6 +55,7 @@ type BladeSession struct {
 	Protocol             string
 	SpaceID              string
 	LastError            error
+	LastJRPCError        JError
 	SessionState         SessionState
 	Certified            bool
 	SignalwireChannels   []string
@@ -171,6 +174,8 @@ func (blade *BladeSession) BladeWSOpenConn(ctx context.Context, u url.URL) (*web
 		InsecureSkipVerify: false,
 	}
 
+	dialer.HandshakeTimeout = WSTimeOut * time.Second
+
 	c, _, err := dialer.DialContext(ctx, u.String(), nil)
 
 	if err != nil {
@@ -201,6 +206,7 @@ func (blade *BladeSession) BladeInit(ctx context.Context, addr string) error {
 	}
 
 	c, err := blade.I.BladeWSOpenConn(ctx, u)
+
 	if err != nil {
 		blade.LastError = err
 
@@ -293,6 +299,21 @@ func (blade *BladeSession) BladeInit(ctx context.Context, addr string) error {
 	return nil
 }
 
+// jsonrpc2ErrorCreate: helper function to create code/message jsonrpc2-like errors from the error string that the library provides.
+// shortcoming of the library.
+func jsonrpc2ErrorCreate(err error, jerr *JError) {
+	errstr := fmt.Sprintf("%v", err)
+	strmsg := strings.SplitAfter(errstr, ":")
+	strcode := strings.SplitAfter(errstr, " ")
+
+	if len(strmsg) < 2 || len(strcode) < 2 {
+		return
+	}
+
+	jerr.Code, _ = strconv.ParseInt(strings.Trim(strcode[2], " "), 10, 64)
+	jerr.Message = strings.Trim(strmsg[2], " ")
+}
+
 // BladeConnect TODO DESCRIPTION
 func (blade *BladeSession) BladeConnect(ctx context.Context, bladeAuth *BladeAuth) error {
 	if blade == nil {
@@ -355,6 +376,8 @@ func (blade *BladeSession) BladeConnect(ctx context.Context, bladeAuth *BladeAut
 		&ReplyConnectDecode, blade.jOpts...,
 	); err != nil {
 		blade.LastError = err
+
+		jsonrpc2ErrorCreate(err, &blade.LastJRPCError)
 
 		return err
 	}
