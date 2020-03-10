@@ -144,6 +144,6 @@ func main() {
 	signalwire.Log.Info("Wait incoming call..")
 	// start
 	if err := consumer.Run(); err != nil {
-		signalwire.Log.Error("Error occurred while starting Signalwire Consumer\n")
+		signalwire.Log.Error("Error occurred while starting Signalwire Consumer: %v\n", err)
 	}
 }
