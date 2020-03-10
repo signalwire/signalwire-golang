@@ -132,11 +132,11 @@ func main() {
 		<-done
 
 		if err := consumer.Stop(); err != nil {
-			signalwire.Log.Error("Error occurred while stopping Signalwire Consumer\n")
+			signalwire.Log.Error("Error occurred while stopping Signalwire Consumer: %v\n", err)
 		}
 	}
 	// start
 	if err := consumer.Run(); err != nil {
-		signalwire.Log.Error("Error occurred while starting Signalwire Consumer\n")
+		signalwire.Log.Error("Error occurred while starting Signalwire Consumer: %v\n", err)
 	}
 }

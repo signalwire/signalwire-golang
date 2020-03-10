@@ -111,7 +111,7 @@ func main() {
 				err := client.Connect()
 
 				if err != nil {
-					signalwire.Log.Error("Error occurred while starting Signalwire Client\n")
+					signalwire.Log.Error("Error occurred while starting Signalwire Client: %v\n", err)
 				}
 
 				if counter == max {

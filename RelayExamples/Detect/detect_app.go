@@ -230,6 +230,6 @@ func main() {
 	consumer.Ready = MyReady
 	// start
 	if err := consumer.Run(); err != nil {
-		consumer.Log.Error("Error occurred while starting Signalwire Consumer")
+		consumer.Log.Error("Error occurred while starting Signalwire Consumer: %v\n", err)
 	}
 }

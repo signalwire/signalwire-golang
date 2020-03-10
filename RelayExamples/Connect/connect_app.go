@@ -198,7 +198,7 @@ func main() {
 
 	// start
 	if err := consumer.Run(); err != nil {
-		signalwire.Log.Error("Error occurred while starting Signalwire Consumer\n")
+		signalwire.Log.Error("Error occurred while starting Signalwire Consumer: %v\n", err)
 	}
 
 	<-timer.C
