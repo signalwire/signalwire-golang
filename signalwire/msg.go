@@ -212,6 +212,15 @@ func (m *MsgSession) SetBody(body string) {
 	m.Unlock()
 }
 
+// GetBody TODO DESCRIPTION
+func (m *MsgSession) GetBody() string {
+	m.Lock()
+	b := m.MsgParams.Body
+	m.Unlock()
+
+	return b
+}
+
 // SetMsgID TODO DESCRIPTION
 func (m *MsgSession) SetMsgID(msgID string) {
 	m.Lock()

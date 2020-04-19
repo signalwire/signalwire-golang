@@ -34,6 +34,7 @@ lint:
 	make lint -C RelayExamples/Tap
 	make lint -C RelayExamples/SendDigits
 	make lint -C RelayExamples/MessageSend
+	make lint -C RelayExamples/MessageReceive
 	make lint -C RelayExamples/DeliverTask
 	make lint -C RelayExamples/ClientConnectStress
 
@@ -58,6 +59,7 @@ update:
 	make update -C RelayExamples/Tap
 	make update -C RelayExamples/SendDigits
 	make update -C RelayExamples/MessageSend
+	make update -C RelayExamples/MessageReceive
 	make update -C RelayExamples/DeliverTask
 	make update -C RelayExamples/ClientConnectStress
 
