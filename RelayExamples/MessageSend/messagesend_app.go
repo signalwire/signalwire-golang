@@ -98,6 +98,7 @@ func main() {
 
 		/*prepare the msg first, then send*/
 		text := "Hello from Signalwire !"
+
 		if len(DefaultContext) == 0 {
 			DefaultContext = "test"
 		}

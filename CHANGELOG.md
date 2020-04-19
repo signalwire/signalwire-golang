@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+ - fix incoming Messaging (access Body)
  - Added ogg/opus decoding in the Tap example app.
  - Handle network timeouts at connect time.
 
