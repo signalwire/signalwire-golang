@@ -253,9 +253,9 @@ func (client *ClientSession) setupInboundMsg() {
 // waitInboundMsg TODO DESCRIPTION
 func (client *ClientSession) waitInboundMsg(_ context.Context) (*MsgSession, error) {
 	blade := client.Relay.Blade
-	call, err := blade.BladeWaitInboundMsg(client.Ctx)
+	msg, err := blade.BladeWaitInboundMsg(client.Ctx)
 
-	return call, err
+	return msg, err
 }
 
 // ClientNew TODO DESCRIPTION

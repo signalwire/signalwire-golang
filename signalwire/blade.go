@@ -973,7 +973,7 @@ func (blade *BladeSession) BladeWaitInboundMsg(ctx context.Context) (*MsgSession
 
 	msg, _ := blade.EventMessaging.I.getMsg(ctx, msgID)
 	if msg == nil {
-		return nil, fmt.Errorf("error, nil CallSession")
+		return nil, fmt.Errorf("error, nil MsgSession")
 	}
 
 	return msg, nil

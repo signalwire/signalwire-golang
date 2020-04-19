@@ -1291,6 +1291,8 @@ func (messaging *EventMessaging) dispatchMsgStateNotif(ctx context.Context, msgP
 
 	msg.UpdateMsgState(msgParams.MsgState)
 
+	msg.SetBody(msgParams.Body)
+
 	msg.Blade = messaging.blade
 
 	if (msgParams.MsgState == MsgReceived) && (msgParams.Direction == MsgInbound) {

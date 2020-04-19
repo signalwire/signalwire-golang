@@ -32,6 +32,9 @@ type IMsgObj interface {
 	SetMedia(media []string)
 	SetTags(tags []string)
 	SetRegion(params string)
+	GetFrom() string
+	GetTo() string
+	GetBody() string
 }
 
 // IMessaging object visible to the end user
@@ -293,4 +296,19 @@ func (msgobj *MsgObj) SetTags(tags []string) {
 // SetRegion TODO DESCRIPTION
 func (msgobj *MsgObj) SetRegion(region string) {
 	msgobj.msg.SetRegion(region)
+}
+
+// GetFrom TODO DESCRIPTION
+func (msgobj *MsgObj) GetFrom() string {
+	return msgobj.msg.GetFrom()
+}
+
+// GetTo TODO DESCRIPTION
+func (msgobj *MsgObj) GetTo() string {
+	return msgobj.msg.GetTo()
+}
+
+// GetBody TODO DESCRIPTION
+func (msgobj *MsgObj) GetBody() string {
+	return msgobj.msg.GetBody()
 }
