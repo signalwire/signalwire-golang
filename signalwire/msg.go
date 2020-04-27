@@ -119,6 +119,15 @@ func (m *MsgSession) GetFrom() string {
 	return from
 }
 
+// GetMedia TODO DESCRIPTION
+func (m *MsgSession) GetMedia() []string {
+	m.RLock()
+	mediaList := m.MsgParams.Media
+	m.RUnlock()
+
+	return mediaList
+}
+
 // SetTo TODO DESCRIPTION
 func (m *MsgSession) SetTo(to string) {
 	m.Lock()

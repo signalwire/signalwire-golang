@@ -40,6 +40,7 @@ func MyOnIncomingMessage(consumer *signalwire.Consumer, msg *signalwire.MsgObj) 
 	signalwire.Log.Info("To: %s\n", msg.GetTo())
 	signalwire.Log.Info("From: %s\n", msg.GetFrom())
 	signalwire.Log.Info("Msg body: %s\n", msg.GetBody())
+	signalwire.Log.Info("Media (if present): %s\n", msg.GetMedia())
 
 	if err := consumer.Stop(); err != nil {
 		signalwire.Log.Error("Error occurred while trying to stop Consumer\n")
