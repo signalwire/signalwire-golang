@@ -717,6 +717,7 @@ type ParamsEventMessagingState struct {
 	Media        []string `json:"media"`
 	Segments     uint     `json:"segments"`
 	MessageState string   `json:"message_state"`
+	Reason       string   `json:"reason"`
 	MsgID        string   `json:"message_id"`
 }
 

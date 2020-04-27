@@ -122,16 +122,51 @@ func main() {
 			signalwire.Log.Info("Message Delivered.\n")
 		}
 
+		signalwire.Log.Info("Sending first message using SendMsg()...\n")
+
 		resultSend1 := consumer.Client.Messaging.SendMsg(message)
+
 		if !resultSend1.GetSuccessful() {
-			signalwire.Log.Error("Could not send message\n")
+			signalwire.Log.Error("Could not send message: %v\n", resultSend1.GetReason())
+		} else {
+			signalwire.Log.Info("Delivered. MsgID: %v\n", resultSend1.GetMsgID())
 		}
 
 		/* now just send a message using Send() with params */
 
+		signalwire.Log.Info("Sending second message using Send()...\n")
+
+		// may be marked as Spam
 		resultSend2 := consumer.Client.Messaging.Send(FromNumber, ToNumber, context, "Hello again from Signalwire !")
+
 		if !resultSend2.GetSuccessful() {
-			signalwire.Log.Error("Could not send message\n")
+			signalwire.Log.Error("Could not send message: %v\n", resultSend2.GetReason())
+		} else {
+			signalwire.Log.Info("Delivered. MsgID: %v\n", resultSend2.GetMsgID())
+		}
+
+		// third Message: MMS
+		text = "Nice pics"
+		messageMms := consumer.Client.Messaging.NewMessage(context, FromNumber, ToNumber, text)
+		list := []string{"https://spdf.gsfc.nasa.gov/pub/misc/photo_gallery/image/astro/hst_abell2218.jpg",
+			"https://spdf.gsfc.nasa.gov/pub/misc/photo_gallery/image/astro/hst_antennae_9734a.jpg"}
+		messageMms.SetMedia(list)
+		messageMms.OnMessageQueued = func(_ *signalwire.SendResult) {
+			signalwire.Log.Info("Message Queued.\n")
+		}
+
+		messageMms.OnMessageDelivered = func(_ *signalwire.SendResult) {
+			signalwire.Log.Info("Message Delivered.\n")
+		}
+
+		signalwire.Log.Info("Sending third message using SendMsg()...\n")
+
+		resultSend3 := consumer.Client.Messaging.SendMsg(messageMms)
+
+		if !resultSend3.GetSuccessful() {
+			signalwire.Log.Error("Could not send message: %v\n", resultSend3.GetReason())
+		} else {
+			signalwire.Log.Info("Delivered. MsgID: %v\n", resultSend3.GetMsgID())
 		}
 
 		if err := consumer.Stop(); err != nil {

@@ -757,6 +757,7 @@ func (messaging *EventMessaging) onMessagingEventState(ctx context.Context, broa
 	msgParams.Body = params.Body
 	msgParams.Tags = params.Tags
 	msgParams.Media = params.Media
+	msgParams.Reason = params.Reason
 
 	return messaging.I.dispatchMsgStateNotif(ctx, msgParams)
 }
@@ -1292,6 +1293,10 @@ func (messaging *EventMessaging) dispatchMsgStateNotif(ctx context.Context, msgP
 	msg.UpdateMsgState(msgParams.MsgState)
 
 	msg.SetBody(msgParams.Body)
+
+	msg.SetFailureReason(msgParams.Reason)
+
+	msg.SetMedia(msgParams.Media)
 
 	msg.Blade = messaging.blade
 

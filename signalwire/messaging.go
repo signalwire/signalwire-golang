@@ -35,6 +35,7 @@ type IMsgObj interface {
 	GetFrom() string
 	GetTo() string
 	GetBody() string
+	GetMedia() []string
 }
 
 // IMessaging object visible to the end user
@@ -275,12 +276,20 @@ func (resultSend *SendResult) GetSuccessful() bool {
 
 // GetReason TODO DESCRIPTION
 func (resultSend *SendResult) GetReason() string {
-	return resultSend.Msg.msg.GetFailureReason()
+	if resultSend.Msg != nil {
+		return resultSend.Msg.msg.GetFailureReason()
+	}
+
+	return ""
 }
 
 // GetMsgID TODO DESCRIPTION
 func (resultSend *SendResult) GetMsgID() string {
-	return resultSend.Msg.msg.GetMsgID()
+	if resultSend.Msg != nil {
+		return resultSend.Msg.msg.GetMsgID()
+	}
+
+	return ""
 }
 
 // SetMedia TODO DESCRIPTION
@@ -311,4 +320,9 @@ func (msgobj *MsgObj) GetTo() string {
 // GetBody TODO DESCRIPTION
 func (msgobj *MsgObj) GetBody() string {
 	return msgobj.msg.GetBody()
+}
+
+// GetMedia TODO DESCRIPTION
+func (msgobj *MsgObj) GetMedia() []string {
+	return msgobj.msg.GetMedia()
 }
