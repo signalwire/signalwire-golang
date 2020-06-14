@@ -85,6 +85,8 @@ func (client *ClientSession) connectInternal(ctx context.Context, cancel context
 
 	var I IRelay = RelayNew()
 
+	var ret int
+
 	relay := &RelaySession{I: I}
 	relay.I = relay
 
@@ -108,9 +110,11 @@ again:
 		return err
 	}
 
+reconnected:
 	if err := blade.BladeConnect(ctx, &blade.bladeAuth); err != nil {
 		Log.Debug("cannot connect to Blade Network. Error Code: [%v] Message: [%v]\n", blade.LastJRPCError.Code, blade.LastJRPCError.Message)
 
+		// Timeout reply received from platform
 		if blade.LastJRPCError.Code == -32000 && strings.Contains(blade.LastJRPCError.Message, "Timeout") {
 			_ = client.disconnectInternal()
 
@@ -188,10 +192,19 @@ again:
 	if err := blade.EventTasking.Cache.SetTasking("tasking", &client.Tasking); err != nil {
 		return err
 	}
-	client.Operational <- struct{}{}
 
-	blade.BladeWaitDisconnect(ctx)
+	if ret != 1 {
+		client.Operational <- struct{}{}
+	}
+
+	ret = blade.BladeWaitDisconnect(ctx)
+	if ret == 1 {
+		goto reconnected
+	}
+
 	Log.Debug("got Disconnect\n")
+
+	blade.WatcherDone <- struct{}{}
 
 	close(client.Tasking.TaskChan)
 	cancel()

@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -67,20 +68,33 @@ func TestBlade(t *testing.T) {
 
 			l := "ws" + strings.TrimPrefix(s.URL, "http")
 			wsconn, resp, err := websocket.DefaultDialer.Dial(l, nil)
-			if err != nil {
+			if err != nil || wsconn == nil {
 				t.Fatalf("%v", err)
 			}
 
 			defer resp.Body.Close()
 			defer wsconn.Close()
 
-			// setup fake function that "opens" a WSS connection
-			Imock.EXPECT().BladeWSOpenConn(ctx, u).Return(wsconn, nil)
+			var wg sync.WaitGroup
+			wg.Add(1)
+
 			blade := &BladeSession{I: Imock} // use the mock interface with a real Blade Session
 
-			// call the real BladeInit()
-			err = blade.BladeInit(ctx, "test.addr")
-			assert.Nil(t, err, "should not be an error from BladeInit")
+			// setup fake function that "opens" a WSS connection
+			Imock.EXPECT().BladeWSOpenConn(ctx, u).Return(wsconn, nil)
+			Imock.EXPECT().BladeWSWatchConn(ctx).Do(func(ctx context.Context) {
+				blade.WatcherSync <- struct{}{}
+				blade.WatcherDone <- struct{}{}
+			})
+
+			go func() {
+				// call the real BladeInit()
+				err = blade.BladeInit(ctx, "test.addr")
+				assert.Nil(t, err, "should not be an error from BladeInit")
+				wg.Done()
+			}()
+
+			wg.Wait()
 
 			if blade.LastError != nil {
 				t.Errorf("Err: %v", blade.LastError)
