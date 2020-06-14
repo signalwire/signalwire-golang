@@ -76,10 +76,13 @@ func TestBlade(t *testing.T) {
 
 			// setup fake function that "opens" a WSS connection
 			Imock.EXPECT().BladeWSOpenConn(ctx, u).Return(wsconn, nil)
-			Imock.EXPECT().BladeWSWatchConn(ctx)
-
+			Imock.EXPECT().BladeWSWatchConn(ctx).Do(func(ctx context.Context) {
+			})
 			blade := &BladeSession{I: Imock} // use the mock interface with a real Blade Session
 
+			go func() {
+				blade.WatcherSync <- struct{}{}
+			}()
 			// call the real BladeInit()
 			err = blade.BladeInit(ctx, "test.addr")
 			assert.Nil(t, err, "should not be an error from BladeInit")
@@ -91,6 +94,7 @@ func TestBlade(t *testing.T) {
 			assert.Nil(t, blade.LastError)
 			t.Logf("test.SessionID: %v\n", blade.SessionID)
 			assert.NotEqual(t, len(blade.SessionID), 0, "SessionID must exist")
+			blade.WatcherSync <- struct{}{}
 		},
 	)
 

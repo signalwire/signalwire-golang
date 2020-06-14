@@ -79,6 +79,7 @@ type BladeSession struct {
 	InboundMsgDone       chan struct{}
 	Tconn                *time.Timer
 	WatcherDone          chan struct{}
+	WatcherSync          chan struct{}
 	Tmutex               sync.Mutex
 	Certified            bool
 	WantReconnect        bool
@@ -242,6 +243,7 @@ func (blade *BladeSession) BladeInit(ctx context.Context, addr string) error {
 	blade.Tconn = time.NewTimer(connTimeout * time.Second /*15 sec = 3 ping/pong intervals */)
 
 	blade.WatcherDone = make(chan struct{}, 1)
+	blade.WatcherSync = make(chan struct{}, 1)
 
 	stream := ws.NewObjectStream(c)
 	l := new(Jsonrpc2Logger)
@@ -257,6 +259,7 @@ func (blade *BladeSession) BladeInit(ctx context.Context, addr string) error {
 	}
 
 	go blade.I.BladeWSWatchConn(ctx)
+	<-blade.WatcherSync
 
 	reqID, _ := GenUUIDv4()
 
@@ -359,6 +362,8 @@ func (blade *BladeSession) BladeReconnect(ctx context.Context, u url.URL) {
 
 // BladeWSWatchConn TODO DESCRIPTION
 func (blade *BladeSession) BladeWSWatchConn(ctx context.Context) {
+	blade.WatcherSync <- struct{}{}
+
 	if blade.conn == nil || blade.Tconn == nil {
 		return
 	}
@@ -871,8 +876,6 @@ func (blade *BladeSession) BladeWaitDisconnect(ctx context.Context) int {
 				if conn != nil {
 					break
 				}
-
-				Log.Debug("%f\n", blade.LastError)
 
 				time.Sleep(3 * time.Second)
 			}
