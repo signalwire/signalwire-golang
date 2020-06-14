@@ -81,6 +81,18 @@ func (mr *MockIBladeMockRecorder) BladeWSOpenConn(ctx, u interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BladeWSOpenConn", reflect.TypeOf((*MockIBlade)(nil).BladeWSOpenConn), ctx, u)
 }
 
+// BladeWSWatchConn mocks base method
+func (m *MockIBlade) BladeWSWatchConn(ctx context.Context) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "BladeWSWatchConn", ctx)
+}
+
+// BladeWSWatchConn indicates an expected call of BladeWSWatchConn
+func (mr *MockIBladeMockRecorder) BladeWSWatchConn(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BladeWSWatchConn", reflect.TypeOf((*MockIBlade)(nil).BladeWSWatchConn), ctx)
+}
+
 // BladeInit mocks base method
 func (m *MockIBlade) BladeInit(ctx context.Context, addr string) error {
 	m.ctrl.T.Helper()
@@ -167,9 +179,11 @@ func (mr *MockIBladeMockRecorder) BladeSignalwireReceive(ctx, signalwireContexts
 }
 
 // BladeWaitDisconnect mocks base method
-func (m *MockIBlade) BladeWaitDisconnect(ctx context.Context) {
+func (m *MockIBlade) BladeWaitDisconnect(ctx context.Context) int {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "BladeWaitDisconnect", ctx)
+	ret := m.ctrl.Call(m, "BladeWaitDisconnect", ctx)
+	ret0, _ := ret[0].(int)
+	return ret0
 }
 
 // BladeWaitDisconnect indicates an expected call of BladeWaitDisconnect

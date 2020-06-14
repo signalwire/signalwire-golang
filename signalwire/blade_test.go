@@ -67,7 +67,7 @@ func TestBlade(t *testing.T) {
 
 			l := "ws" + strings.TrimPrefix(s.URL, "http")
 			wsconn, resp, err := websocket.DefaultDialer.Dial(l, nil)
-			if err != nil {
+			if err != nil || wsconn == nil {
 				t.Fatalf("%v", err)
 			}
 
@@ -76,6 +76,8 @@ func TestBlade(t *testing.T) {
 
 			// setup fake function that "opens" a WSS connection
 			Imock.EXPECT().BladeWSOpenConn(ctx, u).Return(wsconn, nil)
+			Imock.EXPECT().BladeWSWatchConn(ctx)
+
 			blade := &BladeSession{I: Imock} // use the mock interface with a real Blade Session
 
 			// call the real BladeInit()

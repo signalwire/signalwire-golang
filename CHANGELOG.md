@@ -5,6 +5,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## Unreleased
  - Messaging: retrieve Reason for SMS delivery in case of failure, add GetMedia() function to retrieve the URL list
+ - Add code to reconnect and handle reconnections
 
 ## [1.0.2] 2020-04-20
  - fix incoming Messaging (access Body)

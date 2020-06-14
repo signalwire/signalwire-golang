@@ -20,6 +20,7 @@ import (
 const (
 	okCode       = "200"
 	debugJSONRPC = true // show jsonrpc2 command, replies and notifications
+	connTimeout  = 15
 )
 
 // BladeAuth holds auth data for the WS connection
@@ -51,31 +52,36 @@ func (s SessionState) String() string {
 
 // BladeSession cache Session information
 type BladeSession struct {
+	BladeHandlerIncoming ReqHandler
+	Calls                [MaxSimCalls]CallSession
+	RemoteAddress        url.URL
+	bladeAuth            BladeAuth
+	EventCalling         EventCalling
+	EventMessaging       EventMessaging
+	EventTasking         EventTasking
+	LastJRPCError        JError
+	SignalwireChannels   []string
+	SignalwireContexts   []string
+	jOpts                []jsonrpc2.CallOption
 	SessionID            string
 	Protocol             string
 	SpaceID              string
 	LastError            error
-	LastJRPCError        JError
-	SessionState         SessionState
-	Certified            bool
-	SignalwireChannels   []string
-	SignalwireContexts   []string
-	bladeAuth            BladeAuth
 	Ctx                  context.Context
-	conn                 *jsonrpc2.Conn
-	jOpts                []jsonrpc2.CallOption
-	DisconnectChan       chan struct{}
-	Calls                [MaxSimCalls]CallSession
-	BladeHandlerIncoming ReqHandler
 	I                    IBlade
+	SessionState         SessionState
+	conn                 *jsonrpc2.Conn
+	DisconnectChan       chan struct{}
 	Inbound              chan string
 	Netcast              chan string
 	InboundDone          chan struct{}
 	InboundMsg           chan string
 	InboundMsgDone       chan struct{}
-	EventCalling         EventCalling
-	EventMessaging       EventMessaging
-	EventTasking         EventTasking
+	Tconn                *time.Timer
+	WatcherDone          chan struct{}
+	Tmutex               sync.Mutex
+	Certified            bool
+	WantReconnect        bool
 }
 
 // IBlade TODO DESCRIPTION
@@ -83,13 +89,14 @@ type IBlade interface {
 	GetConnection() (*jsonrpc2.Conn, error)
 	BladeCleanup() error
 	BladeWSOpenConn(ctx context.Context, u url.URL) (*websocket.Conn, error)
+	BladeWSWatchConn(ctx context.Context)
 	BladeInit(ctx context.Context, addr string) error
 	BladeConnect(ctx context.Context, bladeAuth *BladeAuth) error
 	BladeSetup(ctx context.Context) error
 	BladeAddSubscription(ctx context.Context, signalwireChannels []string) error
 	BladeExecute(ctx context.Context, v interface{}, res interface{}) (interface{}, error)
 	BladeSignalwireReceive(ctx context.Context, signalwireContexts []string) error
-	BladeWaitDisconnect(ctx context.Context)
+	BladeWaitDisconnect(ctx context.Context) int
 	BladeDisconnect(ctx context.Context) error
 	BladeWaitInboundCall(ctx context.Context) (*CallSession, error)
 
@@ -140,7 +147,11 @@ func (blade *BladeSession) GetConnection() (*jsonrpc2.Conn, error) {
 		return nil, errors.New("empty blade session object")
 	}
 
-	return blade.conn, nil
+	blade.Tmutex.Lock()
+	conn := blade.conn
+	blade.Tmutex.Unlock()
+
+	return conn, nil
 }
 
 // BladeCleanup TODO DESCRIPTION
@@ -178,9 +189,19 @@ func (blade *BladeSession) BladeWSOpenConn(ctx context.Context, u url.URL) (*web
 
 	c, _, err := dialer.DialContext(ctx, u.String(), nil)
 
-	if err != nil {
+	if c == nil || err != nil {
 		return nil, err
 	}
+
+	c.SetPingHandler(func(s string) error {
+		const timeout = connTimeout * time.Second
+
+		blade.Tmutex.Lock()
+		blade.Tconn.Reset(timeout)
+		blade.Tmutex.Unlock()
+
+		return nil
+	})
 
 	return c, nil
 }
@@ -205,6 +226,7 @@ func (blade *BladeSession) BladeInit(ctx context.Context, addr string) error {
 		Path:   "/",
 	}
 
+	blade.RemoteAddress = u
 	c, err := blade.I.BladeWSOpenConn(ctx, u)
 
 	if err != nil {
@@ -216,6 +238,10 @@ func (blade *BladeSession) BladeInit(ctx context.Context, addr string) error {
 	if c == nil {
 		return errors.New("cannot open websocket connection")
 	}
+
+	blade.Tconn = time.NewTimer(connTimeout * time.Second /*15 sec = 3 ping/pong intervals */)
+
+	blade.WatcherDone = make(chan struct{}, 1)
 
 	stream := ws.NewObjectStream(c)
 	l := new(Jsonrpc2Logger)
@@ -229,6 +255,8 @@ func (blade *BladeSession) BladeInit(ctx context.Context, addr string) error {
 	if blade.conn == nil {
 		return errors.New("failed to initialize jsonrpc2 (invalid connection)")
 	}
+
+	go blade.I.BladeWSWatchConn(ctx)
 
 	reqID, _ := GenUUIDv4()
 
@@ -297,6 +325,54 @@ func (blade *BladeSession) BladeInit(ctx context.Context, addr string) error {
 	blade.DisconnectChan = make(chan struct{})
 
 	return nil
+}
+
+// BladeReconnect TODO DESCRIPTION
+func (blade *BladeSession) BladeReconnect(ctx context.Context, u url.URL) {
+	c, err := blade.I.BladeWSOpenConn(ctx, u)
+	blade.LastError = err
+
+	if c != nil {
+		Log.Debug("Reconnected.\n")
+		blade.Tmutex.Lock()
+		blade.Tconn.Reset(connTimeout * time.Second)
+		blade.Tmutex.Unlock()
+
+		go blade.I.BladeWSWatchConn(ctx)
+
+		stream := ws.NewObjectStream(c)
+		l := new(Jsonrpc2Logger)
+
+		blade.Tmutex.Lock()
+
+		blade.conn = jsonrpc2.NewConn(
+			ctx, stream,
+			blade.BladeHandlerIncoming,
+			jsonrpc2.LogMessages(l),
+		)
+
+		blade.Tmutex.Unlock()
+
+		GlobalBladeSessionControl.addBlade(blade.conn, blade)
+	}
+}
+
+// BladeWSWatchConn TODO DESCRIPTION
+func (blade *BladeSession) BladeWSWatchConn(ctx context.Context) {
+	if blade.conn == nil || blade.Tconn == nil {
+		return
+	}
+
+	select {
+	case <-blade.Tconn.C:
+	case <-blade.WatcherDone:
+	}
+	Log.Debug("missed 3 pings from server, will reconnect.\n")
+
+	blade.WantReconnect = true
+
+	blade.conn.Close()
+	GlobalBladeSessionControl.removeBlade(blade.conn)
 }
 
 // jsonrpc2ErrorCreate: helper function to create code/message jsonrpc2-like errors from the error string that the library provides.
@@ -395,6 +471,7 @@ func (blade *BladeSession) BladeDisconnect(ctx context.Context) error {
 		return errors.New("empty blade session object")
 	}
 
+	blade.WantReconnect = false
 	blade.SessionState = BladeClosing
 
 	if blade.conn == nil {
@@ -762,26 +839,51 @@ func (ReqHandler) Handle(ctx context.Context, c *jsonrpc2.Conn, req *jsonrpc2.Re
 }
 
 // BladeWaitDisconnect TODO DESCRIPTION
-func (blade *BladeSession) BladeWaitDisconnect(_ context.Context) {
+func (blade *BladeSession) BladeWaitDisconnect(ctx context.Context) int {
 	conn, err := blade.GetConnection()
 	if err != nil {
 		Log.Error("%v\n", err)
 
-		return
+		return -1
 	}
 
 	if conn == nil {
 		Log.Error("Connection is nil\n")
 
-		return
+		return -1
 	}
 
 	select {
 	case <-conn.DisconnectNotify(): // remote disconnect
-		Log.Debug("got remote disconnect\n")
+		Log.Debug("disconnected\n") // this comes when calling ws.Close() too.
+
+		if blade.WantReconnect {
+			//			conn.Close()
+			blade.Tmutex.Lock()
+			blade.conn = nil
+			blade.Tmutex.Unlock()
+
+			for {
+				Log.Debug("Reconnecting...")
+				blade.BladeReconnect(ctx, blade.RemoteAddress)
+				conn, _ = blade.GetConnection()
+
+				if conn != nil {
+					break
+				}
+
+				Log.Debug("%f\n", blade.LastError)
+
+				time.Sleep(3 * time.Second)
+			}
+
+			return 1
+		}
 	case <-blade.DisconnectChan: // local disconnect
 		Log.Debug("got local disconnect\n")
 	}
+
+	return 0
 }
 
 func (blade *BladeSession) handleInboundCall(_ context.Context, callID string) bool {
