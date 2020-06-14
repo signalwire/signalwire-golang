@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -74,18 +75,26 @@ func TestBlade(t *testing.T) {
 			defer resp.Body.Close()
 			defer wsconn.Close()
 
+			var wg sync.WaitGroup
+			wg.Add(1)
+
+			blade := &BladeSession{I: Imock} // use the mock interface with a real Blade Session
+
 			// setup fake function that "opens" a WSS connection
 			Imock.EXPECT().BladeWSOpenConn(ctx, u).Return(wsconn, nil)
 			Imock.EXPECT().BladeWSWatchConn(ctx).Do(func(ctx context.Context) {
+				blade.WatcherSync <- struct{}{}
+				blade.WatcherDone <- struct{}{}
 			})
-			blade := &BladeSession{I: Imock} // use the mock interface with a real Blade Session
 
 			go func() {
-				blade.WatcherSync <- struct{}{}
+				// call the real BladeInit()
+				err = blade.BladeInit(ctx, "test.addr")
+				assert.Nil(t, err, "should not be an error from BladeInit")
+				wg.Done()
 			}()
-			// call the real BladeInit()
-			err = blade.BladeInit(ctx, "test.addr")
-			assert.Nil(t, err, "should not be an error from BladeInit")
+
+			wg.Wait()
 
 			if blade.LastError != nil {
 				t.Errorf("Err: %v", blade.LastError)
@@ -94,7 +103,6 @@ func TestBlade(t *testing.T) {
 			assert.Nil(t, blade.LastError)
 			t.Logf("test.SessionID: %v\n", blade.SessionID)
 			assert.NotEqual(t, len(blade.SessionID), 0, "SessionID must exist")
-			blade.WatcherSync <- struct{}{}
 		},
 	)
 
